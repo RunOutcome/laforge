@@ -68,8 +68,8 @@ export function Palette({ actions, onClose }: { actions: Action[]; onClose: () =
 }
 
 export const keyHelp: [string, string][] = [
-  ['Ctrl-b %', 'Split right'],
-  ['Ctrl-b "', 'Split down'],
+  ['Ctrl-b % or |', 'Split right'],
+  ['Ctrl-b " or -', 'Split down'],
   ['Ctrl-b ← ↑ → ↓', 'Move between panes (or h j k l)'],
   ['Ctrl-b o', 'Next pane'],
   ['Ctrl-b z', 'Zoom the pane'],
@@ -80,7 +80,7 @@ export const keyHelp: [string, string][] = [
   ['Ctrl-b ,', 'Rename the tab'],
   ['Ctrl-b space', 'Tiled layout'],
   ['Ctrl-b m', 'Main + stack layout'],
-  ['Ctrl-b + / -', 'Bigger / smaller text'],
+  ['Ctrl-b + / _', 'Bigger / smaller text'],
   ['Ctrl-b :  or  ⌘K', 'Command palette'],
   ['Ctrl-b Ctrl-b', 'Send Ctrl-b to the pane'],
   ['Ctrl-b ?', 'This help'],

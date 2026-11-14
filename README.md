@@ -79,8 +79,8 @@ Keys follow tmux: press the prefix **Ctrl-b**, then
 
 | Key | Does |
 | --- | --- |
-| `%` | split right |
-| `"` | split down |
+| `%` or `\|` | split right |
+| `"` or `-` | split down |
 | arrows or `h j k l` | move between panes |
 | `o` | next pane |
 | `z` | zoom the pane |
@@ -89,6 +89,7 @@ Keys follow tmux: press the prefix **Ctrl-b**, then
 | `n` / `p`, `1`–`9` | next / previous tab, go to tab |
 | `,` | rename the tab |
 | space / `m` | tiled / main-and-stack layout |
+| `+` / `_` | bigger / smaller text |
 | `:` or ⌘K | command palette |
 | `?` | all keys |
 | Ctrl-b | send a literal Ctrl-b |
@@ -151,7 +152,10 @@ case "la":
 ### API
 
 All routes but `/api/health` need the token, as the cookie or
-`Authorization: Bearer <token>`.
+`Authorization: Bearer <token>`. Changes (POST, PUT, PATCH, DELETE) from a
+browser are accepted only from the forge's own origin: other local ports
+share the cookie's site, so `Origin` and `Sec-Fetch-Site` are checked. A
+client embedding the forge from another origin needs to proxy it.
 
 | Route | |
 | --- | --- |

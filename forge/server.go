@@ -19,6 +19,7 @@ import (
 	"io"
 	"io/fs"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -51,6 +52,7 @@ type Server struct {
 	sessions *sessions
 	mux      *http.ServeMux
 	mu       sync.Mutex
+	layoutMu sync.Mutex
 	cwd      string
 	started  time.Time
 }
@@ -177,8 +179,29 @@ func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
 			writeError(w, http.StatusUnauthorized, "unauthorized", "Present this forge's token.")
 			return
 		}
+		if r.Method != http.MethodGet && r.Method != http.MethodHead && !sameOrigin(r) {
+			writeError(w, http.StatusForbidden, "cross_origin", "Changes come only from the forge's own page.")
+			return
+		}
 		next(w, r)
 	}
+}
+
+// sameOrigin refuses a browser request sent from another origin. The cookie
+// is SameSite=Strict, but every port on 127.0.0.1 is the same site, so a page
+// on another local port could otherwise send it with a simple POST. Browsers
+// send Origin (and Sec-Fetch-Site) on these requests; CLI clients send
+// neither and authenticate with the bearer token.
+func sameOrigin(r *http.Request) bool {
+	if site := r.Header.Get("Sec-Fetch-Site"); site != "" && site != "same-origin" && site != "none" {
+		return false
+	}
+	origin := r.Header.Get("Origin")
+	if origin == "" {
+		return true
+	}
+	u, err := url.Parse(origin)
+	return err == nil && u.Host == r.Host
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {
@@ -278,6 +301,10 @@ func (s *Server) closeSession(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// closeFellBehind closes a stream whose viewer missed output; the client
+// reconnects and redraws from the buffer.
+const closeFellBehind websocket.StatusCode = 4408
+
 // clientMessage is what the browser sends on a stream as a text frame.
 type clientMessage struct {
 	Type string `json:"type"` // input | resize
@@ -327,8 +354,17 @@ func (s *Server) stream(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	var offset int64
+	sent := false
 	for {
 		watch := e.session.WatchFrom(offset)
+		if watch.Dropped > 0 && sent {
+			// The ring wrapped past what this viewer had: rather than draw a
+			// screen with a hole in it, close so the client redraws whole.
+			watch.Cancel()
+			conn.Close(closeFellBehind, "fell behind")
+			return
+		}
+		sent = true
 		if len(watch.Output) > 0 {
 			if conn.Write(ctx, websocket.MessageBinary, watch.Output) != nil {
 				watch.Cancel()
@@ -384,12 +420,22 @@ func (s *Server) putLayout(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "input", "The layout is not JSON.")
 		return
 	}
-	tmp := s.layoutPath() + ".tmp"
-	if err := os.WriteFile(tmp, raw, 0o600); err != nil {
+	s.layoutMu.Lock()
+	defer s.layoutMu.Unlock()
+	tmp, err := os.CreateTemp(s.opts.Home, "layout-*.json")
+	if err != nil {
 		writeError(w, http.StatusInternalServerError, "layout", err.Error())
 		return
 	}
-	if err := os.Rename(tmp, s.layoutPath()); err != nil {
+	_, werr := tmp.Write(raw)
+	cerr := tmp.Close()
+	if werr != nil || cerr != nil {
+		os.Remove(tmp.Name())
+		writeError(w, http.StatusInternalServerError, "layout", errors.Join(werr, cerr).Error())
+		return
+	}
+	if err := os.Rename(tmp.Name(), s.layoutPath()); err != nil {
+		os.Remove(tmp.Name())
 		writeError(w, http.StatusInternalServerError, "layout", err.Error())
 		return
 	}

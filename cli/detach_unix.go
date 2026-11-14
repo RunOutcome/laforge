@@ -16,3 +16,12 @@ import (
 func detach(c *exec.Cmd) { c.SysProcAttr = &syscall.SysProcAttr{Setsid: true} }
 
 func terminate(p *os.Process) error { return p.Signal(syscall.SIGTERM) }
+
+// processAlive reports whether pid is a live process.
+func processAlive(pid int) bool {
+	if pid <= 0 {
+		return false
+	}
+	err := syscall.Kill(pid, 0)
+	return err == nil || err == syscall.EPERM
+}

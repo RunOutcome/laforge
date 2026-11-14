@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -103,6 +104,9 @@ func (c *cmd) upContainer(o containerUp) error {
 	if err := exec.Command(rt, "image", "inspect", o.image).Run(); err != nil {
 		return fmt.Errorf("there is no image %s; build it with `make image` in the laforge repository (or set LAFORGE_IMAGE)", o.image)
 	}
+	if containerRunning(rt, nil) {
+		return fmt.Errorf("a %s container is running that this host's LaForge did not start (no %s); `%s down --container` replaces it", ContainerName, c.containerStatePath(), c.cfg.Prog)
+	}
 	_ = exec.Command(rt, "rm", "-f", ContainerName).Run() // a stopped one from before
 	if err := os.MkdirAll(c.home, 0o700); err != nil {
 		return err
@@ -113,6 +117,14 @@ func (c *cmd) upContainer(o containerUp) error {
 		"-v", "laforge-home:/home/forge",
 		"-v", o.dir + ":/workspace",
 		"-e", "LAFORGE_TOKEN=" + s.Token,
+	}
+	switch {
+	case rt == "podman":
+		// rootless podman: the host user is uid 1000 (forge) inside, so
+		// /workspace is writable and new files are the host user's
+		args = append(args, "--userns=keep-id:uid=1000,gid=1000")
+	case runtime.GOOS == "linux" && os.Getuid() != 1000:
+		fmt.Fprintf(c.cfg.Stderr, "note: the container's user is uid 1000 and you are uid %d; files it writes in %s will be owned by uid 1000\n", os.Getuid(), o.dir)
 	}
 	// API keys for the agents, if the user keeps them in <home>/agents.env
 	if env := filepath.Join(c.home, "agents.env"); fileExists(env) {

@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -397,5 +398,69 @@ func TestAgentOutputCannotFakeTheExit(t *testing.T) {
 	_ = json.NewDecoder(r.Body).Decode(&panes)
 	if len(panes) != 1 || panes[0].Profile != "fake" {
 		t.Fatalf("relabelled by output: %+v", panes)
+	}
+}
+
+// A page on another local port cannot make changes with the forge's cookie.
+func TestChangesFromAnotherOriginAreRefused(t *testing.T) {
+	_, ts := newTestServer(t)
+	post := func(headers map[string]string) int {
+		req, _ := http.NewRequest("POST", ts.URL+"/api/sessions", strings.NewReader(`{"profile":"shell"}`))
+		req.Header.Set("Content-Type", "text/plain")
+		req.AddCookie(&http.Cookie{Name: cookieName, Value: "secret"})
+		for k, v := range headers {
+			req.Header.Set(k, v)
+		}
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp.Body.Close()
+		return resp.StatusCode
+	}
+	if code := post(map[string]string{"Origin": "http://127.0.0.1:3000"}); code != http.StatusForbidden {
+		t.Fatalf("other origin: %d, want 403", code)
+	}
+	if code := post(map[string]string{"Sec-Fetch-Site": "same-site"}); code != http.StatusForbidden {
+		t.Fatalf("same-site, not same-origin: %d, want 403", code)
+	}
+	if code := post(map[string]string{"Origin": ts.URL, "Sec-Fetch-Site": "same-origin"}); code != http.StatusCreated {
+		t.Fatalf("own page: %d, want 201", code)
+	}
+	if code := post(nil); code != http.StatusCreated { // the CLI: no Origin
+		t.Fatalf("no origin: %d, want 201", code)
+	}
+}
+
+// Saves that arrive together never leave a broken layout.
+func TestConcurrentLayoutSavesStayWhole(t *testing.T) {
+	srv, ts := newTestServer(t)
+	done := make(chan int, 20)
+	for i := 0; i < 20; i++ {
+		go func(i int) {
+			body := fmt.Sprintf(`{"version":1,"active":"t%d","tabs":[{"id":"t%d","pad":%q}]}`, i, i, strings.Repeat("x", 20000))
+			req, _ := http.NewRequest("PUT", ts.URL+"/api/layout", strings.NewReader(body))
+			req.Header.Set("Authorization", "Bearer secret")
+			resp, err := http.DefaultClient.Do(req)
+			if err != nil {
+				done <- 0
+				return
+			}
+			resp.Body.Close()
+			done <- resp.StatusCode
+		}(i)
+	}
+	for i := 0; i < 20; i++ {
+		if code := <-done; code != http.StatusNoContent {
+			t.Fatalf("save: %d", code)
+		}
+	}
+	raw, err := os.ReadFile(filepath.Join(srv.opts.Home, "layout.json"))
+	if err != nil || !json.Valid(raw) {
+		t.Fatalf("layout after concurrent saves is not JSON (%v)", err)
+	}
+	left, _ := filepath.Glob(filepath.Join(srv.opts.Home, "layout-*.json"))
+	if len(left) != 0 {
+		t.Fatalf("temp files left: %v", left)
 	}
 }

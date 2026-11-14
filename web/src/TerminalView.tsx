@@ -34,6 +34,7 @@ interface Props {
 export function TerminalView({ api, session, mode, focused, fontSize, onKey, onFocus, onEnded, register }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const termRef = useRef<Terminal | null>(null);
+  const refitRef = useRef<() => void>(() => undefined);
   const handlers = useRef({ onKey, onFocus, onEnded });
   handlers.current = { onKey, onFocus, onEnded };
   const focusedRef = useRef(focused);
@@ -92,12 +93,15 @@ export function TerminalView({ api, session, mode, focused, fontSize, onKey, onF
       }
     };
 
+    refitRef.current = refit;
+    let failures = 0;
     const connect = () => {
       const ws = new WebSocket(api.streamUrl(session));
       ws.binaryType = 'arraybuffer';
       socket = ws;
       let first = true;
       ws.onopen = () => {
+        failures = 0;
         size = { cols: 0, rows: 0 };
         refit();
         sendResize();
@@ -116,8 +120,27 @@ export function TerminalView({ api, session, mode, focused, fontSize, onKey, onF
           handlers.current.onEnded();
           return;
         }
-        if (ev.code === 1008 || ev.code === 4404) return;
-        retry = setTimeout(connect, 1000);
+        // A refused upgrade (stale token, session gone) shows only as 1006;
+        // ask the API which it was before trying again, and back off.
+        failures++;
+        api
+          .sessions()
+          .then((list) => {
+            if (closed) return;
+            if (!list.some((x) => x.id === session)) {
+              handlers.current.onEnded();
+              return;
+            }
+            retry = setTimeout(connect, ev.code === 4408 ? 0 : Math.min(1000 * failures, 10000));
+          })
+          .catch((err) => {
+            if (closed) return;
+            if (err?.status === 401) {
+              handlers.current.onEnded(); // the forge shows the expired-link notice
+              return;
+            }
+            retry = setTimeout(connect, Math.min(1000 * failures, 10000));
+          });
       };
     };
     connect();
@@ -163,7 +186,9 @@ export function TerminalView({ api, session, mode, focused, fontSize, onKey, onF
   }, [mode]);
 
   useEffect(() => {
-    if (termRef.current) termRef.current.options.fontSize = fontSize;
+    if (!termRef.current) return;
+    termRef.current.options.fontSize = fontSize;
+    refitRef.current(); // new glyph size: new cols/rows, and the pty told
   }, [fontSize]);
 
   useEffect(() => {

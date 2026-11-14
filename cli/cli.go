@@ -7,6 +7,7 @@
 package cli
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -21,7 +22,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
-	"strings"
 	"syscall"
 	"text/tabwriter"
 	"time"
@@ -165,7 +165,7 @@ func (c *cmd) running() *State {
 	if err != nil {
 		return nil
 	}
-	client := http.Client{Timeout: 800 * time.Millisecond}
+	client := http.Client{Timeout: 3 * time.Second}
 	resp, err := client.Get(fmt.Sprintf("http://127.0.0.1:%d/api/health", s.Port))
 	if err != nil {
 		return nil
@@ -232,6 +232,9 @@ func (c *cmd) up(args []string) error {
 		return err
 	}
 	defer logFile.Close()
+	if old, err := c.readState(); err == nil && processAlive(old.PID) {
+		return fmt.Errorf("a forge (pid %d) holds %s but does not answer on port %d; stop it (kill %d) or check %s", old.PID, c.statePath(), old.Port, old.PID, logPath)
+	}
 	_ = os.Remove(c.statePath())
 	child := exec.Command(exe, append(append([]string{}, c.cfg.Reexec...), serveArgs...)...)
 	child.Stdout, child.Stderr, child.Stdin = logFile, logFile, nil
@@ -257,8 +260,8 @@ func (c *cmd) up(args []string) error {
 }
 
 func (c *cmd) setCwd(s *State, dir string) {
-	body := strings.NewReader(fmt.Sprintf(`{"cwd":%q}`, dir))
-	req, _ := http.NewRequest(http.MethodPut, s.URL+"/api/config", body)
+	raw, _ := json.Marshal(map[string]string{"cwd": dir})
+	req, _ := http.NewRequest(http.MethodPut, s.URL+"/api/config", bytes.NewReader(raw))
 	req.Header.Set("Authorization", "Bearer "+s.Token)
 	req.Header.Set("Content-Type", "application/json")
 	if resp, err := (&http.Client{Timeout: time.Second}).Do(req); err == nil {
@@ -392,7 +395,12 @@ func (c *cmd) serve(args []string) error {
 	if err := os.WriteFile(c.statePath(), raw, 0o600); err != nil {
 		return err
 	}
-	defer os.Remove(c.statePath())
+	defer func() {
+		// remove the state only while it is still this process's
+		if cur, err := c.readState(); err == nil && cur.PID == os.Getpid() {
+			os.Remove(c.statePath())
+		}
+	}()
 
 	httpServer := &http.Server{Handler: srv, ReadHeaderTimeout: 10 * time.Second}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)

@@ -5,7 +5,7 @@
 // It is one component so a host (the Outcome Arena) can mount it with its
 // own api base; the standalone client is this and nothing else.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ForgeApi, type Config, type Profile, type Session } from './api';
+import { ApiError, ForgeApi, type Config, type Profile, type Session } from './api';
 import * as L from './layout';
 import { Help, Palette, type Action } from './Palette';
 import { Picker, monogram } from './Picker';
@@ -28,6 +28,7 @@ export function Forge({ api: given, embedded = false }: Props) {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [config, setConfig] = useState<Config | null>(null);
   const [connected, setConnected] = useState(true);
+  const [authLost, setAuthLost] = useState(false);
   const [pref, setPref] = useState<ModePref>(loadPref);
   const [sysMode, setSysMode] = useState<Mode>(systemMode);
   const [prefix, setPrefix] = useState(false);
@@ -62,9 +63,11 @@ export function Forge({ api: given, embedded = false }: Props) {
       const list = await api.sessions();
       setSessions(new Map(list.map((s) => [s.id, s])));
       setConnected(true);
+      setAuthLost(false);
       return list;
-    } catch {
+    } catch (err) {
       setConnected(false);
+      if (err instanceof ApiError && err.status === 401) setAuthLost(true);
       return null;
     }
   }, [api]);
@@ -73,7 +76,24 @@ export function Forge({ api: given, embedded = false }: Props) {
   useEffect(() => {
     let stop = false;
     (async () => {
-      const [raw, list, profs, cfg] = await Promise.all([api.layout().catch(() => null), refresh(), api.profiles().catch(() => []), api.config().catch(() => null)]);
+      // Never reconcile against a failed fetch: an empty session list or a
+      // missing layout from a hiccup would clear every pane and be saved.
+      let raw: unknown;
+      let list: Session[] | null = null;
+      let profs: Profile[] = [];
+      let cfg: Config | null = null;
+      for (let attempt = 0; !stop; attempt++) {
+        const failed = Symbol('failed');
+        const [r, l, p, c] = await Promise.all([api.layout().catch(() => failed), refresh(), api.profiles().catch(() => failed), api.config().catch(() => null)]);
+        if (r !== failed && l !== null && p !== failed) {
+          raw = r;
+          list = l;
+          profs = p as Profile[];
+          cfg = c;
+          break;
+        }
+        await new Promise((ok) => setTimeout(ok, Math.min(1000 * (attempt + 1), 5000)));
+      }
       if (stop) return;
       setProfiles(profs);
       setConfig(cfg);
@@ -116,6 +136,8 @@ export function Forge({ api: given, embedded = false }: Props) {
   }, [api, layout]);
 
   const tab = layout?.tabs.find((t) => t.id === layout.active);
+  const layoutRef = useRef(layout);
+  layoutRef.current = layout;
 
   const updateTab = useCallback((id: string, fn: (t: L.Tab) => L.Tab) => {
     setLayout((l) => (l ? { ...l, tabs: l.tabs.map((t) => (t.id === id ? fn(t) : t)) } : l));
@@ -152,12 +174,12 @@ export function Forge({ api: given, embedded = false }: Props) {
   const closePane = useCallback(
     (tabId: string, paneId: string) => {
       setConfirm(null);
+      const session = L.findPane(layoutRef.current?.tabs.find((x) => x.id === tabId)?.root ?? L.newPane(), paneId)?.session;
+      if (session) api.close(session).catch(() => undefined);
       setLayout((l) => {
         if (!l) return l;
         const t = l.tabs.find((x) => x.id === tabId);
         if (!t) return l;
-        const pane = L.findPane(t.root, paneId);
-        if (pane?.session) api.close(pane.session).catch(() => undefined);
         const root = L.remove(t.root, paneId);
         if (!root) {
           if (l.tabs.length > 1) {
@@ -245,7 +267,7 @@ export function Forge({ api: given, embedded = false }: Props) {
       { id: 'main', group: 'Layout', label: 'Main and stack', hint: '^b m', run: () => preset('main') },
       { id: 'mode', group: 'View', label: `Theme: ${pref} (switch)`, run: cycleMode },
       { id: 'bigger', group: 'View', label: 'Bigger text', hint: '^b +', run: () => setFontSize((f) => Math.min(f + 1, 22)) },
-      { id: 'smaller', group: 'View', label: 'Smaller text', hint: '^b -', run: () => setFontSize((f) => Math.max(f - 1, 9)) },
+      { id: 'smaller', group: 'View', label: 'Smaller text', hint: '^b _', run: () => setFontSize((f) => Math.max(f - 1, 9)) },
       { id: 'help', group: 'Help', label: 'Keys', hint: '^b ?', run: () => setHelp(true) },
     ];
     for (const p of profiles.filter((x) => x.available)) {
@@ -589,11 +611,12 @@ export function Forge({ api: given, embedded = false }: Props) {
 
   const closeTab = (id: string) => {
     setClosingTab(null);
+    const closing = layoutRef.current?.tabs.find((x) => x.id === id);
+    for (const p of closing ? L.panes(closing.root) : []) if (p.session) api.close(p.session).catch(() => undefined);
     setLayout((l) => {
       if (!l) return l;
       const t = l.tabs.find((x) => x.id === id);
       if (!t) return l;
-      for (const p of L.panes(t.root)) if (p.session) api.close(p.session).catch(() => undefined);
       if (l.tabs.length === 1) {
         const fresh = L.newTab();
         return { ...l, tabs: [fresh], active: fresh.id };
@@ -774,7 +797,7 @@ export function Forge({ api: given, embedded = false }: Props) {
         ))}
         <span className="grow" />
         {prefix && <span className="sb-prefix">PREFIX</span>}
-        {!connected && <span className="sb-down">disconnected — retrying</span>}
+        {!connected && !authLost && <span className="sb-down">disconnected — retrying</span>}
         <span className="sb-counts">
           <span className="dot dot-running" /> {counts.running} running <span className="dot dot-idle" /> {counts.idle} idle
           {counts.ended ? (
@@ -795,6 +818,16 @@ export function Forge({ api: given, embedded = false }: Props) {
         <span className="sb-clock">{clock.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
       </footer>
 
+      {authLost && (
+        <div className="scrim">
+          <div className="help">
+            <h2>This link has expired</h2>
+            <p className="help-sub">
+              The forge was restarted, so it has a new token. Run <code>la open</code> (or <code>la status</code>) for a fresh link. Your panes are still running unless the forge was stopped.
+            </p>
+          </div>
+        </div>
+      )}
       {palette && <Palette actions={actions} onClose={() => setPalette(false)} />}
       {help && <Help onClose={() => setHelp(false)} />}
     </div>

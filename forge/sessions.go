@@ -68,7 +68,8 @@ type StartRequest struct {
 // strippedEnv are variables of the process that started the forge that would
 // mislead a child: an agent CLI started from inside another agent's session
 // refuses to run, or reports into the wrong one.
-var strippedEnv = []string{"CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT", "CLAUDE_CODE_SSE_PORT"}
+// The forge's own token and listen address stay with the forge.
+var strippedEnv = []string{"CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT", "CLAUDE_CODE_SSE_PORT", "LAFORGE_TOKEN", "LAFORGE_LISTEN"}
 
 func newID() string {
 	b := make([]byte, 6)

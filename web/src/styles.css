@@ -980,6 +980,13 @@ body.dragging-col * {
   font-size: 15px;
 }
 
+.help-sub code {
+  font: 12px var(--font-mono);
+  background: var(--sunken);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
 .help-sub {
   margin: 4px 0 12px;
   color: var(--tx-3);
