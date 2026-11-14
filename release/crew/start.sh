@@ -65,12 +65,12 @@ brief() { # name worktree
 }
 if [ "$DRY" = 0 ]; then
   mkdir -p "$CREW_HOME"
-  python3 - "$CREW_HOME/profiles.json" "$(command -v claude)" "$(brief media)" "$(brief site)" <<'PY'
+  python3 - "$CREW_HOME/profiles.json" "$(command -v claude)" "$(brief media)" "$(brief site)" "$REPO" <<'PY'
 import json, sys
-path, claude, media, site = sys.argv[1:]
+path, claude, media, site, repo = sys.argv[1:]
 def crew(name, label, prompt):
     return {"name": name, "label": label, "description": "LaForge release crew: " + name,
-            "command": claude, "args": ["--name", "laforge-" + name, "--permission-mode", "acceptEdits", prompt], "agent": True}
+            "command": claude, "args": ["--name", "laforge-" + name, "--permission-mode", "acceptEdits", "--add-dir", repo, "--", prompt], "agent": True}
 json.dump([crew("crew-media", "Media", media), crew("crew-site", "Site", site)], open(path, "w"), indent=2)
 PY
 fi
@@ -103,7 +103,7 @@ unset LAFORGE_NO_BROWSER
 "$LA" open
 cat <<MSG
 
-The crew is in the forge: one tab of found panes (Media, Site). Approve
-their tool prompts there. Checklist: release/crew/CHECKLIST.md.
+The crew is in the forge, in the tab "Found" (Media, Site; rename it with
+the pencil). Their tool prompts wait for you there: approving them is yours. Checklist: release/crew/CHECKLIST.md.
 Stop it with: release/crew/start.sh --stop
 MSG
