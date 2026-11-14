@@ -5,7 +5,7 @@ All notable changes to LaForge. The format follows
 [Semantic Versioning](https://semver.org/). A release's notes are its section
 here, so each tag needs one.
 
-## [0.1.0] - Unreleased
+## [0.1.0] - 2026-11-14
 
 The first release of the new, standalone LaForge: many shells and AI agents,
 side by side, in your browser.
