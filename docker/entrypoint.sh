@@ -19,4 +19,11 @@ if [ -n "$ON_FIRST_START" ]; then
       >> "$LAFORGE_HOME/agents-install.log" 2>&1 &
   fi
 fi
+# Antigravity (agy) ships as a native binary from Google's own installer,
+# which puts it in ~/.local/bin.
+if [ "${INSTALL_ANTIGRAVITY:-1}" != "0" ] && [ ! -x "$HOME/.local/bin/agy" ]; then
+  ( echo "installing: antigravity (agy)"
+    curl -fsSL https://antigravity.google/cli/install.sh | bash && echo "done" || echo "failed" ) \
+    >> "$LAFORGE_HOME/agents-install.log" 2>&1 &
+fi
 exec "$@"

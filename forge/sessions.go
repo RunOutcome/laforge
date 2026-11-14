@@ -4,12 +4,14 @@
 package forge
 
 import (
+	"bytes"
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 	"sync"
@@ -24,13 +26,18 @@ type Pane struct {
 	Profile string `json:"profile"`
 	Title   string `json:"title"`
 	Cwd     string `json:"cwd"`
+	// After names the agent profile a pane ran before it became a shell.
+	After string `json:"after,omitempty"`
 }
 
 type entry struct {
 	session *terminal.Session
+	mu      sync.Mutex
 	profile string
 	title   string
 	cwd     string
+	command string // what the pane runs, as the user would type it
+	after   string // the agent profile this pane ran before it became a shell
 }
 
 // sessions holds every session the forge has started.
@@ -84,9 +91,14 @@ func (s *sessions) start(p Profile, req StartRequest, defaultCwd string, scrollb
 	id := newID()
 	env := append([]string{}, p.Env...)
 	env = append(env, "LAFORGE_SESSION="+id, "COLORTERM=truecolor", "TERM_PROGRAM=LaForge")
+	command, args := p.Command, p.Args
+	display := strings.TrimSpace(p.Command + " " + strings.Join(p.Args, " "))
+	if p.Agent && runtime.GOOS != "windows" {
+		command, args = thenShell(p)
+	}
 	spec := terminal.LaunchSpec{
-		Command:    p.Command,
-		Args:       p.Args,
+		Command:    command,
+		Args:       args,
 		Workdir:    cwd,
 		Env:        env,
 		Columns:    req.Cols,
@@ -106,7 +118,10 @@ func (s *sessions) start(p Profile, req StartRequest, defaultCwd string, scrollb
 	if title == "" {
 		title = p.Label
 	}
-	e := &entry{session: session, profile: p.Name, title: title, cwd: cwd}
+	e := &entry{session: session, profile: p.Name, title: title, cwd: cwd, command: display}
+	if p.Agent && runtime.GOOS != "windows" {
+		go s.watchForShell(e)
+	}
 	s.mu.Lock()
 	s.byID[id] = e
 	s.mu.Unlock()
@@ -117,7 +132,78 @@ func (s *sessions) start(p Profile, req StartRequest, defaultCwd string, scrollb
 }
 
 func (e *entry) pane() Pane {
-	return Pane{SessionView: e.session.View(), Profile: e.profile, Title: e.title, Cwd: e.cwd}
+	view := e.session.View()
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if e.command != "" {
+		view.Command = e.command
+	}
+	return Pane{SessionView: view, Profile: e.profile, Title: e.title, Cwd: e.cwd, After: e.after}
+}
+
+// shellMarker is the private OSC sequence the agent wrapper prints when the
+// agent has exited and the pane becomes a shell. Terminals ignore unknown
+// OSC sequences, so it never shows.
+const shellMarker = "\x1b]7770;laforge-shell\x07"
+
+// thenShell wraps an agent so that when it exits the pane carries on as the
+// user's login shell in the same folder, instead of ending.
+func thenShell(p Profile) (string, []string) {
+	const script = `label=$1; shift
+"$@"
+code=$?
+printf '\033]7770;laforge-shell\007'
+printf '\r\n\033[2m── %s exited (%s). This pane is a shell now; exit closes it. ──\033[0m\r\n\r\n' "$label" "$code"
+exec "${SHELL:-/bin/sh}" -l`
+	args := append([]string{"-c", script, "laforge", p.Label, p.Command}, p.Args...)
+	return "/bin/sh", args
+}
+
+// watchForShell reads the pane's output for the wrapper's marker and, when
+// it comes, relabels the pane as the shell it now is.
+func (s *sessions) watchForShell(e *entry) {
+	marker := []byte(shellMarker)
+	var tail []byte
+	var offset int64
+	for {
+		w := e.session.WatchFrom(offset)
+		chunks := [][]byte{w.Output}
+		offset = w.From + int64(len(w.Output))
+		for {
+			for _, chunk := range chunks {
+				buf := append(tail, chunk...)
+				if bytes.Contains(buf, marker) {
+					w.Cancel()
+					e.mu.Lock()
+					e.after, e.profile, e.title, e.command = e.profile, "shell", "Shell", os.Getenv("SHELL")+" -l"
+					e.mu.Unlock()
+					if s.changed != nil {
+						s.changed()
+					}
+					return
+				}
+				if len(buf) >= len(marker) {
+					tail = append([]byte{}, buf[len(buf)-len(marker)+1:]...)
+				} else {
+					tail = buf
+				}
+			}
+			chunk, open := <-w.Feed
+			if !open {
+				break
+			}
+			offset += int64(len(chunk))
+			chunks = [][]byte{chunk}
+		}
+		if w.Ended {
+			return
+		}
+		select {
+		case <-e.session.Done():
+			return
+		default:
+		}
+	}
 }
 
 func (s *sessions) get(id string) (*entry, bool) {
@@ -146,7 +232,9 @@ func (s *sessions) rename(id, title string) (Pane, error) {
 		return Pane{}, errNoSession
 	}
 	if t := strings.TrimSpace(title); t != "" {
+		e.mu.Lock()
 		e.title = t
+		e.mu.Unlock()
 	}
 	return e.pane(), nil
 }

@@ -3,7 +3,7 @@
 Many shells and agents, side by side, in your browser. LaForge is tmux for
 the agent era: one small local server keeps your terminals running, and a
 web client lays them out as tabs and split panes. Start Claude Code, Codex,
-Gemini, Copilot or a plain shell in any pane, close the browser, come back
+Antigravity, Qwen Code, Copilot or a plain shell in any pane, close the browser, come back
 later, and everything is where you left it.
 
 ```sh
@@ -43,13 +43,14 @@ la down --container        # stops it; logins and installed agents stay
 | Agent | How it gets there |
 | --- | --- |
 | Codex (`@openai/codex`, Apache-2.0) | built into the image |
-| Gemini CLI (`@google/gemini-cli`, Apache-2.0) | built into the image |
+| Qwen Code (`@qwen-code/qwen-code`, Apache-2.0) | built into the image |
 | opencode (`opencode-ai`, MIT) | built into the image |
 | Claude Code (`@anthropic-ai/claude-code`) | installed from npm on first start |
 | Copilot CLI (`@github/copilot`) | installed from npm on first start |
+| Antigravity (`agy`) | installed with Google's installer on first start (`INSTALL_ANTIGRAVITY=0` skips) |
 
-Claude Code and the Copilot CLI have proprietary licences, so the image never
-carries them: on its first start the container installs them into its home
+Claude Code, the Copilot CLI and Antigravity have proprietary licences, so the
+image never carries them: on its first start the container installs them into its home
 volume as your own install (about 20 seconds; their tiles in the picker turn
 on when it is done, and `~/.laforge/forge/agents-install.log` in the container
 shows progress). `ON_FIRST_START=""` skips that; set it to other npm packages
@@ -58,9 +59,9 @@ to install those instead. Change what is built in with
 
 The container's home is the volume `laforge-home`: each agent's login,
 history and settings survive restarts and new images. Sign in once inside a
-pane (`claude`, `codex login`, `gemini`, `copilot`), or put API keys in
+pane (`claude`, `codex login`, `agy`, `qwen`, `copilot`), or put API keys in
 `~/.laforge/forge/agents.env` (`ANTHROPIC_API_KEY=…`, `OPENAI_API_KEY=…`,
-`GEMINI_API_KEY=…`, one per line), which `la up --container` passes in.
+`DASHSCOPE_API_KEY=…`, one per line), which `la up --container` passes in.
 
 The port is published on 127.0.0.1 only, and the forge still needs its token.
 One folder is mounted per container; to work on another, `la down --container`
@@ -104,8 +105,10 @@ Drag the gaps between panes to resize them; double-click a gap to even them.
 ### Profiles
 
 The built-in profiles are your login shell and each agent CLI that is
-installed (`claude`, `codex`, `gemini`, `copilot`, `grok`, `opencode`,
-`ollama`). Each runs unchanged, with its own login. Add or replace profiles in
+installed (`claude`, `codex`, `agy`, `qwen`, `copilot`, `grok`, `opencode`,
+`ollama`). Each runs unchanged, with its own login. When an agent exits, its
+pane stays open as your shell in the same folder (the pane's label changes to
+Shell); `exit` there closes it. Add or replace profiles in
 `~/.laforge/forge/profiles.json`:
 
 ```json

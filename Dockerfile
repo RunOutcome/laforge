@@ -5,10 +5,11 @@
 #   make image                     # builds laforge:local
 #   la up --container              # runs it, mounts this folder at /workspace
 #
-# Agent CLIs under open licences are built in (BUNDLED). Claude Code and the
-# Copilot CLI have proprietary licences, so the image does not carry them:
-# the entrypoint installs them from npm into the persistent home volume on
-# first start (ON_FIRST_START), as the user's own install.
+# Agent CLIs under open licences are built in (BUNDLED). Claude Code, the
+# Copilot CLI and Antigravity have proprietary licences, so the image does
+# not carry them: the entrypoint installs them into the persistent home
+# volume on first start (ON_FIRST_START from npm; Antigravity with Google's
+# installer unless INSTALL_ANTIGRAVITY=0), as the user's own install.
 
 FROM golang:1.26-bookworm AS build
 WORKDIR /src
@@ -19,7 +20,7 @@ ARG VERSION=dev
 RUN CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X github.com/RunOutcome/laforge/cli.Version=${VERSION}" -o /out/la ./cmd/la
 
 FROM node:22-bookworm-slim
-ARG BUNDLED="@openai/codex @google/gemini-cli opencode-ai"
+ARG BUNDLED="@openai/codex @qwen-code/qwen-code opencode-ai"
 RUN apt-get update && apt-get install -y --no-install-recommends \
       bash zsh git curl ca-certificates openssh-client less nano vim-tiny \
       ripgrep fd-find jq procps tini locales python3 python3-pip make \
@@ -44,7 +45,8 @@ ENV HOME=/home/forge \
     LAFORGE_NO_BROWSER=1 \
     NPM_CONFIG_PREFIX=/home/forge/.local \
     PATH=/home/forge/.local/bin:/usr/local/bin:/usr/bin:/bin \
-    ON_FIRST_START="@anthropic-ai/claude-code @github/copilot"
+    ON_FIRST_START="@anthropic-ai/claude-code @github/copilot" \
+    INSTALL_ANTIGRAVITY=1
 WORKDIR /workspace
 VOLUME ["/home/forge"]
 EXPOSE 4646

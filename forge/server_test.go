@@ -253,3 +253,50 @@ func TestAgentEnvironmentIsNotLeakedIntoPanes(t *testing.T) {
 		t.Fatalf("environment: %q", out)
 	}
 }
+
+// When an agent exits, its pane carries on as a shell, relabelled.
+func TestAnAgentThatExitsLeavesAShell(t *testing.T) {
+	srv, ts := newTestServer(t)
+	t.Setenv("SHELL", "/bin/sh")
+	raw, _ := json.Marshal([]Profile{{Name: "fake", Label: "Fake Agent", Command: "/bin/sh", Args: []string{"-c", "echo agent-ran; exit 3"}, Agent: true}})
+	_ = os.WriteFile(filepath.Join(srv.opts.Home, "profiles.json"), raw, 0o600)
+	r := call(t, ts, "POST", "/api/sessions", "secret", StartRequest{Profile: "fake", Cols: 100, Rows: 30})
+	var pane Pane
+	_ = json.NewDecoder(r.Body).Decode(&pane)
+	if pane.Command != "/bin/sh -c echo agent-ran; exit 3" {
+		t.Fatalf("shown command: %q", pane.Command)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	url := "ws" + strings.TrimPrefix(ts.URL, "http") + "/api/sessions/" + pane.ID + "/stream"
+	conn, _, err := websocket.Dial(ctx, url, &websocket.DialOptions{HTTPHeader: http.Header{"Authorization": {"Bearer secret"}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.CloseNow()
+	var seen bytes.Buffer
+	read := func(until string) {
+		for !strings.Contains(seen.String(), until) {
+			_, data, err := conn.Read(ctx)
+			if err != nil {
+				t.Fatalf("waiting for %q: %v (seen %q)", until, err, seen.String())
+			}
+			seen.Write(data)
+		}
+	}
+	read("This pane is a shell now")
+	if !strings.Contains(seen.String(), "agent-ran") || !strings.Contains(seen.String(), "Fake Agent exited (3)") {
+		t.Fatalf("output: %q", seen.String())
+	}
+	msg, _ := json.Marshal(clientMessage{Type: "input", Data: "echo still-$((1+1))\r"})
+	_ = conn.Write(ctx, websocket.MessageText, msg)
+	read("still-2")
+
+	r = call(t, ts, "GET", "/api/sessions", "secret", nil)
+	var panes []Pane
+	_ = json.NewDecoder(r.Body).Decode(&panes)
+	if len(panes) != 1 || panes[0].Title != "Shell" || panes[0].Profile != "shell" || panes[0].After != "fake" || panes[0].State == "complete" {
+		t.Fatalf("after the agent: %+v", panes)
+	}
+}
