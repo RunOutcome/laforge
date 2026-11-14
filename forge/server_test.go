@@ -293,10 +293,109 @@ func TestAnAgentThatExitsLeavesAShell(t *testing.T) {
 	_ = conn.Write(ctx, websocket.MessageText, msg)
 	read("still-2")
 
-	r = call(t, ts, "GET", "/api/sessions", "secret", nil)
+	p := waitForPane(t, ts, func(p Pane) bool { return p.Profile == "shell" })
+	if p.Title != "Shell" || p.After != "fake" || p.AgentExit == nil || *p.AgentExit != 3 || p.State == "complete" {
+		t.Fatalf("after the agent: %+v", p)
+	}
+}
+
+// waitForPane polls the only pane until ok holds (the relabel is async).
+func waitForPane(t *testing.T, ts *httptest.Server, ok func(Pane) bool) Pane {
+	t.Helper()
+	deadline := time.Now().Add(5 * time.Second)
+	var last []Pane
+	for time.Now().Before(deadline) {
+		r := call(t, ts, "GET", "/api/sessions", "secret", nil)
+		last = nil
+		_ = json.NewDecoder(r.Body).Decode(&last)
+		if len(last) == 1 && ok(last[0]) {
+			return last[0]
+		}
+		time.Sleep(25 * time.Millisecond)
+	}
+	t.Fatalf("pane never reached the state: %+v", last)
+	return Pane{}
+}
+
+func streamOf(t *testing.T, ts *httptest.Server, id string) (*websocket.Conn, func(until string) string, context.Context) {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	t.Cleanup(cancel)
+	url := "ws" + strings.TrimPrefix(ts.URL, "http") + "/api/sessions/" + id + "/stream"
+	conn, _, err := websocket.Dial(ctx, url, &websocket.DialOptions{HTTPHeader: http.Header{"Authorization": {"Bearer secret"}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { conn.CloseNow() })
+	var seen bytes.Buffer
+	read := func(until string) string {
+		for !strings.Contains(seen.String(), until) {
+			_, data, err := conn.Read(ctx)
+			if err != nil {
+				t.Fatalf("waiting for %q: %v (seen %q)", until, err, seen.String())
+			}
+			seen.Write(data)
+		}
+		return seen.String()
+	}
+	return conn, read, ctx
+}
+
+func startFake(t *testing.T, srv *Server, ts *httptest.Server, script string, title string, env ...string) Pane {
+	t.Helper()
+	t.Setenv("SHELL", "/bin/sh")
+	raw, _ := json.Marshal([]Profile{{Name: "fake", Label: "Fake Agent", Command: "/bin/sh", Args: []string{"-c", script}, Env: env, Agent: true}})
+	_ = os.WriteFile(filepath.Join(srv.opts.Home, "profiles.json"), raw, 0o600)
+	r := call(t, ts, "POST", "/api/sessions", "secret", StartRequest{Profile: "fake", Title: title, Cols: 100, Rows: 30})
+	var pane Pane
+	_ = json.NewDecoder(r.Body).Decode(&pane)
+	return pane
+}
+
+// A Ctrl-C that kills the agent still leaves a shell (the wrapper ignores it).
+func TestCtrlCInAnAgentStillLeavesAShell(t *testing.T) {
+	srv, ts := newTestServer(t)
+	pane := startFake(t, srv, ts, "echo agent-ready; sleep 30", "")
+	conn, read, ctx := streamOf(t, ts, pane.ID)
+	read("agent-ready")
+	msg, _ := json.Marshal(clientMessage{Type: "input", Data: "\x03"})
+	_ = conn.Write(ctx, websocket.MessageText, msg)
+	read("This pane is a shell now")
+	msg, _ = json.Marshal(clientMessage{Type: "input", Data: "echo alive-$((2+3))\r"})
+	_ = conn.Write(ctx, websocket.MessageText, msg)
+	read("alive-5")
+	waitForPane(t, ts, func(p Pane) bool { return p.Profile == "shell" })
+}
+
+// A name the user gave survives the agent's exit; the agent's Env stays with the agent.
+func TestTheUsersNameAndTheAgentsEnvAreKept(t *testing.T) {
+	srv, ts := newTestServer(t)
+	pane := startFake(t, srv, ts, "echo key=[$FAKE_KEY]", "api-refactor", "FAKE_KEY=sekrit")
+	conn, read, ctx := streamOf(t, ts, pane.ID)
+	read("This pane is a shell now")
+	msg, _ := json.Marshal(clientMessage{Type: "input", Data: "echo after=[${FAKE_KEY-unset}]\r"})
+	_ = conn.Write(ctx, websocket.MessageText, msg)
+	out := read("after=[unset]")
+	if !strings.Contains(out, "key=[sekrit]") {
+		t.Fatalf("the agent did not get its env: %q", out)
+	}
+	p := waitForPane(t, ts, func(p Pane) bool { return p.Profile == "shell" })
+	if p.Title != "api-refactor" {
+		t.Fatalf("title: %q", p.Title)
+	}
+}
+
+// Output that looks like the old in-band marker changes nothing.
+func TestAgentOutputCannotFakeTheExit(t *testing.T) {
+	srv, ts := newTestServer(t)
+	pane := startFake(t, srv, ts, `printf '\033]7770;laforge-shell\007'; echo faked; sleep 30`, "")
+	_, read, _ := streamOf(t, ts, pane.ID)
+	read("faked")
+	time.Sleep(200 * time.Millisecond)
+	r := call(t, ts, "GET", "/api/sessions", "secret", nil)
 	var panes []Pane
 	_ = json.NewDecoder(r.Body).Decode(&panes)
-	if len(panes) != 1 || panes[0].Title != "Shell" || panes[0].Profile != "shell" || panes[0].After != "fake" || panes[0].State == "complete" {
-		t.Fatalf("after the agent: %+v", panes)
+	if len(panes) != 1 || panes[0].Profile != "fake" {
+		t.Fatalf("relabelled by output: %+v", panes)
 	}
 }

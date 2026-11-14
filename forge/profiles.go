@@ -30,10 +30,7 @@ type Profile struct {
 // own login shell; each agent is its platform's own CLI, run unchanged with
 // its own login.
 func BuiltinProfiles() []Profile {
-	shell := os.Getenv("SHELL")
-	if shell == "" {
-		shell = "/bin/sh"
-	}
+	shell := LoginShell()
 	return []Profile{
 		{Name: "shell", Label: "Shell", Description: "Your login shell", Command: shell, Args: []string{"-l"}},
 		{Name: "claude", Label: "Claude Code", Description: "Anthropic Claude Code", Command: "claude", Agent: true},

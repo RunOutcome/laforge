@@ -4,7 +4,7 @@
 package forge
 
 import (
-	"bytes"
+	"bufio"
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -26,8 +27,10 @@ type Pane struct {
 	Profile string `json:"profile"`
 	Title   string `json:"title"`
 	Cwd     string `json:"cwd"`
-	// After names the agent profile a pane ran before it became a shell.
-	After string `json:"after,omitempty"`
+	// After names the agent profile a pane ran before it became a shell, and
+	// AgentExit that agent's exit code.
+	After     string `json:"after,omitempty"`
+	AgentExit *int   `json:"agentExit,omitempty"`
 }
 
 type entry struct {
@@ -38,6 +41,8 @@ type entry struct {
 	cwd     string
 	command string // what the pane runs, as the user would type it
 	after   string // the agent profile this pane ran before it became a shell
+	// agentExit is that agent's exit code.
+	agentExit *int
 }
 
 // sessions holds every session the forge has started.
@@ -88,13 +93,28 @@ func (s *sessions) start(p Profile, req StartRequest, defaultCwd string, scrollb
 	if info, err := os.Stat(cwd); err != nil || !info.IsDir() {
 		return Pane{}, fmt.Errorf("%s is not a folder", cwd)
 	}
+	if _, ok := terminal.LookupCommand(p.Command); !ok {
+		return Pane{}, fmt.Errorf("start %s: the command is not installed on this machine", p.Command)
+	}
 	id := newID()
-	env := append([]string{}, p.Env...)
-	env = append(env, "LAFORGE_SESSION="+id, "COLORTERM=truecolor", "TERM_PROGRAM=LaForge")
+	env := []string{"LAFORGE_SESSION=" + id, "COLORTERM=truecolor", "TERM_PROGRAM=LaForge"}
 	command, args := p.Command, p.Args
 	display := strings.TrimSpace(p.Command + " " + strings.Join(p.Args, " "))
-	if p.Agent && runtime.GOOS != "windows" {
+	var exits *os.File
+	var extra []*os.File
+	if wrapsAgents && p.Agent {
+		// The agent runs inside a small wrapper that becomes the user's shell
+		// when the agent exits. The wrapper reports the exit on a private pipe
+		// (descriptor 3), which the agent itself never holds, so nothing the
+		// agent prints can fake it. The profile's Env reaches the agent only.
+		r, w, err := os.Pipe()
+		if err != nil {
+			return Pane{}, err
+		}
+		exits, extra = r, []*os.File{w}
 		command, args = thenShell(p)
+	} else {
+		env = append(append([]string{}, p.Env...), env...)
 	}
 	spec := terminal.LaunchSpec{
 		Command:    command,
@@ -105,13 +125,20 @@ func (s *sessions) start(p Profile, req StartRequest, defaultCwd string, scrollb
 		Rows:       req.Rows,
 		InheritAll: true,
 		Unset:      strippedEnv,
+		ExtraFiles: extra,
 	}
 	session, err := terminal.Start(id, spec, scrollback, func(*terminal.Session) {
 		if s.changed != nil {
 			s.changed()
 		}
 	})
+	for _, f := range extra {
+		f.Close() // the child holds its own copy
+	}
 	if err != nil {
+		if exits != nil {
+			exits.Close()
+		}
 		return Pane{}, err
 	}
 	title := strings.TrimSpace(req.Title)
@@ -119,8 +146,8 @@ func (s *sessions) start(p Profile, req StartRequest, defaultCwd string, scrollb
 		title = p.Label
 	}
 	e := &entry{session: session, profile: p.Name, title: title, cwd: cwd, command: display}
-	if p.Agent && runtime.GOOS != "windows" {
-		go s.watchForShell(e)
+	if exits != nil {
+		go s.watchForShell(e, exits, p.Label)
 	}
 	s.mu.Lock()
 	s.byID[id] = e
@@ -131,6 +158,10 @@ func (s *sessions) start(p Profile, req StartRequest, defaultCwd string, scrollb
 	return e.pane(), nil
 }
 
+// wrapsAgents: an agent that exits leaves a shell. Windows has no sh to
+// wrap with, so its agent panes end with the agent.
+var wrapsAgents = runtime.GOOS != "windows"
+
 func (e *entry) pane() Pane {
 	view := e.session.View()
 	e.mu.Lock()
@@ -138,71 +169,60 @@ func (e *entry) pane() Pane {
 	if e.command != "" {
 		view.Command = e.command
 	}
-	return Pane{SessionView: view, Profile: e.profile, Title: e.title, Cwd: e.cwd, After: e.after}
+	return Pane{SessionView: view, Profile: e.profile, Title: e.title, Cwd: e.cwd, After: e.after, AgentExit: e.agentExit}
 }
 
-// shellMarker is the private OSC sequence the agent wrapper prints when the
-// agent has exited and the pane becomes a shell. Terminals ignore unknown
-// OSC sequences, so it never shows.
-const shellMarker = "\x1b]7770;laforge-shell\x07"
+// LoginShell is the user's shell: $SHELL, else /bin/sh.
+func LoginShell() string {
+	if sh := os.Getenv("SHELL"); sh != "" {
+		return sh
+	}
+	return "/bin/sh"
+}
 
 // thenShell wraps an agent so that when it exits the pane carries on as the
-// user's login shell in the same folder, instead of ending.
+// user's login shell in the same folder, instead of ending. Arguments: the
+// label, the shell, then env assignments and the agent's command line.
+//   - trap : INT keeps a Ctrl-C the agent handled from killing the wrapper
+//     when the agent exits (dash re-raises a SIGINT it saw); a caught signal
+//     is reset to default in the agent on exec, so the agent's Ctrl-C works.
+//   - the agent runs with descriptor 3 closed; the wrapper writes the exit
+//     code to it, closes it, then execs the shell.
 func thenShell(p Profile) (string, []string) {
-	const script = `label=$1; shift
-"$@"
+	const script = `trap : INT
+label=$1; sh=$2; shift 2
+env "$@" 3>&-
 code=$?
-printf '\033]7770;laforge-shell\007'
+printf '%s\n' "$code" >&3
+exec 3>&-
 printf '\r\n\033[2m── %s exited (%s). This pane is a shell now; exit closes it. ──\033[0m\r\n\r\n' "$label" "$code"
-exec "${SHELL:-/bin/sh}" -l`
-	args := append([]string{"-c", script, "laforge", p.Label, p.Command}, p.Args...)
+trap - INT
+exec "$sh" -l`
+	args := []string{"-c", script, "laforge", p.Label, LoginShell()}
+	args = append(args, p.Env...)
+	args = append(args, p.Command)
+	args = append(args, p.Args...)
 	return "/bin/sh", args
 }
 
-// watchForShell reads the pane's output for the wrapper's marker and, when
-// it comes, relabels the pane as the shell it now is.
-func (s *sessions) watchForShell(e *entry) {
-	marker := []byte(shellMarker)
-	var tail []byte
-	var offset int64
-	for {
-		w := e.session.WatchFrom(offset)
-		chunks := [][]byte{w.Output}
-		offset = w.From + int64(len(w.Output))
-		for {
-			for _, chunk := range chunks {
-				buf := append(tail, chunk...)
-				if bytes.Contains(buf, marker) {
-					w.Cancel()
-					e.mu.Lock()
-					e.after, e.profile, e.title, e.command = e.profile, "shell", "Shell", os.Getenv("SHELL")+" -l"
-					e.mu.Unlock()
-					if s.changed != nil {
-						s.changed()
-					}
-					return
-				}
-				if len(buf) >= len(marker) {
-					tail = append([]byte{}, buf[len(buf)-len(marker)+1:]...)
-				} else {
-					tail = buf
-				}
-			}
-			chunk, open := <-w.Feed
-			if !open {
-				break
-			}
-			offset += int64(len(chunk))
-			chunks = [][]byte{chunk}
-		}
-		if w.Ended {
-			return
-		}
-		select {
-		case <-e.session.Done():
-			return
-		default:
-		}
+// watchForShell waits for the wrapper's report that the agent exited, then
+// relabels the pane as the shell it now is. The pane keeps a name the user
+// gave it; only the profile's own label is replaced.
+func (s *sessions) watchForShell(e *entry, exits *os.File, label string) {
+	defer exits.Close()
+	line, err := bufio.NewReader(exits).ReadString('\n')
+	if err != nil {
+		return // the pane ended without the agent finishing (stopped, killed)
+	}
+	code, _ := strconv.Atoi(strings.TrimSpace(line))
+	e.mu.Lock()
+	e.after, e.agentExit, e.profile, e.command = e.profile, &code, "shell", LoginShell()+" -l"
+	if e.title == label {
+		e.title = "Shell"
+	}
+	e.mu.Unlock()
+	if s.changed != nil {
+		s.changed()
 	}
 }
 

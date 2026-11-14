@@ -180,7 +180,7 @@ export function Forge({ api: given, embedded = false }: Props) {
     (tabId: string, paneId: string, s: Session) => {
       api.close(s.id).catch(() => undefined);
       updateTab(tabId, (t) => ({ ...t, root: L.setSession(t.root, paneId, undefined) }));
-      startIn(tabId, paneId, s.profile, s.cwd);
+      startIn(tabId, paneId, s.after ?? s.profile, s.cwd);
     },
     [api, startIn, updateTab],
   );
@@ -499,6 +499,12 @@ export function Forge({ api: given, embedded = false }: Props) {
               >
                 {s.title}
               </span>
+              {s.after && (
+                <span className="pane-after" title={`${profiles.find((p) => p.name === s.after)?.label ?? s.after} exited${s.agentExit !== undefined ? ` (${s.agentExit})` : ''}; this pane is a shell now`}>
+                  after {profiles.find((p) => p.name === s.after)?.label ?? s.after}
+                  {s.agentExit ? ` · exit ${s.agentExit}` : ''}
+                </span>
+              )}
               <span className="pane-cwd" title={s.cwd}>
                 {shortPath(s.cwd, config?.cwd)}
               </span>

@@ -33,6 +33,9 @@ export interface Session {
   profile: string;
   title: string;
   cwd: string;
+  /** after: the agent profile this pane ran before it became a shell; agentExit: its exit code. */
+  after?: string;
+  agentExit?: number;
 }
 
 export interface Config {

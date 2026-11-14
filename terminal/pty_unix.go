@@ -28,6 +28,7 @@ func StartPTY(spec LaunchSpec) (PTY, error) {
 	command := exec.Command(spec.Command, spec.Args...)
 	command.Dir = spec.Workdir
 	command.Env = spec.environment()
+	command.ExtraFiles = spec.ExtraFiles
 	// Put the child in its own process group so that stopping a session cannot
 	// signal the Outcome server itself.
 	command.SysProcAttr = &syscall.SysProcAttr{Setsid: true, Setctty: true}

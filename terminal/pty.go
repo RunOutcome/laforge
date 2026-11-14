@@ -45,6 +45,8 @@ type LaunchSpec struct {
 	InheritAll bool
 	// Unset names variables removed from an inherited environment.
 	Unset []string
+	// ExtraFiles are passed to the child as descriptors 3, 4, … (Unix only).
+	ExtraFiles []*os.File
 }
 
 // environment is the child's environment for this spec.

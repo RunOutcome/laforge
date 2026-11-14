@@ -20,10 +20,16 @@ if [ -n "$ON_FIRST_START" ]; then
   fi
 fi
 # Antigravity (agy) ships as a native binary from Google's own installer,
-# which puts it in ~/.local/bin.
-if [ "${INSTALL_ANTIGRAVITY:-1}" != "0" ] && [ ! -x "$HOME/.local/bin/agy" ]; then
+# which puts it in ~/.local/bin. The script is downloaded first so a failed
+# download is reported as one, not run as an empty script.
+if [ "${INSTALL_ANTIGRAVITY:-1}" != "0" ] && ! command -v agy >/dev/null 2>&1; then
   ( echo "installing: antigravity (agy)"
-    curl -fsSL https://antigravity.google/cli/install.sh | bash && echo "done" || echo "failed" ) \
-    >> "$LAFORGE_HOME/agents-install.log" 2>&1 &
+    script=$(mktemp)
+    if curl -fsSL https://antigravity.google/cli/install.sh -o "$script" && bash "$script"; then
+      command -v agy >/dev/null 2>&1 && echo "done" || echo "failed: the installer finished but agy is not on PATH ($PATH)"
+    else
+      echo "failed: could not download or run the Antigravity installer"
+    fi
+    rm -f "$script" ) >> "$LAFORGE_HOME/agents-install.log" 2>&1 &
 fi
 exec "$@"
