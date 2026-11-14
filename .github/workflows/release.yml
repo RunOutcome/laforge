@@ -24,13 +24,13 @@ jobs:
     env:
       IS_TAG: ${{ startsWith(github.ref, 'refs/tags/v') }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
       # cosign 2.x: install.sh verifies the raw base64 signature with openssl
@@ -85,7 +85,7 @@ jobs:
           "$RUNNER_TEMP/la" version
           if [ "$IS_TAG" = true ]; then "$RUNNER_TEMP/la" version | grep -qx "laforge ${GITHUB_REF_NAME#v}"; fi
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         if: env.IS_TAG != 'true'
         with:
           name: laforge-snapshot
