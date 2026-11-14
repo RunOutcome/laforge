@@ -45,7 +45,10 @@ done
 
 # --- the release public key (release/embed-public-key.sh writes this block) ---
 # BEGIN COSIGN PUBLIC KEY
-PUBKEY=''
+PUBKEY='-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE73HF9M4ZrMe+lMpqgjRKsIr6QjSo
+7bX5nJ3ymU4pSSyRoz3lfzodn3brxUWhnkMG8F6hLd+SHOMNzS4a44SbRQ==
+-----END PUBLIC KEY-----'
 # END COSIGN PUBLIC KEY
 
 [ -n "$PUBKEY" ] || fail "this copy of install.sh has no release public key embedded, so it cannot verify anything. Use the install.sh attached to the release."
