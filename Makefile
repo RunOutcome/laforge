@@ -5,13 +5,16 @@ VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 LDFLAGS := -X github.com/RunOutcome/laforge/cli.Version=$(VERSION)
 PREFIX  ?= $(HOME)/.local/bin
 
-.PHONY: build web test install dev clean image
+.PHONY: build web test install dev clean image notices release-check release-snapshot
 
 build:                      ## bin/la, with the committed web client embedded
 	go build -ldflags "$(LDFLAGS)" -o bin/la ./cmd/la
 
-web:                        ## rebuild the web client into forge/dist
+web: notices                ## rebuild the web client into forge/dist
 	cd web && npm ci && npm run build
+
+notices:                    ## regenerate THIRD_PARTY_NOTICES.md (and the web copy)
+	node scripts/notices.mjs
 
 test:
 	go test ./...
@@ -34,5 +37,13 @@ IMAGE ?= laforge:local
 image:                      ## the container image (agent CLIs bundled); run with `la up --container`
 	docker build --build-arg VERSION=$(VERSION) -t $(IMAGE) .
 
+GORELEASER ?= go run github.com/goreleaser/goreleaser/v2@v2.15.2
+
+release-check:              ## validate .goreleaser.yaml
+	$(GORELEASER) check
+
+release-snapshot:           ## every release archive, unsigned and unpublished, into dist/
+	$(GORELEASER) release --snapshot --clean --skip=publish,sign,sbom
+
 clean:
-	rm -rf bin
+	rm -rf bin dist

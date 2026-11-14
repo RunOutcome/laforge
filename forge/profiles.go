@@ -32,7 +32,7 @@ type Profile struct {
 func BuiltinProfiles() []Profile {
 	shell := LoginShell()
 	return []Profile{
-		{Name: "shell", Label: "Shell", Description: "Your login shell", Command: shell, Args: []string{"-l"}},
+		{Name: "shell", Label: "Shell", Description: "Your login shell", Command: shell, Args: loginArgs()},
 		{Name: "claude", Label: "Claude Code", Description: "Anthropic Claude Code", Command: "claude", Agent: true},
 		{Name: "codex", Label: "Codex", Description: "OpenAI Codex CLI", Command: "codex", Agent: true},
 		{Name: "antigravity", Label: "Antigravity", Description: "Google Antigravity CLI", Command: "agy", Agent: true},

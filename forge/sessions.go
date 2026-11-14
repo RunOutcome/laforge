@@ -173,12 +173,36 @@ func (e *entry) pane() Pane {
 	return Pane{SessionView: view, Profile: e.profile, Title: e.title, Cwd: e.cwd, After: e.after, AgentExit: e.agentExit}
 }
 
-// LoginShell is the user's shell: $SHELL, else /bin/sh.
+// LoginShell is the user's shell: $SHELL, else /bin/sh; on Windows,
+// PowerShell 7 (pwsh), else Windows PowerShell, else COMSPEC (cmd.exe).
 func LoginShell() string {
-	if sh := os.Getenv("SHELL"); sh != "" {
+	if sh := os.Getenv("SHELL"); sh != "" && runtime.GOOS != "windows" {
 		return sh
 	}
-	return "/bin/sh"
+	if runtime.GOOS != "windows" {
+		return "/bin/sh"
+	}
+	for _, name := range []string{"pwsh.exe", "powershell.exe"} {
+		if path, ok := terminal.LookupCommand(name); ok {
+			return path
+		}
+	}
+	if comspec := os.Getenv("COMSPEC"); comspec != "" {
+		return comspec
+	}
+	return "cmd.exe"
+}
+
+// loginArgs are the arguments that start LoginShell as a login shell.
+func loginArgs() []string {
+	if runtime.GOOS != "windows" {
+		return []string{"-l"}
+	}
+	name := strings.ToLower(filepath.Base(LoginShell()))
+	if strings.HasPrefix(name, "pwsh") || strings.HasPrefix(name, "powershell") {
+		return []string{"-NoLogo"}
+	}
+	return nil // cmd.exe
 }
 
 // thenShell wraps an agent so that when it exits the pane carries on as the

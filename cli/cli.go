@@ -97,6 +97,8 @@ func Main(cfg Config, args []string) int {
 		err = c.open(args[1:])
 	case "serve":
 		err = c.serve(args[1:])
+	case "notices", "licenses", "licences":
+		fmt.Fprint(cfg.Stdout, forge.Notices())
 	case "version", "--version", "-v":
 		fmt.Fprintf(cfg.Stdout, "laforge %s\n", Version)
 	case "help", "--help", "-h":
@@ -133,6 +135,7 @@ Usage:
   %[1]s down [--container]
                      stop the forge and every pane in it
   %[1]s version
+  %[1]s notices      third-party licences of what la includes
 
 The forge keeps running when the browser closes; panes reattach when you open
 it again. Its files are in %[2]s ($LAFORGE_HOME to change).
@@ -191,7 +194,7 @@ func (c *cmd) up(args []string) error {
 	noOpen := fs.Bool("no-open", false, "do not open the browser")
 	foreground := fs.Bool("foreground", false, "run in this terminal instead of in the background")
 	container := fs.Bool("container", false, "run the forge in a container (docker or podman), this folder at /workspace")
-	image := fs.String("image", envOr("LAFORGE_IMAGE", DefaultImage), "the image for --container")
+	image := fs.String("image", envOr("LAFORGE_IMAGE", DefaultImage()), "the image for --container")
 	if err := fs.Parse(args); err != nil {
 		return usageError{err}
 	}

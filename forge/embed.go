@@ -10,3 +10,12 @@ import "embed"
 //
 //go:embed all:dist
 var embedded embed.FS
+
+// Notices is THIRD_PARTY_NOTICES.md as built into the web client.
+func Notices() string {
+	raw, err := embedded.ReadFile("dist/notices.txt")
+	if err != nil {
+		return "Third-party notices are not in this build; see THIRD_PARTY_NOTICES.md in the source.\n"
+	}
+	return string(raw)
+}

@@ -1,0 +1,83 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2026 COR Holdings, LLC
+#
+# Every push and pull request: Go tests (race) on Linux and macOS, the
+# Windows build and the tests that run there, the web client (types, tests,
+# and that the committed forge/dist matches a fresh build), the notices,
+# known vulnerabilities, and the release configuration.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  go:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Vet
+        run: go vet ./...
+      - name: Test (race)
+        if: runner.os != 'Windows'
+        run: go test -race -count=1 ./...
+      - name: Test
+        if: runner.os == 'Windows'
+        run: go test -count=1 ./...
+      - name: gofmt
+        if: runner.os == 'Linux'
+        run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - run: npm ci
+        working-directory: web
+      - run: npx vitest run
+        working-directory: web
+      - name: Notices are current
+        run: node scripts/notices.mjs --check
+      - name: forge/dist matches a fresh build
+        run: |
+          cd web && npm run build && cd ..
+          git status --porcelain forge/dist web/public
+          test -z "$(git status --porcelain forge/dist web/public)" || { echo "::error::forge/dist is stale: run make web and commit"; exit 1; }
+
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: govulncheck
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.1.4 ./...
+      - name: Installer syntax
+        run: sh -n release/install.sh && sh -n release/embed-public-key.sh
+      - name: Installer trusts the release key
+        run: if [ -f release/cosign.pub ]; then sh release/embed-public-key.sh --check; else echo "::warning::release/cosign.pub not yet created (RELEASING.md)"; fi
+      - uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: check

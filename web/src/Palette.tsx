@@ -100,7 +100,12 @@ export function Help({ onClose }: { onClose: () => void }) {
     <div className="scrim" onMouseDown={onClose}>
       <div className="help" onMouseDown={(e) => e.stopPropagation()}>
         <h2>Keys</h2>
-        <p className="help-sub">Press the prefix, Ctrl-b, then a key — as in tmux.</p>
+        <p className="help-sub">
+          Press the prefix, Ctrl-b, then a key — as in tmux. ·{' '}
+          <a href="/notices.txt" target="_blank" rel="noreferrer" onMouseDown={(e) => e.stopPropagation()}>
+            Licences
+          </a>
+        </p>
         <dl>
           {keyHelp.map(([k, v]) => (
             <div key={k}>

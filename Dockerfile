@@ -11,7 +11,8 @@
 # volume on first start (ON_FIRST_START from npm; Antigravity with Google's
 # installer unless INSTALL_ANTIGRAVITY=0), as the user's own install.
 
-FROM golang:1.26-bookworm AS build
+# Base images are pinned by digest (refresh: docker buildx imagetools inspect <tag>).
+FROM golang:1.27-bookworm@sha256:4fa7c968ba93f1635670522dbb01a2c78150443e1385746924566079f36570ea AS build
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
@@ -19,8 +20,15 @@ COPY . .
 ARG VERSION=dev
 RUN CGO_ENABLED=0 go build -trimpath -ldflags "-s -w -X github.com/RunOutcome/laforge/cli.Version=${VERSION}" -o /out/la ./cmd/la
 
-FROM node:22-bookworm-slim
-ARG BUNDLED="@openai/codex @qwen-code/qwen-code opencode-ai"
+FROM node:22-bookworm-slim@sha256:e9f565d32859f0cbfb52125eafe8be39390f24dac302dc3cdf566e8ba3ab21ee
+ARG VERSION=dev
+ARG BUNDLED="@openai/codex@0.169.0 @qwen-code/qwen-code@0.27.3 opencode-ai@1.19.5"
+LABEL org.opencontainers.image.title="LaForge" \
+      org.opencontainers.image.description="Many shells and AI agents, side by side, in your browser" \
+      org.opencontainers.image.source="https://github.com/RunOutcome/laforge" \
+      org.opencontainers.image.licenses="Apache-2.0" \
+      org.opencontainers.image.vendor="COR Holdings, LLC" \
+      org.opencontainers.image.version="${VERSION}"
 RUN apt-get update && apt-get install -y --no-install-recommends \
       bash zsh git curl ca-certificates openssh-client less nano vim-tiny \
       ripgrep fd-find jq procps tini locales python3 python3-pip make \
@@ -32,6 +40,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && useradd -m -u 1000 -s /bin/zsh forge \
     && mkdir -p /workspace && chown forge:forge /workspace
 COPY --from=build /out/la /usr/local/bin/la
+COPY LICENSE THIRD_PARTY_NOTICES.md /usr/share/doc/laforge/
 COPY docker/entrypoint.sh /usr/local/bin/laforge-entrypoint
 COPY docker/zshrc /etc/zsh/zshrc.laforge
 RUN cat /etc/zsh/zshrc.laforge >> /etc/zsh/zshrc && chmod +x /usr/local/bin/laforge-entrypoint

@@ -1,0 +1,122 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2026 COR Holdings, LLC
+#
+# Release of la. A pushed tag vX.Y.Z (.github/workflows/release.yml) builds
+# every platform from that one revision with the go.mod toolchain, writes an
+# SBOM per archive, checksums.txt, and a Cosign signature over checksums.txt,
+# and creates the GitHub release as a DRAFT: nothing is public until a person
+# publishes the draft.
+#
+#   laforge_<version>_{darwin,linux}_{arm64,amd64}.tar.gz
+#   laforge_<version>_windows_{amd64,arm64}.zip
+#   <each archive>.sbom.json
+#   checksums.txt, checksums.txt.sig, cosign.pub, install.sh
+#
+# The signature is key-based (secrets COSIGN_PRIVATE_KEY, COSIGN_PASSWORD;
+# public key in release/cosign.pub) so install.sh verifies it with plain
+# openssl on machines without Cosign. Without the secrets the workflow stops
+# before publishing anything.
+#
+#   make release-check      goreleaser check (in a container)
+#   make release-snapshot   a full unsigned, unpublished build into dist/
+
+version: 2
+
+project_name: laforge
+
+before:
+  hooks:
+    - go mod download
+    - node scripts/notices.mjs --check
+
+builds:
+  - id: la
+    main: ./cmd/la
+    binary: la
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X github.com/RunOutcome/laforge/cli.Version={{ .Version }}
+    goos: [darwin, linux, windows]
+    goarch: [amd64, arm64]
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+archives:
+  - id: la
+    ids: [la]
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - README.md
+      - CHANGELOG.md
+      - THIRD_PARTY_NOTICES.md
+
+sboms:
+  - id: archives
+    artifacts: archive
+
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+
+signs:
+  - id: checksums
+    cmd: cosign
+    artifacts: checksum
+    output: true
+    signature: "${artifact}.sig"
+    args:
+      - sign-blob
+      - --key=env://COSIGN_PRIVATE_KEY
+      - --output-signature=${signature}
+      - --tlog-upload=false
+      - --yes
+      - ${artifact}
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next+{{ .ShortCommit }}"
+
+changelog:
+  disable: true # the release notes are CHANGELOG.md's section for the tag
+
+release:
+  github:
+    owner: RunOutcome
+    name: laforge
+  draft: true
+  prerelease: auto
+  extra_files:
+    - glob: release/install.sh
+    - glob: release/cosign.pub
+  footer: |
+    ## Install
+
+    macOS and Linux:
+
+    ```sh
+    curl -fsSL https://github.com/RunOutcome/laforge/releases/download/{{ .Tag }}/install.sh | sh
+    ```
+
+    The installer checks `checksums.txt` against its signature and the
+    release public key, then the archive against `checksums.txt`, and puts
+    `la` in `~/.local/bin`. Windows: unzip `la.exe` onto your PATH
+    (Windows support is experimental in this release).
+
+    Verify by hand:
+
+    ```sh
+    openssl base64 -d -A -in checksums.txt.sig -out checksums.txt.sig.der
+    openssl dgst -sha256 -verify cosign.pub -signature checksums.txt.sig.der checksums.txt
+    sha256sum -c --ignore-missing checksums.txt
+    ```
+
+    Container: `docker pull ghcr.io/runoutcome/laforge:{{ .Version }}`, then
+    `LAFORGE_IMAGE=ghcr.io/runoutcome/laforge:{{ .Version }} la up --container`.
+
+report_sizes: true

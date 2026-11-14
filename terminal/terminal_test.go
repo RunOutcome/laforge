@@ -56,6 +56,9 @@ func TestLaunchInheritsOnlyTheAllowlist(t *testing.T) {
 	got := map[string][]string{}
 	for _, entry := range environment {
 		k, v, _ := strings.Cut(entry, "=")
+		if runtime.GOOS == "windows" {
+			k = strings.ToUpper(k) // Windows names are case-insensitive: Path is PATH
+		}
 		got[k] = append(got[k], v)
 	}
 	for _, k := range []string{"FOO_SECRET", "GH_TOKEN", "OUTCOME_TOKEN"} {

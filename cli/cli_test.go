@@ -29,3 +29,21 @@ func TestAHostMountsTheTreeUnderItsOwnName(t *testing.T) {
 		t.Fatalf("unknown command: %d %q", code, errb.String())
 	}
 }
+
+func TestAReleaseRunsTheImageOfItsOwnVersion(t *testing.T) {
+	defer func(v string) { Version = v }(Version)
+	for v, want := range map[string]string{
+		"dev":                     LocalImage,
+		"v0.1.0":                  PublishedImage + ":0.1.0",
+		"0.1.0":                   PublishedImage + ":0.1.0",
+		"0.1.1-next+abc1234":      LocalImage,
+		"9e7efa4":                 LocalImage,
+		"v0.1.0-3-g9e7efa4-dirty": LocalImage,
+		"v0.2.0-rc1":              PublishedImage + ":0.2.0-rc1",
+	} {
+		Version = v
+		if got := DefaultImage(); got != want {
+			t.Errorf("Version %q: image %q, want %q", v, got, want)
+		}
+	}
+}

@@ -1,0 +1,92 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2026 COR Holdings, LLC
+#
+# A pushed tag vX.Y.Z: test, build every platform with GoReleaser, sign
+# checksums.txt with the release key, and create a DRAFT GitHub release whose
+# notes are CHANGELOG.md's section for the tag. Nothing is public until a
+# person publishes the draft (which then runs image.yml).
+#
+# workflow_dispatch: the same build, unsigned and unpublished, uploaded as a
+# workflow artifact.
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      IS_TAG: ${{ startsWith(github.ref, 'refs/tags/v') }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # cosign 2.x: install.sh verifies the raw base64 signature with openssl
+      - uses: sigstore/cosign-installer@v3
+        with:
+          cosign-release: v2.5.0
+      - uses: anchore/sbom-action/download-syft@v0
+
+      - name: Refuse to build a release that cannot be signed
+        if: env.IS_TAG == 'true'
+        env:
+          HAVE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY != '' }}
+          HAVE_PASSWORD: ${{ secrets.COSIGN_PASSWORD != '' }}
+        run: |
+          [ "$HAVE_KEY" = true ] && [ "$HAVE_PASSWORD" = true ] || { echo "::error::COSIGN_PRIVATE_KEY and COSIGN_PASSWORD secrets are not set (RELEASING.md)"; exit 1; }
+          sh release/embed-public-key.sh --check
+
+      - name: The tag matches the changelog
+        if: env.IS_TAG == 'true'
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          awk -v v="$v" '$0 ~ "^## \\[?"v"\\]?( |$)" {f=1; next} /^## /{f=0} f' CHANGELOG.md > "$RUNNER_TEMP/notes.md"
+          [ -s "$RUNNER_TEMP/notes.md" ] || { echo "::error::CHANGELOG.md has no section for $v"; exit 1; }
+          cat "$RUNNER_TEMP/notes.md"
+
+      - name: Test
+        run: go test -count=1 ./...
+
+      - name: Build, sign and draft the release
+        if: env.IS_TAG == 'true'
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: release --clean --release-notes ${{ runner.temp }}/notes.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+
+      - name: Snapshot build (unsigned, unpublished)
+        if: env.IS_TAG != 'true'
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: release --snapshot --clean --skip=publish,sign
+
+      - name: Check a built binary reports its version
+        run: |
+          tar -xzf dist/laforge_*_linux_amd64.tar.gz -C "$RUNNER_TEMP" la
+          "$RUNNER_TEMP/la" version
+          if [ "$IS_TAG" = true ]; then "$RUNNER_TEMP/la" version | grep -qx "laforge ${GITHUB_REF_NAME#v}"; fi
+
+      - uses: actions/upload-artifact@v4
+        if: env.IS_TAG != 'true'
+        with:
+          name: laforge-snapshot
+          path: dist/*

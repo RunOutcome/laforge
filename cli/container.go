@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 	"time"
@@ -18,8 +19,25 @@ import (
 	"github.com/RunOutcome/laforge/forge"
 )
 
-// DefaultImage is the image `la up --container` runs ($LAFORGE_IMAGE to change).
-const DefaultImage = "laforge:local"
+// LocalImage is what `make image` builds.
+const LocalImage = "laforge:local"
+
+// PublishedImage is where release images are published.
+const PublishedImage = "ghcr.io/runoutcome/laforge"
+
+// DefaultImage is the image `la up --container` runs ($LAFORGE_IMAGE to
+// change): a release build runs the image of its own version, a development
+// build the locally built one.
+func DefaultImage() string {
+	v := strings.TrimPrefix(Version, "v")
+	if !releaseVersion.MatchString(v) {
+		return LocalImage
+	}
+	return PublishedImage + ":" + v
+}
+
+// releaseVersion is a tagged release: 1.2.3, or 1.2.3-rc1 / -beta.2 / -alpha.
+var releaseVersion = regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta|rc)[0-9.]*)?$`)
 
 // ContainerName is the one forge container per machine.
 const ContainerName = "laforge"
@@ -102,7 +120,15 @@ func (c *cmd) upContainer(o containerUp) error {
 		return nil
 	}
 	if err := exec.Command(rt, "image", "inspect", o.image).Run(); err != nil {
-		return fmt.Errorf("there is no image %s; build it with `make image` in the laforge repository (or set LAFORGE_IMAGE)", o.image)
+		if o.image == LocalImage {
+			return fmt.Errorf("there is no image %s; build it with `make image` in the laforge repository (or set LAFORGE_IMAGE)", o.image)
+		}
+		fmt.Fprintf(c.cfg.Stdout, "Pulling %s…\n", o.image)
+		pull := exec.Command(rt, "pull", o.image)
+		pull.Stdout, pull.Stderr = c.cfg.Stderr, c.cfg.Stderr
+		if err := pull.Run(); err != nil {
+			return fmt.Errorf("could not pull %s: %w", o.image, err)
+		}
 	}
 	if containerRunning(rt, nil) {
 		return fmt.Errorf("a %s container is running that this host's LaForge did not start (no %s); `%s down --container` replaces it", ContainerName, c.containerStatePath(), c.cfg.Prog)

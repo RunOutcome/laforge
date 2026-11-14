@@ -35,3 +35,6 @@ go.work.sum
 # LaForge
 bin/
 web/node_modules/
+/dist/
+release/cosign.key
+*.key

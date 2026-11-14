@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2026 COR Holdings, LLC
 
+// These tests drive real shells (/bin/sh); Windows panes are covered by the
+// terminal package's ConPTY tests.
+//go:build !windows
+
 package forge
 
 import (

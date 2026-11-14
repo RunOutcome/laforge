@@ -15,9 +15,21 @@ la down      # stop the forge and every pane in it
 
 LaForge is part of [Outcome](https://github.com/RunOutcome), and works on its own.
 
+## Install
+
+macOS and Linux, from a signed release:
+
+```sh
+curl -fsSL https://github.com/RunOutcome/laforge/releases/latest/download/install.sh | sh
+```
+
+The installer verifies the release signature and checksum before it puts
+`la` in `~/.local/bin`; it needs no root and starts nothing. Windows (experimental):
+unzip `la.exe` from the release onto your PATH; panes run PowerShell.
+
 ## Build
 
-Needs Go 1.24+. Node 20+ only to change the web client.
+Needs Go 1.26+ (release builds use the go.mod toolchain, 1.27.4). Node 20+ only to change the web client.
 
 ```sh
 make build      # bin/la (the built web client in forge/dist is committed)
@@ -169,6 +181,12 @@ client embedding the forge from another origin needs to proxy it.
 | `GET`/`PUT /api/layout` | the client's layout |
 | `GET`/`PUT /api/config` | `{cwd}`: where new panes start |
 
+## Releases
+
+See [RELEASING.md](RELEASING.md) and [CHANGELOG.md](CHANGELOG.md).
+
 ## Licence
 
-Apache-2.0. Copyright 2026 COR Holdings, LLC.
+Apache-2.0. Copyright 2026 COR Holdings, LLC. LaForge includes third-party
+software under its own licences: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md),
+or `la notices`.

@@ -59,15 +59,21 @@ func (spec LaunchSpec) environment() []string {
 
 // inheritAllEnvironment is the whole environment, TERM defaulted, then extra.
 func inheritAllEnvironment(extra, unset []string) []string {
+	fold := func(k string) string {
+		if runtime.GOOS == "windows" {
+			return strings.ToUpper(k) // Windows names are case-insensitive
+		}
+		return k
+	}
 	drop := map[string]bool{}
 	for _, k := range unset {
-		drop[k] = true
+		drop[fold(k)] = true
 	}
 	var result []string
 	term := false
 	for _, value := range os.Environ() {
 		key, _, _ := strings.Cut(value, "=")
-		if drop[key] {
+		if drop[fold(key)] {
 			continue
 		}
 		term = term || strings.EqualFold(key, "TERM")
