@@ -33,6 +33,9 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 22
+      - name: Web packages (the notices check reads their licences)
+        run: npm ci
+        working-directory: web
       # cosign 2.x: install.sh verifies the raw base64 signature with openssl
       - uses: sigstore/cosign-installer@v3
         with:
