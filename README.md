@@ -1,10 +1,21 @@
 # LaForge
 
+[![Licence: Apache-2.0](https://img.shields.io/github/license/RunOutcome/laforge)](LICENSE)
+[![Latest release](https://img.shields.io/github/v/release/RunOutcome/laforge)](https://github.com/RunOutcome/laforge/releases/latest)
+[![CI](https://img.shields.io/github/actions/workflow/status/RunOutcome/laforge/ci.yml?branch=main&label=CI)](https://github.com/RunOutcome/laforge/actions/workflows/ci.yml)
+[![Go version](https://img.shields.io/github/go-mod/go-version/RunOutcome/laforge)](go.mod)
+[![Platforms: macOS, Linux, Windows (experimental)](https://img.shields.io/badge/platforms-macOS%20%C2%B7%20Linux%20%C2%B7%20Windows%20%28experimental%29-informational)](#install)
+[![Container image on ghcr.io](https://img.shields.io/badge/container-ghcr.io%2Frunoutcome%2Flaforge-informational?logo=docker&logoColor=white)](https://github.com/RunOutcome/laforge/pkgs/container/laforge)
+
 Many shells and agents, side by side, in your browser. LaForge is tmux for
 the agent era: one small local server keeps your terminals running, and a
 web client lays them out as tabs and split panes. Start Claude Code, Codex,
 Antigravity, Qwen Code, Copilot or a plain shell in any pane, close the browser, come back
 later, and everything is where you left it.
+
+![LaForge in the browser: one tab split into four panes, with Claude Code reviewing a Go file, Codex reviewing invoice rounding, and two shells running go test and git log](https://getlaforge.com/assets/laforge/hero.png)
+
+![Demo: la up opens the forge, a shell runs go test, a split starts Claude Code, and after a page reload both panes are still there](https://getlaforge.com/assets/laforge/demo.gif)
 
 ```sh
 la up        # start the forge (or find the running one) and open it
