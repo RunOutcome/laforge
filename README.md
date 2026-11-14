@@ -27,6 +27,45 @@ make web        # rebuild the web client after changing web/
 make dev        # web client with hot reload against a running `la up`
 ```
 
+## In a container
+
+The image carries the forge, a shell toolbox (zsh, git, ripgrep, fd, jq,
+Python, make) and AI agent CLIs, so nothing but Docker (or Podman) is needed
+on the machine.
+
+```sh
+make image                 # builds laforge:local
+la up --container          # runs it with this folder at /workspace, opens the link
+la status                  # shows the container and its link
+la down --container        # stops it; logins and installed agents stay
+```
+
+| Agent | How it gets there |
+| --- | --- |
+| Codex (`@openai/codex`, Apache-2.0) | built into the image |
+| Gemini CLI (`@google/gemini-cli`, Apache-2.0) | built into the image |
+| opencode (`opencode-ai`, MIT) | built into the image |
+| Claude Code (`@anthropic-ai/claude-code`) | installed from npm on first start |
+| Copilot CLI (`@github/copilot`) | installed from npm on first start |
+
+Claude Code and the Copilot CLI have proprietary licences, so the image never
+carries them: on its first start the container installs them into its home
+volume as your own install (about 20 seconds; their tiles in the picker turn
+on when it is done, and `~/.laforge/forge/agents-install.log` in the container
+shows progress). `ON_FIRST_START=""` skips that; set it to other npm packages
+to install those instead. Change what is built in with
+`docker build --build-arg BUNDLED="…"`.
+
+The container's home is the volume `laforge-home`: each agent's login,
+history and settings survive restarts and new images. Sign in once inside a
+pane (`claude`, `codex login`, `gemini`, `copilot`), or put API keys in
+`~/.laforge/forge/agents.env` (`ANTHROPIC_API_KEY=…`, `OPENAI_API_KEY=…`,
+`GEMINI_API_KEY=…`, one per line), which `la up --container` passes in.
+
+The port is published on 127.0.0.1 only, and the forge still needs its token.
+One folder is mounted per container; to work on another, `la down --container`
+and `la up --container` from there. `LAFORGE_IMAGE` picks another image.
+
 ## Using it
 
 `la up` starts the forge in the background on `127.0.0.1:4646` (any free

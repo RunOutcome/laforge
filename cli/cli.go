@@ -125,9 +125,13 @@ func usage(cfg Config) {
 Usage:
   %[1]s up [--port N] [--cwd DIR] [--no-open] [--foreground]
                      start the forge (or find the running one) and open it
+  %[1]s up --container [--image IMG]
+                     the same, in a container with agent CLIs bundled,
+                     this folder (or --cwd) mounted at /workspace
   %[1]s open         open the running forge in the browser
   %[1]s status       show the running forge and its panes
-  %[1]s down         stop the forge and every pane in it
+  %[1]s down [--container]
+                     stop the forge and every pane in it
   %[1]s version
 
 The forge keeps running when the browser closes; panes reattach when you open
@@ -186,6 +190,8 @@ func (c *cmd) up(args []string) error {
 	cwd := fs.String("cwd", "", "folder new panes start in (default: this folder)")
 	noOpen := fs.Bool("no-open", false, "do not open the browser")
 	foreground := fs.Bool("foreground", false, "run in this terminal instead of in the background")
+	container := fs.Bool("container", false, "run the forge in a container (docker or podman), this folder at /workspace")
+	image := fs.String("image", envOr("LAFORGE_IMAGE", DefaultImage), "the image for --container")
 	if err := fs.Parse(args); err != nil {
 		return usageError{err}
 	}
@@ -194,6 +200,9 @@ func (c *cmd) up(args []string) error {
 		dir, _ = os.Getwd()
 	}
 	dir, _ = filepath.Abs(dir)
+	if *container {
+		return c.upContainer(containerUp{port: *port, dir: dir, image: *image, noOpen: *noOpen})
+	}
 
 	if s := c.running(); s != nil {
 		c.setCwd(s, dir)
@@ -275,6 +284,12 @@ func (c *cmd) status(args []string) error {
 		return usageError{err}
 	}
 	s := c.running()
+	if line := c.containerLine(); line != "" && !*asJSON {
+		fmt.Fprintln(c.cfg.Stdout, line)
+		if s == nil {
+			return nil
+		}
+	}
 	if s == nil {
 		if *asJSON {
 			fmt.Fprintln(c.cfg.Stdout, `{"running":false}`)
@@ -311,6 +326,15 @@ func (c *cmd) status(args []string) error {
 }
 
 func (c *cmd) down(args []string) error {
+	fs := flag.NewFlagSet("down", flag.ContinueOnError)
+	fs.SetOutput(c.cfg.Stderr)
+	container := fs.Bool("container", false, "stop the forge's container")
+	if err := fs.Parse(args); err != nil {
+		return usageError{err}
+	}
+	if *container {
+		return c.downContainer()
+	}
 	s := c.running()
 	if s == nil {
 		fmt.Fprintln(c.cfg.Stdout, "LaForge is not running.")
@@ -341,6 +365,7 @@ func (c *cmd) serve(args []string) error {
 	port := fs.Int("port", DefaultPort, "port")
 	cwd := fs.String("cwd", "", "folder new panes start in")
 	openIt := fs.Bool("open", false, "open the browser once listening")
+	listen := fs.String("listen", envOr("LAFORGE_LISTEN", "127.0.0.1"), "address to listen on (0.0.0.0 in a container)")
 	if err := fs.Parse(args); err != nil {
 		return usageError{err}
 	}
@@ -350,15 +375,15 @@ func (c *cmd) serve(args []string) error {
 	if err := os.MkdirAll(c.home, 0o700); err != nil {
 		return err
 	}
-	ln, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", *port))
+	ln, err := net.Listen("tcp", net.JoinHostPort(*listen, strconv.Itoa(*port)))
 	if err != nil {
-		ln, err = net.Listen("tcp", "127.0.0.1:0")
+		ln, err = net.Listen("tcp", net.JoinHostPort(*listen, "0"))
 		if err != nil {
 			return err
 		}
 	}
 	actual := ln.Addr().(*net.TCPAddr).Port
-	srv, err := forge.NewServer(forge.Options{Home: c.home, Cwd: *cwd, Version: Version})
+	srv, err := forge.NewServer(forge.Options{Home: c.home, Cwd: *cwd, Version: Version, Token: os.Getenv("LAFORGE_TOKEN")})
 	if err != nil {
 		return err
 	}
@@ -391,6 +416,13 @@ func (c *cmd) serve(args []string) error {
 	defer cancel()
 	_ = httpServer.Shutdown(shutdownCtx)
 	return nil
+}
+
+func envOr(key, def string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return def
 }
 
 func openBrowser(url string) {

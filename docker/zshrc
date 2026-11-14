@@ -1,0 +1,7 @@
+
+# LaForge container defaults (appended to /etc/zsh/zshrc)
+autoload -Uz compinit && compinit -u 2>/dev/null
+setopt PROMPT_SUBST HIST_IGNORE_DUPS SHARE_HISTORY
+HISTFILE=$HOME/.zsh_history HISTSIZE=10000 SAVEHIST=10000
+PROMPT='%F{cyan}forge%f %F{blue}%~%f %(?.%F{cyan}.%F{red})›%f '
+alias ll='ls -la' fd=fdfind

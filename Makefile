@@ -5,7 +5,7 @@ VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 LDFLAGS := -X github.com/RunOutcome/laforge/cli.Version=$(VERSION)
 PREFIX  ?= $(HOME)/.local/bin
 
-.PHONY: build web test install dev clean
+.PHONY: build web test install dev clean image
 
 build:                      ## bin/la, with the committed web client embedded
 	go build -ldflags "$(LDFLAGS)" -o bin/la ./cmd/la
@@ -28,6 +28,11 @@ install: build
 
 dev:                        ## the web client with hot reload, against a running forge
 	cd web && npm run dev
+
+IMAGE ?= laforge:local
+
+image:                      ## the container image (agent CLIs bundled); run with `la up --container`
+	docker build --build-arg VERSION=$(VERSION) -t $(IMAGE) .
 
 clean:
 	rm -rf bin

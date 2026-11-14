@@ -1,6 +1,6 @@
 module github.com/RunOutcome/laforge
 
-go 1.27.0
+go 1.24
 
 require (
 	github.com/UserExistsError/conpty v0.1.4
