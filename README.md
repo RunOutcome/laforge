@@ -92,7 +92,13 @@ Keys follow tmux: press the prefix **Ctrl-b**, then
 | `?` | all keys |
 | Ctrl-b | send a literal Ctrl-b |
 
-In an empty pane, press `1`–`9` to start a profile, or Enter for a shell.
+**New pane** (next to the tabs) adds a pane to the current tab: pick a shell
+or an agent to start it at once, or an empty pane to the right or below. In an
+empty pane, press `1`–`9` to start a profile, or Enter for a shell.
+
+A tab is named after its focused pane until you rename it: the pencil on the
+tab, a double-click, or Ctrl-b `,`. Clearing the name goes back to automatic.
+The tab's ✕ closes it and its panes (it asks first when any are running).
 Drag the gaps between panes to resize them; double-click a gap to even them.
 
 ### Profiles

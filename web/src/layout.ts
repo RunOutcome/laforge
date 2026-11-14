@@ -24,7 +24,9 @@ export type Node = PaneNode | SplitNode;
 
 export interface Tab {
   id: string;
+  /** name is what the user called the tab; '' (or an old default) means it is named after its focused pane. */
   name: string;
+  custom?: boolean;
   root: Node;
   focus: string;
   zoom?: string | null;
@@ -46,13 +48,13 @@ export function newPane(session?: string): PaneNode {
   return { kind: 'pane', id: uid('p'), session };
 }
 
-export function newTab(name: string, session?: string): Tab {
+export function newTab(name = '', session?: string): Tab {
   const pane = newPane(session);
   return { id: uid('t'), name, root: pane, focus: pane.id, zoom: null };
 }
 
 export function initialLayout(): Layout {
-  const tab = newTab('main');
+  const tab = newTab();
   return { version: 1, tabs: [tab], active: tab.id };
 }
 
@@ -243,4 +245,9 @@ export function gutters(node: Node, r: Rect = { x: 0, y: 0, w: 1, h: 1 }, out: G
     gutters(child, cr, out);
   });
   return out;
+}
+
+/** autoNamed reports whether a tab takes its name from its panes. */
+export function autoNamed(t: Tab): boolean {
+  return !t.custom && (t.name === '' || t.name === 'main' || /^\d+$/.test(t.name));
 }

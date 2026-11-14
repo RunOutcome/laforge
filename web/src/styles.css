@@ -185,13 +185,166 @@ kbd {
   box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06);
 }
 
-.tab-index {
-  font: 500 11px var(--font-mono);
-  color: var(--tx-3);
-}
 
 .tab-name {
   font-weight: 500;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tab-actions {
+  display: flex;
+  gap: 1px;
+  margin-right: -4px;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+.tab:hover .tab-actions,
+.tab.is-active .tab-actions {
+  opacity: 1;
+}
+
+.tab-actions button,
+.tab-confirm button {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--tx-3);
+}
+
+.tab-actions button:hover {
+  background: var(--hover);
+  color: var(--tx);
+}
+
+.tab-confirm {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--amber);
+}
+
+.tab-confirm button {
+  width: auto;
+  padding: 0 6px;
+  font-size: 12px;
+  color: var(--tx-2);
+  border: 1px solid var(--line);
+}
+
+.tab-confirm button:first-of-type:hover {
+  color: var(--red);
+  border-color: var(--red);
+}
+
+/* new pane */
+.pane-menu-wrap {
+  position: relative;
+  flex: none;
+  margin-left: 4px;
+  padding-left: 10px;
+  border-left: 1px solid var(--line);
+}
+
+.new-pane-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 8px 0 9px;
+  border-radius: 7px;
+  border: 1px solid color-mix(in oklab, var(--acc) 45%, var(--line));
+  background: color-mix(in oklab, var(--acc) 10%, var(--card));
+  color: var(--acc);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.new-pane-btn:hover,
+.new-pane-btn.is-open {
+  background: color-mix(in oklab, var(--acc) 18%, var(--card));
+  border-color: var(--acc);
+}
+
+.menu-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+}
+
+.menu {
+  position: absolute;
+  top: 34px;
+  left: 10px;
+  z-index: 41;
+  min-width: 240px;
+  padding: 6px;
+  border-radius: 10px;
+  background: var(--card);
+  box-shadow: var(--e2);
+}
+
+.menu-label {
+  padding: 6px 8px 4px;
+  font-size: 11px;
+  color: var(--tx-3);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  text-align: left;
+}
+
+.menu-item:hover {
+  background: var(--acc-100);
+}
+
+.menu-mono {
+  width: 24px;
+  height: 24px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  font: 600 10.5px var(--font-mono);
+  background: var(--hover);
+  color: var(--tx-2);
+}
+
+.menu-mono.is-agent {
+  background: var(--ai-50);
+  color: var(--ai-600);
+}
+
+.menu-mono.is-shell {
+  background: var(--acc-100);
+  color: var(--acc);
+}
+
+.menu-text {
+  flex: 1;
+}
+
+.menu-sep {
+  height: 1px;
+  margin: 6px 4px;
+  background: var(--line-2);
 }
 
 .tab-count {
@@ -857,6 +1010,7 @@ body.dragging-col * {
 @media (max-width: 640px) {
   .cmd-btn span,
   .cmd-btn kbd,
+  .new-pane-btn span,
   .sb-host,
   .sb-help {
     display: none;

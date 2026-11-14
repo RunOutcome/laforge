@@ -91,3 +91,19 @@ export const Mark = ({ size = 20 }: { size?: number }) => (
     <path d="M13 16h4.5" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" />
   </svg>
 );
+
+export const Pencil = () => (
+  <svg {...base} width={12} height={12} aria-hidden>
+    <path d="M10.5 2.5l3 3L6 13H3v-3z" />
+  </svg>
+);
+export const Chevron = () => (
+  <svg {...base} width={11} height={11} aria-hidden>
+    <path d="M4 6l4 4 4-4" />
+  </svg>
+);
+export const SmallClose = () => (
+  <svg {...base} width={11} height={11} aria-hidden>
+    <path d="M4 4l8 8M12 4l-8 8" />
+  </svg>
+);
