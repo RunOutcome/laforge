@@ -183,8 +183,11 @@ Usage:
                      answer the permission a pane's agent waits on
   %[1]s share PANE [--for 2h] | share --list | share --revoke TOKEN
                      a read-only link to watch one pane
-  %[1]s skin [list] | skin install DIR | skin use NAME | skin remove NAME
-                     how the forge looks (docs/skins.md to make one)
+  %[1]s skin [list] | skin install SOURCE | skin update [NAME]
+  %[1]s skin use NAME | skin remove NAME
+                     how the forge looks; SOURCE is a folder, owner/repo[@ref]
+                     or a github.com link, holding one skin or many
+                     (docs/skins.md to make one)
   %[1]s --skill      how an agent uses LaForge, in one read
   %[1]s hooks install [claude|codex]
                      let Claude Code and Codex report their status to LaForge

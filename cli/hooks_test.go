@@ -315,3 +315,28 @@ func TestSkinInstall(t *testing.T) {
 		t.Fatalf("installed code: %d %q", code, errs)
 	}
 }
+
+// la skin install installs every skin in a pack without a forge, and la
+// skin update reinstalls them from where they came.
+func TestSkinInstallPackAndUpdate(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("LAFORGE_HOME", home)
+	src := t.TempDir()
+	for _, n := range []string{"neon", "ember"} {
+		os.MkdirAll(filepath.Join(src, "skins", n), 0o755)
+		os.WriteFile(filepath.Join(src, "skins", n, "skin.json"), []byte(`{"name":"`+n+`"}`), 0o644)
+	}
+	if code, out, errs := run(t, "", "skin", "install", src); code != 0 || !strings.Contains(out, "installed neon") || !strings.Contains(out, "installed ember") {
+		t.Fatalf("%d %q %q", code, out, errs)
+	}
+	os.WriteFile(filepath.Join(src, "skins", "neon", "skin.json"), []byte(`{"name":"neon","label":"Neon 2"}`), 0o644)
+	if code, out, errs := run(t, "", "skin", "update"); code != 0 || !strings.Contains(out, "updated ember") || !strings.Contains(out, "updated neon") {
+		t.Fatalf("%d %q %q", code, out, errs)
+	}
+	if raw, _ := os.ReadFile(filepath.Join(home, "skins", "neon", "skin.json")); !strings.Contains(string(raw), "Neon 2") {
+		t.Fatalf("not updated: %s", raw)
+	}
+	if code, _, errs := run(t, "", "skin", "install", "https://gitlab.com/a/b"); code == 0 || !strings.Contains(errs, "github.com") {
+		t.Fatalf("other host: %d %q", code, errs)
+	}
+}

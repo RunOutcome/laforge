@@ -28,7 +28,8 @@ func skinDir(t *testing.T, files map[string]string) string {
 
 // A skin carries looks only, and says what it is correctly.
 func TestASkinIsChecked(t *testing.T) {
-	good := `{"name":"neon","label":"Neon","layout":"rail","mode":"dark","css":["skin.css"],"terminal":{"background":"#000000","red":"rgb(255, 0, 0)"}}`
+	good := `{"name":"neon","label":"Neon","layout":"rail","css":["skin.css"],"terminal":{"dark":{"background":"#000000","red":"rgb(255, 0, 0)"},"light":{"background":"#ffffff"}}}`
+	darkOnly := `{"name":"neon","layout":"rail","terminal":{"dark":{"background":"#000000"}}}`
 	cases := []struct {
 		name  string
 		files fstest.MapFS
@@ -42,7 +43,15 @@ func TestASkinIsChecked(t *testing.T) {
 		{"bad layout", fstest.MapFS{"skin.json": {Data: []byte(`{"name":"x","layout":"grid"}`)}}, "layout"},
 		{"missing css", fstest.MapFS{"skin.json": {Data: []byte(`{"name":"x","css":["a.css"]}`)}}, "not in the skin"},
 		{"css escapes", fstest.MapFS{"skin.json": {Data: []byte(`{"name":"x","css":["../a.css"]}`)}}, "a .css file"},
-		{"bad colour", fstest.MapFS{"skin.json": {Data: []byte(`{"name":"x","terminal":{"red":"url(x)"}}`)}}, "terminal.red"},
+		{"one mode", fstest.MapFS{"skin.json": {Data: []byte(darkOnly)}}, ""},
+		{"no terminal", fstest.MapFS{"skin.json": {Data: []byte(`{"name":"neon","layout":"rail"}`)}}, ""},
+		{"bad colour", fstest.MapFS{"skin.json": {Data: []byte(`{"name":"x","terminal":{"dark":{"red":"url(x)"}}}`)}}, "terminal.dark.red"},
+		{"bad light key", fstest.MapFS{"skin.json": {Data: []byte(`{"name":"x","terminal":{"light":{"purple":"#fff"}}}`)}}, "terminal.light.purple"},
+		{"flat terminal", fstest.MapFS{"skin.json": {Data: []byte(`{"name":"x","terminal":{"background":"#000"}}`)}}, `{"dark"`},
+		{"terminal not object", fstest.MapFS{"skin.json": {Data: []byte(`{"name":"x","terminal":"#000"}`)}}, `{"dark"`},
+		{"old mode", fstest.MapFS{"skin.json": {Data: []byte(`{"name":"x","mode":"dark"}`)}}, "skins draw both light and dark; remove mode"},
+		{"builtin claimed", fstest.MapFS{"skin.json": {Data: []byte(`{"name":"x","builtin":true}`)}}, "remove it"},
+		{"source claimed", fstest.MapFS{"skin.json": {Data: []byte(`{"name":"x","source":"a/b"}`)}}, "remove it"},
 		{"unknown key", fstest.MapFS{"skin.json": {Data: []byte(`{"name":"x","script":"a.js"}`)}}, "unknown field"},
 	}
 	for _, c := range cases {

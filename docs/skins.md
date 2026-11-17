@@ -19,13 +19,19 @@ LaForge ships two skins: **classic** (its own look, light and dark) and
 install is used in the browser that picks it. The forge's default skin is
 what other browsers see until they pick their own.
 
+**Every skin draws light and dark.** The viewer chooses the mode; the
+client sets `data-mode="light"` or `data-mode="dark"` on the root and the
+skin styles both.
+
 ## Install and choose
 
 ```
-la skin install ./my-skin   # check the folder and copy it into the forge's home
-la skin list                # the skins the forge has, and its default
-la skin use my-skin         # make it the forge's default
-la skin remove my-skin      # remove an installed skin (built-ins stay)
+la skin install ./my-skin        # check the folder and copy it into the forge's home
+la skin install you/theme-pack   # every skin in a GitHub repository
+la skin list                     # the skins the forge has, and its default
+la skin use my-skin              # make it the forge's default
+la skin update [my-skin]         # reinstall one skin, or all, from where it came
+la skin remove my-skin           # remove an installed skin (built-ins stay)
 ```
 
 Installed skins live in `<home>/skins/<name>/` (`~/.laforge/forge/skins` by
@@ -48,9 +54,11 @@ whose stylesheet fails to load falls back to classic.
   "author": "You",
   "license": "Apache-2.0",
   "layout": "classic",
-  "mode": "dark",
   "css": ["skin.css"],
-  "terminal": { "background": "#0d1418", "foreground": "#e3e9ec", "cursor": "#d4a04c" }
+  "terminal": {
+    "dark": { "background": "#0d1418", "foreground": "#e3e9ec", "cursor": "#d4a04c" },
+    "light": { "background": "#f4f1ea", "foreground": "#1d262b", "cursor": "#9a6a1c" }
+  }
 }
 ```
 
@@ -60,11 +68,12 @@ whose stylesheet fails to load falls back to classic.
 | `label` | What people see in the palette. Defaults to `name`. |
 | `description`, `version`, `author`, `license` | Shown in `la skin list`; say what licence your files are under. |
 | `layout` | `classic` (tabs above panes) or `rail` (spaces and crew in a rail at the left). Defaults to `classic`. |
-| `mode` | `dark` or `light` forces that mode; `both` (the default) follows the viewer's choice. |
 | `css` | The stylesheets, in order, relative to the folder. Optional: a skin may change only the terminal palette. |
-| `terminal` | The terminal's colours. Keys: `background`, `foreground`, `cursor`, `cursorAccent`, `selectionBackground`, `selectionForeground`, `black`, `red`, `green`, `yellow`, `blue`, `magenta`, `cyan`, `white` and `brightBlack` … `brightWhite`. Values are `#hex` or `rgb()`/`rgba()`. Keys left out keep the mode's own colours. |
+| `terminal` | The terminal's colours, one palette per mode: `{"dark": {…}, "light": {…}}`. Either may be left out, and that mode keeps the client's own palette. Keys: `background`, `foreground`, `cursor`, `cursorAccent`, `selectionBackground`, `selectionForeground`, `black`, `red`, `green`, `yellow`, `blue`, `magenta`, `cyan`, `white` and `brightBlack` … `brightWhite`. Values are `#hex` or `rgb()`/`rgba()`. Keys left out keep the mode's own colours. |
 
-Unknown fields are refused, so a typo is caught when you install.
+Unknown fields are refused, so a typo is caught when you install. An old
+`mode` field is refused too: skins draw both light and dark, so remove it
+and style both modes.
 
 ## How a skin is applied
 
@@ -255,26 +264,86 @@ harbour/
 `skin.json`:
 
 ```json
-{ "name": "harbour", "label": "Harbour", "license": "Apache-2.0", "mode": "dark", "css": ["skin.css"] }
+{ "name": "harbour", "label": "Harbour", "license": "Apache-2.0", "css": ["skin.css"] }
 ```
 
 `skin.css`:
 
 ```css
 :root[data-skin='harbour'] {
+  --side: #f4f1ea;
+  --canvas: #f4f1ea;
+  --card: #ffffff;
+  --term: #f4f1ea;
+  --line: #d8d1c2;
+  --acc: #9a6a1c;
+  --acc-fill: #b9852f;
+  --radius-pane: 4px;
+}
+:root[data-skin='harbour'][data-mode='dark'] {
   --side: #0d1418;
   --canvas: #0d1418;
   --card: #132026;
   --term: #0d1418;
   --line: #24363e;
   --acc: #d4a04c;
-  --acc-fill: #b9852f;
-  --radius-pane: 4px;
 }
 [data-skin='harbour'] .tab.is-active { box-shadow: inset 0 -2px 0 var(--acc); }
 ```
 
 Then `la skin install ./harbour` and pick **Skin: Harbour** in ⌘K.
+
+## Theme packs
+
+`la skin install SOURCE` takes a folder or a GitHub repository, holding
+one skin or many, and installs every skin it finds. A skin that fails its
+checks is reported and the others still install.
+
+**Sources**
+
+| Form | Example |
+| --- | --- |
+| a folder | `./harbour`, `~/skins/pack`, `/srv/skins` |
+| a repository | `you/skins`, `github:you/skins` |
+| at a branch, tag or commit | `you/skins@v2` |
+| a folder in it | `you/skins//themes/harbour`, `you/skins@v2//themes` |
+| a link | `https://github.com/you/skins`, `https://github.com/you/skins/tree/v2/themes` |
+
+Only public repositories on github.com: the forge downloads
+`codeload.github.com/<owner>/<repo>/tar.gz/<ref>` (the default branch when
+no ref is given), at most 32 MB, and unpacks only files and folders (an
+archive with links, devices, absolute paths or `..` is refused). Nothing it
+downloads runs; each skin passes the same checks as a folder.
+
+A folder installs straight into the forge's home, with or without a forge
+running. A GitHub source is fetched by the running forge, or by `la`
+itself when none runs.
+
+**Layout of a source**
+
+One skin: `skin.json` at the root.
+
+```
+harbour/
+  skin.json
+  skin.css
+```
+
+Many skins: one per folder, at the root or under `skins/`.
+
+```
+my-skins/                 my-skins/
+  harbour/                  README.md
+    skin.json               skins/
+    skin.css                  harbour/skin.json …
+  ember/                      ember/skin.json …
+    skin.json
+```
+
+Each installed skin remembers where it came from in
+`<home>/skins/<name>/.source.json` (`{source, ref, installedAt}`), shown in
+`la skin list`. `la skin update NAME` reinstalls it from there, at the same
+ref; `la skin update` does so for every skin with a source.
 
 ## Rules
 

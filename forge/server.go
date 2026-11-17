@@ -175,6 +175,8 @@ func (s *Server) routes(web fs.FS) {
 	s.mux.HandleFunc("GET /api/skins", s.auth(s.listSkins))
 	s.mux.HandleFunc("PUT /api/skins/default", s.auth(s.setDefaultSkin))
 	s.mux.HandleFunc("DELETE /api/skins/{name}", s.auth(s.removeSkin))
+	s.mux.HandleFunc("POST /api/skins/install", s.auth(s.installSkins))
+	s.mux.HandleFunc("POST /api/skins/{name}/update", s.auth(s.updateSkin))
 	s.mux.HandleFunc("GET /skins/{name}/{file...}", func(w http.ResponseWriter, r *http.Request) {
 		if _, viewing := s.viewer(r); !s.authorized(r) && !viewing {
 			http.Error(w, "Present this forge's token.", http.StatusUnauthorized)

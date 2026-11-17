@@ -17,6 +17,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 )
 
 // Skins: how the forge looks, installable. A skin is a folder with a
@@ -41,15 +42,25 @@ type Skin struct {
 	// Layout arranges the screen: "classic" (tabs above panes) or "rail"
 	// (a fixed rail of spaces and agents at the left, a status footer).
 	Layout string `json:"layout,omitempty"`
-	// Mode is the colour mode the skin draws: "dark", "light" or "both".
-	Mode string `json:"mode,omitempty"`
 	// CSS are the skin's stylesheets, in order, relative to its folder.
 	CSS []string `json:"css,omitempty"`
-	// Terminal is the terminal palette (xterm ITheme keys: background,
-	// foreground, cursor, selectionBackground, black … brightWhite).
-	Terminal map[string]string `json:"terminal,omitempty"`
+	// Terminal is the terminal palette for each mode. Every skin draws both
+	// light and dark; a mode left out keeps the client's own palette.
+	Terminal SkinTerminal `json:"terminal"`
 	// Builtin marks a skin the binary ships (it cannot be removed).
 	Builtin bool `json:"builtin"`
+	// Source is where an installed skin came from (a folder, or
+	// github:owner/repo//subdir), from its .source.json; empty for a
+	// built-in or a skin installed without one.
+	Source string `json:"source,omitempty"`
+}
+
+// SkinTerminal is a skin's terminal palettes, one per mode (xterm ITheme
+// keys: background, foreground, cursor, selectionBackground, black …
+// brightWhite).
+type SkinTerminal struct {
+	Dark  map[string]string `json:"dark,omitempty"`
+	Light map[string]string `json:"light,omitempty"`
 }
 
 var skinName = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,39}$`)
@@ -82,13 +93,35 @@ func ReadSkin(fsys fs.FS) (Skin, error) {
 	if err != nil {
 		return Skin{}, errors.New("a skin needs a skin.json")
 	}
+	var keys map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &keys); err != nil {
+		return Skin{}, fmt.Errorf("skin.json: %v", err)
+	}
+	if _, ok := keys["mode"]; ok {
+		return Skin{}, errors.New("skin.json: skins draw both light and dark; remove mode")
+	}
+	for _, k := range []string{"builtin", "source"} {
+		if _, ok := keys[k]; ok {
+			return Skin{}, fmt.Errorf("skin.json: %s is the forge's to set; remove it", k)
+		}
+	}
+	if t, ok := keys["terminal"]; ok {
+		var modes map[string]json.RawMessage
+		if json.Unmarshal(t, &modes) != nil {
+			return Skin{}, errors.New(`skin.json: terminal is {"dark": {…}, "light": {…}}`)
+		}
+		for k := range modes {
+			if k != "dark" && k != "light" {
+				return Skin{}, fmt.Errorf(`skin.json: terminal.%s: terminal is {"dark": {…}, "light": {…}}, a palette per mode`, k)
+			}
+		}
+	}
 	var sk Skin
 	dec := json.NewDecoder(strings.NewReader(string(raw)))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&sk); err != nil {
 		return Skin{}, fmt.Errorf("skin.json: %v", err)
 	}
-	sk.Builtin = false
 	if !skinName.MatchString(sk.Name) {
 		return Skin{}, fmt.Errorf("skin.json: name %q: lower-case letters, digits and dashes, at most 40", sk.Name)
 	}
@@ -102,16 +135,11 @@ func ReadSkin(fsys fs.FS) (Skin, error) {
 	default:
 		return Skin{}, fmt.Errorf("skin.json: layout %q: classic or rail", sk.Layout)
 	}
-	switch sk.Mode {
-	case "":
-		sk.Mode = "both"
-	case "dark", "light", "both":
-	default:
-		return Skin{}, fmt.Errorf("skin.json: mode %q: dark, light or both", sk.Mode)
-	}
-	for k, v := range sk.Terminal {
-		if !terminalKeys[k] || !cssColor.MatchString(v) {
-			return Skin{}, fmt.Errorf("skin.json: terminal.%s %q: a known key and a #hex or rgb() colour", k, v)
+	for mode, palette := range map[string]map[string]string{"dark": sk.Terminal.Dark, "light": sk.Terminal.Light} {
+		for k, v := range palette {
+			if !terminalKeys[k] || !cssColor.MatchString(v) {
+				return Skin{}, fmt.Errorf("skin.json: terminal.%s.%s %q: a known key and a #hex or rgb() colour", mode, k, v)
+			}
 		}
 	}
 	var total int64
@@ -190,6 +218,9 @@ func (s *Server) skins() map[string]skinSource {
 		}
 		sub := os.DirFS(filepath.Join(s.skinsDir(), e.Name()))
 		if sk, err := ReadSkin(sub); err == nil && sk.Name == e.Name() {
+			if rec, ok := readSourceRecord(filepath.Join(s.skinsDir(), e.Name())); ok {
+				sk.Source = rec.Source
+			}
 			out[sk.Name] = skinSource{sk, sub}
 		}
 	}
@@ -295,7 +326,18 @@ func (s *Server) skinFile(w http.ResponseWriter, r *http.Request) {
 
 // InstallSkin copies a checked skin folder into home/skins/<name>,
 // replacing an installed skin of that name. A built-in name is refused.
+// It records the folder as the skin's source.
 func InstallSkin(home, dir string) (Skin, error) {
+	abs, err := filepath.Abs(dir)
+	if err != nil {
+		return Skin{}, err
+	}
+	return installSkin(home, abs, &SourceRecord{Source: abs})
+}
+
+// installSkin is InstallSkin with the source to record in the skin's
+// .source.json (none when rec is nil).
+func installSkin(home, dir string, rec *SourceRecord) (Skin, error) {
 	sk, err := ReadSkin(os.DirFS(dir))
 	if err != nil {
 		return Skin{}, err
@@ -334,6 +376,15 @@ func InstallSkin(home, dir string) (Skin, error) {
 	})
 	if err != nil {
 		return Skin{}, err
+	}
+	if rec != nil {
+		r := *rec
+		r.InstalledAt = time.Now().UTC()
+		raw, _ := json.MarshalIndent(r, "", "  ")
+		if err := os.WriteFile(filepath.Join(tmp, sourceFile), append(raw, '\n'), 0o600); err != nil {
+			return Skin{}, err
+		}
+		sk.Source = r.Source
 	}
 	dest := filepath.Join(root, sk.Name)
 	old := dest + ".old"
