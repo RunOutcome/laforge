@@ -721,6 +721,239 @@ kbd {
   border-color: var(--acc);
 }
 
+/* asks: Allow / Deny what an agent waits for */
+.ask {
+  flex: none;
+  display: inline-flex;
+  gap: 4px;
+}
+
+.ask button {
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 5px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--tx);
+  font: 500 11.5px/1 var(--font-ui);
+}
+
+.ask .ask-allow {
+  border-color: color-mix(in oklab, var(--green) 55%, var(--line));
+  color: var(--green);
+}
+
+.ask .ask-allow:hover {
+  background: color-mix(in oklab, var(--green) 14%, var(--card));
+}
+
+.ask .ask-deny:hover {
+  border-color: var(--red);
+  color: var(--red);
+}
+
+.ask-note {
+  flex: none;
+  font-size: 11.5px;
+  color: var(--tx-3);
+  white-space: nowrap;
+}
+
+.agent-row .ask,
+.agent-row .ask-note {
+  align-self: flex-start;
+  margin-top: 2px;
+}
+
+/* held: a quiet mark on panes that outlive the forge */
+.pane-held {
+  flex: none;
+  display: grid;
+  place-items: center;
+  color: var(--tx-3);
+  opacity: 0.55;
+}
+
+.pane-lost {
+  flex: none;
+  font: 600 10px/1 var(--font-mono);
+  padding: 3px 6px;
+  border-radius: 4px;
+  background: var(--amber-50);
+  color: var(--amber);
+}
+
+/* children and labels in the agents panel */
+.agent-row.is-child {
+  border-left: 1px solid var(--line);
+  border-radius: 0 7px 7px 0;
+}
+
+.agent-labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.label-chip {
+  font: 500 10px/1 var(--font-mono);
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: var(--ai-50);
+  color: var(--ai-600);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* lost panes: in their slot, and in the agents panel */
+.lost-pane {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  overflow: auto;
+}
+
+.lost-inner {
+  max-width: 520px;
+}
+
+.lost-inner h2 {
+  margin: 0 0 6px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--tx);
+}
+
+.lost-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.lost-actions.is-compact {
+  margin-top: 4px;
+  gap: 4px;
+}
+
+.lost-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--tx);
+  font: 500 12px/1 var(--font-ui);
+}
+
+.lost-actions.is-compact button {
+  height: 22px;
+  padding: 0 7px;
+  font-size: 11.5px;
+}
+
+.lost-actions button:hover {
+  border-color: var(--tx-3);
+}
+
+.lost-actions .lost-primary {
+  background: var(--acc-fill);
+  border-color: var(--acc-fill);
+  color: var(--on-acc);
+}
+
+.lost-actions .lost-primary:hover {
+  border-color: var(--acc);
+}
+
+.lost-note {
+  flex-basis: 100%;
+  font-size: 11.5px;
+  color: var(--tx-3);
+}
+
+.agents-lost {
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid var(--line-2);
+}
+
+.agents-sub {
+  font: 600 10.5px/1 var(--font-ui);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--tx-3);
+  padding: 6px 8px;
+}
+
+.lost-row {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 7px 8px;
+}
+
+.lost-error {
+  margin: 4px 8px;
+  font-size: 12px;
+  color: var(--red);
+}
+
+/* a read-only share of one pane */
+.view-banner {
+  height: 30px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--card);
+  color: var(--tx-2);
+  font-size: 12.5px;
+  min-width: 0;
+}
+
+.view-title {
+  color: var(--tx);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.view-sep {
+  color: var(--tx-3);
+}
+
+.view-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  padding: 6px;
+}
+
+.view-pane {
+  flex: 1;
+}
+
+.view-pane .pane-body {
+  overflow: auto;
+}
+
+.term-host.is-read-only {
+  position: relative;
+  inset: auto;
+  margin: 6px 4px 4px 10px;
+  width: max-content;
+}
+
 /* tab bodies and panes */
 .tab-bodies {
   flex: 1;

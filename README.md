@@ -144,6 +144,55 @@ blocked, errors or is done while you are looking elsewhere (click the
 notification to go to the pane), and **Sound** adds a short chime. The panel,
 notifications and sound are remembered in this browser.
 
+In the panel, a pane started from another pane (`la run` inside it) sits
+under its parent, with its labels as small chips. A pane that keeps running
+if LaForge restarts has a faint anchor in its header.
+
+### Agents run agents
+
+A program in a pane, an agent or you in its shell, can start panes of its own
+and work with them:
+
+```
+la run --bg --name tests make test   # start a pane, print its id, return
+la run make test                     # or stream it and wait
+la send tests "go test ./..."        # type a line into it
+la read tests --lines 80             # its last lines, as text
+la wait tests                        # until it needs attention or ends
+la ls --children                     # the panes this one started
+la close tests
+```
+
+A pane started from inside a pane is its child: it ends with its parent
+(unless `--outlive-parent`), and the parent is told when it is blocked, errs,
+is done or ends (`--no-notes` to turn that off). `--label key=value` names it
+for the starter. `la --skill` prints all of this for an agent to read.
+
+### Restart and resume
+
+`la restart` restarts the forge (after an update, say); the panes keep
+running. `la down` stops the forge and every pane; after the next `la up`
+each stopped pane shows in its place with **Resume** (which continues the
+agent's own session when its hook reported one), **Start fresh** (the same
+profile and folder, a new session) and **Dismiss**. Stopped panes that no tab
+holds are listed under **Lost panes** in the agents panel.
+
+### Answer from the browser
+
+`la hooks install --answer 90s claude` makes Claude Code hold each permission
+request for up to 90 seconds so you can answer it in LaForge: the pane and its
+agents-panel row show **Allow** and **Deny**, and the notification says so.
+If no one answers in time, it asks in its terminal as before. `la answer PANE
+allow|deny` answers from a shell.
+
+### Share a pane read-only
+
+`la share PANE` prints a link that shows that one pane, live, and nothing
+else: no typing, no other panes, no changes. It lasts 24 hours (`--for 2h`,
+at most 7 days); `la share --list` and `la share --revoke TOKEN` manage links.
+The link reaches only people who can reach the forge's address, which is
+127.0.0.1 (this machine) unless you have tunnelled it somewhere.
+
 ### Profiles
 
 The built-in profiles are your login shell and each agent CLI that is

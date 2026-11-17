@@ -5,8 +5,8 @@
 // It is one component so a host (the Outcome Arena) can mount it with its
 // own api base; the standalone client is this and nothing else.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Agents, Badge, type AgentRow } from './Agents';
-import { ApiError, ForgeApi, type Config, type Profile, type Session } from './api';
+import { Agents, AskButtons, Badge, LostActions, type AgentRow, type LostAction } from './Agents';
+import { ApiError, ForgeApi, type Config, type LostPane, type Profile, type Session, type Whoami } from './api';
 import * as L from './layout';
 import { Help, Palette, type Action } from './Palette';
 import { Picker, monogram } from './Picker';
@@ -49,6 +49,13 @@ export function Forge({ api: given, embedded = false }: Props) {
   const [soundOn, setSoundOn] = useState(() => N.loadFlag('laforge.sound', false));
   const [permission, setPermission] = useState<N.Permission>(N.permission);
   const [visible, setVisible] = useState(() => document.visibilityState === 'visible');
+  const [who, setWho] = useState<Whoami | null>(null);
+  const [lost, setLost] = useState<LostPane[]>([]);
+  const [lostError, setLostError] = useState('');
+  const [askHidden, setAskHidden] = useState<Set<string>>(new Set());
+  const [askNotes, setAskNotes] = useState<Record<string, string>>({});
+  const viewingRef = useRef(false);
+  viewingRef.current = who?.mode === 'view';
   const terms = useRef(new Map<string, TerminalHandle>());
   const mode: Mode = pref === 'system' ? sysMode : pref;
 
@@ -90,14 +97,26 @@ export function Forge({ api: given, embedded = false }: Props) {
       let list: Session[] | null = null;
       let profs: Profile[] = [];
       let cfg: Config | null = null;
+      let me: Whoami = { mode: 'full' };
+      let gone: LostPane[] = [];
       for (let attempt = 0; !stop; attempt++) {
         const failed = Symbol('failed');
-        const [r, l, p, c] = await Promise.all([api.layout().catch(() => failed), refresh(), api.profiles().catch(() => failed), api.config().catch(() => null)]);
-        if (r !== failed && l !== null && p !== failed) {
+        // whoami first: a read-only share may not ask for the lost panes
+        const w = await api.whoami().catch((err) => (err instanceof ApiError && err.status === 404 ? ({ mode: 'full' } as Whoami) : failed));
+        const [r, l, p, c, g] = await Promise.all([
+          api.layout().catch(() => failed),
+          refresh(),
+          api.profiles().catch(() => failed),
+          api.config().catch(() => null),
+          w !== failed && w.mode === 'full' ? api.lost().catch(() => [] as LostPane[]) : Promise.resolve([] as LostPane[]),
+        ]);
+        if (w !== failed && r !== failed && l !== null && p !== failed) {
+          me = w;
           raw = r;
           list = l;
           profs = p as Profile[];
           cfg = c;
+          gone = g;
           break;
         }
         await new Promise((ok) => setTimeout(ok, Math.min(1000 * (attempt + 1), 5000)));
@@ -105,15 +124,20 @@ export function Forge({ api: given, embedded = false }: Props) {
       if (stop) return;
       setProfiles(profs);
       setConfig(cfg);
+      setWho(me);
+      if (me.mode === 'view') return; // one pane, no layout
+      setLost(gone);
       let next = L.valid(raw) ? raw : L.initialLayout();
       const ids = new Set((list ?? []).map((s) => s.id));
+      const lostIds = new Set(gone.map((x) => x.id));
       const placed = new Set<string>();
       next = {
         ...next,
         tabs: next.tabs.map((t) => {
           let root = t.root;
           for (const p of L.panes(root)) {
-            if (p.session && !ids.has(p.session)) root = L.setSession(root, p.id, undefined);
+            // a lost pane keeps its slot, to resume there
+            if (p.session && !ids.has(p.session) && !lostIds.has(p.session)) root = L.setSession(root, p.id, undefined);
             else if (p.session) placed.add(p.session);
           }
           return { ...t, root };
@@ -169,7 +193,7 @@ export function Forge({ api: given, embedded = false }: Props) {
   const seenSent = useRef(new Set<string>());
   const markSeen = useCallback(
     (s: Session | undefined) => {
-      if (!s || s.seen !== false) return;
+      if (!s || s.seen !== false || viewingRef.current) return;
       const key = `${s.id}|${s.statusSince ?? ''}`;
       if (seenSent.current.has(key)) return;
       seenSent.current.add(key);
@@ -319,12 +343,13 @@ export function Forge({ api: given, embedded = false }: Props) {
   const alertRef = useRef<(t: S.Transition) => void>(() => undefined);
   alertRef.current = (t: S.Transition) => {
     const s = sessionsRef.current.get(t.id);
-    if (!s || S.shown(s) !== t.word || s.statusSince !== t.since || watched(t.id)) return;
+    if (viewingRef.current || !s || S.shown(s) !== t.word || s.statusSince !== t.since || watched(t.id)) return;
     if (soundOn) N.chime(t.word);
     if (!notifyOn) return;
     const name = s.status?.app || s.title;
     const what = t.word === 'blocked' ? 'is waiting for you' : t.word === 'error' ? 'hit an error' : 'is done';
-    const body = s.status?.msg || (t.word === 'blocked' && s.status?.kind ? `Waiting for ${s.status.kind}` : s.title);
+    let body = s.status?.msg || (t.word === 'blocked' && s.status?.kind ? `Waiting for ${s.status.kind}` : s.title);
+    if (t.word === 'blocked' && s.asking) body = `${s.asking.msg || body} · answer in LaForge`;
     N.show(`${name} ${what}`, body, `laforge-${t.id}`, () => {
       const at = locate(t.id);
       if (at) goTo(at.tab.id, at.pane.id);
@@ -363,6 +388,89 @@ export function Forge({ api: given, embedded = false }: Props) {
     };
   }, []);
 
+  // asks: Allow or Deny what a pane's agent waits for. A 409 means it gave
+  // up waiting and asked in its terminal.
+  const answer = useCallback(
+    async (s: Session, decision: 'allow' | 'deny') => {
+      const key = `${s.id}|${s.asking?.since ?? ''}`;
+      const note = (text: string) => {
+        setAskNotes((n) => ({ ...n, [s.id]: text }));
+        setTimeout(
+          () =>
+            setAskNotes((n) => {
+              const { [s.id]: _, ...rest } = n;
+              return rest;
+            }),
+          4000,
+        );
+      };
+      setAskHidden((h) => new Set(h).add(key));
+      try {
+        await api.answer(s.id, decision);
+        note(decision === 'allow' ? 'Allowed' : 'Denied');
+        refresh();
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 409) {
+          note('It already asked in its terminal');
+          return;
+        }
+        setAskHidden((h) => {
+          const next = new Set(h);
+          next.delete(key);
+          return next;
+        });
+        note((err as Error).message);
+      }
+    },
+    [api, refresh],
+  );
+
+  // lost panes: resume (continuing the agent's session when it can), start
+  // the profile fresh, or dismiss; in their slot, or else in a new tab
+  const lostAction = useCallback(
+    async (lp: LostPane, action: LostAction, slot?: { tabId: string; paneId: string }) => {
+      const fail = (msg: string) => (slot ? setErrors((e) => ({ ...e, [slot.paneId]: msg })) : setLostError(msg));
+      fail('');
+      try {
+        if (action === 'dismiss') {
+          await api.dismissLost(lp.id).catch((err) => {
+            if (!(err instanceof ApiError && err.status === 404)) throw err;
+          });
+          setLost((l) => l.filter((x) => x.id !== lp.id));
+          if (slot) updateTab(slot.tabId, (t) => ({ ...t, root: L.setSession(t.root, slot.paneId, undefined), focus: slot.paneId }));
+          return;
+        }
+        const s = await api.start(action === 'resume' ? { profile: lp.profile, resume: lp.id, cols: 100, rows: 30 } : { profile: lp.profile, cwd: lp.cwd, cols: 100, rows: 30 });
+        if (action === 'fresh') api.dismissLost(lp.id).catch(() => undefined);
+        setLost((l) => l.filter((x) => x.id !== lp.id));
+        setSessions((m) => new Map(m).set(s.id, s));
+        if (slot) updateTab(slot.tabId, (t) => ({ ...t, root: L.setSession(t.root, slot.paneId, s.id), focus: slot.paneId }));
+        else
+          setLayout((l) => {
+            if (!l) return l;
+            const t = L.newTab('', s.id);
+            return { ...l, tabs: [...l.tabs, t], active: t.id };
+          });
+      } catch (err) {
+        fail((err as Error).message);
+        api
+          .lost()
+          .then(setLost)
+          .catch(() => undefined);
+      }
+    },
+    [api, updateTab],
+  );
+
+  // openUnplaced shows a pane no tab holds (one an agent started) in a new tab.
+  const openUnplaced = useCallback((id: string) => {
+    setLayout((l) => {
+      if (!l) return l;
+      const t = L.newTab('', id);
+      return { ...l, tabs: [...l.tabs, t], active: t.id };
+    });
+  }, []);
+
   const toggleAgents = useCallback(() => {
     setAgentsOpen((o) => {
       N.saveFlag('laforge.agents', !o);
@@ -386,6 +494,14 @@ export function Forge({ api: given, embedded = false }: Props) {
       setTimeout(() => N.chime('done'), 50);
     }
   }, []);
+
+  useEffect(() => {
+    if (!agentsOpen || who?.mode !== 'full') return;
+    api
+      .lost()
+      .then(setLost)
+      .catch(() => undefined);
+  }, [agentsOpen, who, api]);
 
   // the agents panel's clock: finer than the status bar's while it is open
   const [now, setNow] = useState(() => Date.now());
@@ -435,7 +551,7 @@ export function Forge({ api: given, embedded = false }: Props) {
   const prefixRef = useRef(false);
   prefixRef.current = prefix;
   keys.current = (e: KeyboardEvent) => {
-    if (palette || help || renaming) return false;
+    if (palette || help || renaming || viewingRef.current) return false;
     if (paneMenu && e.key === 'Escape') {
       setPaneMenu(false);
       return true;
@@ -553,6 +669,43 @@ export function Forge({ api: given, embedded = false }: Props) {
     return () => window.removeEventListener('keydown', onDown);
   }, []);
 
+  const lostById = new Map(lost.map((x) => [x.id, x]));
+
+  if (who?.mode === 'view') {
+    const s = sessions.get(who.pane);
+    const word = S.shown(s);
+    const msg = s?.status?.msg ?? '';
+    return (
+      <div className={`forge is-view ${embedded ? 'is-embedded' : ''}`}>
+        <div className="view-banner">
+          <I.Eye />
+          <span>Read-only view</span>
+          <span className="view-sep">·</span>
+          <span className="view-title">{s?.title ?? 'pane'}</span>
+          <span className="view-sep">·</span>
+          {word ? <Badge word={word} progress={s?.status?.progress} /> : <span className={`dot dot-${s ? s.state : 'empty'}`} />}
+          {!word && <span>{s ? s.state : 'gone'}</span>}
+          {msg && (
+            <span className="pane-msg" title={msg}>
+              {msg}
+            </span>
+          )}
+        </div>
+        <main className="view-body">
+          {s && !authLost ? (
+            <div className="pane view-pane">
+              <div className="pane-body">
+                <TerminalView api={api} session={s.id} mode={mode} focused fontSize={fontSize} readOnly cols={s.columns} rows={s.rows} onKey={() => false} onFocus={() => undefined} onEnded={refresh} register={() => undefined} />
+              </div>
+            </div>
+          ) : (
+            <div className="loading">{authLost ? 'This share link has expired or was revoked.' : 'This pane has ended.'}</div>
+          )}
+        </main>
+      </div>
+    );
+  }
+
   if (!layout || !tab) {
     return (
       <div className={`forge ${embedded ? 'is-embedded' : ''}`}>
@@ -563,6 +716,8 @@ export function Forge({ api: given, embedded = false }: Props) {
       </div>
     );
   }
+
+  const placedSessions = new Set(layout.tabs.flatMap((t) => L.panes(t.root).map((p) => p.session)).filter(Boolean) as string[]);
 
   const counts = { running: 0, idle: 0, ended: 0 };
   for (const s of sessions.values()) {
@@ -653,6 +808,7 @@ export function Forge({ api: given, embedded = false }: Props) {
     const state = s ? s.state : 'empty';
     const word = S.shown(s);
     const msg = word ? s?.status?.msg || (word === 'blocked' && s?.status?.kind ? `waiting for ${s.status.kind}` : '') : '';
+    const lp = !s && pane.session ? lostById.get(pane.session) : undefined;
     return (
       <section
         className={`pane ${focused ? 'is-focused' : ''} ${zoomed ? 'is-zoomed' : ''}`}
@@ -679,6 +835,12 @@ export function Forge({ api: given, embedded = false }: Props) {
                   {msg}
                 </span>
               )}
+              <AskButtons asking={!!s.asking && !askHidden.has(`${s.id}|${s.asking.since}`)} note={askNotes[s.id]} onAnswer={(d) => answer(s, d)} />
+              {s.held && (
+                <span className="pane-held" title="Keeps running if LaForge restarts">
+                  <I.Held />
+                </span>
+              )}
               {s.after && (
                 <span className="pane-after" title={`${profiles.find((p) => p.name === s.after)?.label ?? s.after} exited${s.agentExit !== undefined ? ` (${s.agentExit})` : ''}; this pane is a shell now`}>
                   after {profiles.find((p) => p.name === s.after)?.label ?? s.after}
@@ -687,6 +849,14 @@ export function Forge({ api: given, embedded = false }: Props) {
               )}
               <span className="pane-cwd" title={s.cwd}>
                 {shortPath(s.cwd, config?.cwd)}
+              </span>
+            </>
+          ) : lp ? (
+            <>
+              <span className="pane-title is-muted">{lp.title}</span>
+              <span className="pane-lost">lost</span>
+              <span className="pane-cwd" title={lp.cwd}>
+                {shortPath(lp.cwd, config?.cwd)}
               </span>
             </>
           ) : (
@@ -729,6 +899,17 @@ export function Forge({ api: given, embedded = false }: Props) {
               onEnded={refresh}
               register={(h) => (h ? terms.current.set(pane.id, h) : terms.current.delete(pane.id))}
             />
+          ) : lp ? (
+            <div className="lost-pane">
+              <div className="lost-inner">
+                <h2>{lp.title}</h2>
+                <p className="picker-note">
+                  Its program stopped {S.ago(lp.lostAt, Date.now()) === 'now' ? 'just now' : `${S.ago(lp.lostAt, Date.now())} ago`} (LaForge was stopped, or the machine restarted). It ran {profiles.find((x) => x.name === lp.profile)?.label ?? lp.profile} in <code>{shortPath(lp.cwd)}</code>.
+                </p>
+                <LostActions lp={lp} onAction={(a) => lostAction(lp, a, { tabId: t.id, paneId: pane.id })} />
+                {errors[pane.id] && <p className="picker-error">{errors[pane.id]}</p>}
+              </div>
+            </div>
           ) : (
             <Picker
               profiles={profiles}
@@ -793,33 +974,42 @@ export function Forge({ api: given, embedded = false }: Props) {
     if (profile) startIn(tab.id, pane.id, profile, config?.cwd);
   };
 
-  // agentRows: every pane with a status or an agent profile, most urgent first
+  // agentRows: every pane with a status, an agent profile, a parent or
+  // children, most urgent first, children under their parent; panes no tab
+  // holds (an agent started them) too, so they can be opened
   const agentRows = (): AgentRow[] => {
-    const rows: (AgentRow & { s: Session })[] = [];
-    for (const t of layout.tabs) {
-      for (const p of L.panes(t.root)) {
-        const s = p.session ? sessions.get(p.session) : undefined;
-        if (!s) continue;
-        const prof = profiles.find((x) => x.name === s.profile);
-        if (!s.status && !prof?.agent) continue;
-        const word = S.shown(s);
-        rows.push({
-          s,
-          key: p.id,
-          tabId: t.id,
-          paneId: p.id,
-          tab: tabLabel(t),
-          title: s.title,
-          app: s.status?.app || prof?.label || s.profile,
-          word,
-          state: s.state,
-          msg: s.status?.msg || (word === 'blocked' && s.status?.kind ? `waiting for ${s.status.kind}` : ''),
-          since: s.statusSince,
-          current: t.id === layout.active && t.focus === p.id,
-        });
-      }
+    const where = new Map<string, { tab: L.Tab; pane: L.PaneNode }>();
+    for (const t of layout.tabs) for (const p of L.panes(t.root)) if (p.session) where.set(p.session, { tab: t, pane: p });
+    const parents = new Set([...sessions.values()].map((x) => x.parent).filter(Boolean) as string[]);
+    const items: (AgentRow & { s: Session; parent?: string })[] = [];
+    for (const s of sessions.values()) {
+      const at = where.get(s.id);
+      if (!at && !live(s)) continue;
+      const prof = profiles.find((x) => x.name === s.profile);
+      if (!s.status && !prof?.agent && !s.parent && !parents.has(s.id)) continue;
+      const word = S.shown(s);
+      items.push({
+        s,
+        parent: s.parent,
+        key: s.id,
+        id: s.id,
+        tabId: at?.tab.id ?? '',
+        paneId: at?.pane.id ?? '',
+        tab: at ? tabLabel(at.tab) : 'not in a tab',
+        title: s.title,
+        app: s.status?.app || prof?.label || s.profile,
+        word,
+        state: s.state,
+        msg: s.status?.msg || (word === 'blocked' && s.status?.kind ? `waiting for ${s.status.kind}` : ''),
+        since: s.statusSince,
+        current: !!at && at.tab.id === layout.active && at.tab.focus === at.pane.id,
+        depth: 0,
+        labels: Object.entries(s.labels ?? {}),
+        asking: !!s.asking && !askHidden.has(`${s.id}|${s.asking.since}`),
+        askNote: askNotes[s.id],
+      });
     }
-    return rows.sort((a, b) => S.byUrgency(a.s, b.s)).map(({ s: _, ...r }) => r);
+    return S.nest(items, (a, b) => S.byUrgency(a.s, b.s)).map(({ s: _, parent: __, ...r }) => r);
   };
 
   const ModeIcon = pref === 'dark' ? I.Moon : pref === 'light' ? I.Sun : I.Monitor;
@@ -983,14 +1173,21 @@ export function Forge({ api: given, embedded = false }: Props) {
         {agentsOpen && (
           <Agents
             rows={agentRows()}
+            lost={lost.filter((x) => !placedSessions.has(x.id))}
+            lostError={lostError}
+            onAnswer={(r, d) => {
+              const s = sessions.get(r.id);
+              if (s) answer(s, d);
+            }}
+            onLost={(lp, a) => lostAction(lp, a)}
             now={now}
             permission={permission}
             notify={notifyOn}
             sound={soundOn}
             onPick={(r) => {
-              goTo(r.tabId, r.paneId);
-              const id = L.findPane(layout.tabs.find((x) => x.id === r.tabId)!.root, r.paneId)?.session;
-              if (id) markSeen(sessions.get(id));
+              if (r.tabId) goTo(r.tabId, r.paneId);
+              else openUnplaced(r.id);
+              markSeen(sessions.get(r.id));
             }}
             onNotify={setNotify}
             onSound={setSound}

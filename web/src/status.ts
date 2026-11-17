@@ -80,3 +80,29 @@ export function ago(iso: string | undefined, now: number): string {
   if (s < 86400) return `${Math.floor(s / 3600)}h`;
   return `${Math.floor(s / 86400)}d`;
 }
+
+/**
+ * nest orders items as a tree: each item under its parent (by id), siblings
+ * by cmp, with its depth. An item whose parent is not among them sits at the
+ * top level, and so does any item caught in a cycle.
+ */
+export function nest<T extends { id: string; parent?: string }>(items: T[], cmp: (a: T, b: T) => number): (T & { depth: number })[] {
+  const ids = new Set(items.map((x) => x.id));
+  const kids = new Map<string, T[]>();
+  const roots: T[] = [];
+  for (const x of items) {
+    if (x.parent && x.parent !== x.id && ids.has(x.parent)) kids.set(x.parent, [...(kids.get(x.parent) ?? []), x]);
+    else roots.push(x);
+  }
+  const out: (T & { depth: number })[] = [];
+  const done = new Set<string>();
+  const walk = (x: T, depth: number) => {
+    if (done.has(x.id)) return;
+    done.add(x.id);
+    out.push({ ...x, depth });
+    for (const k of [...(kids.get(x.id) ?? [])].sort(cmp)) walk(k, depth + 1);
+  };
+  for (const r of [...roots].sort(cmp)) walk(r, 0);
+  for (const x of [...items].sort(cmp)) walk(x, 0); // a cycle: no root reaches it
+  return out;
+}

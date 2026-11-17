@@ -59,7 +59,39 @@ export interface Session {
   reported?: boolean;
   /** seen: a viewer has looked since the status last changed. */
   seen?: boolean;
+  /** agentSession: the agent's own session, what resuming continues. */
+  agentSession?: AgentSession;
+  /** held: the pane runs in a holder and keeps running if the forge restarts. */
+  held?: boolean;
+  /** parent: the pane this one was started from (la run); labels: its starter's names for it. */
+  parent?: string;
+  outlive?: boolean;
+  notes?: boolean;
+  labels?: Record<string, string>;
+  /** asking: the permission its agent waits for a person to answer (answer). */
+  asking?: { msg: string; since: string };
 }
+
+export interface AgentSession {
+  agent: string;
+  sessionId: string;
+}
+
+/** LostPane is a pane whose program is gone (la down, a reboot), offered to resume. */
+export interface LostPane {
+  id: string;
+  profile: string;
+  title: string;
+  cwd: string;
+  agentSession?: AgentSession;
+  startedAt: string;
+  lostAt: string;
+  /** resumable: starting it again continues the agent's own session. */
+  resumable: boolean;
+}
+
+/** Who is the viewer: the forge's full token, or a read-only share of one pane. */
+export type Whoami = { mode: 'full' } | { mode: 'view'; pane: string };
 
 export interface Config {
   cwd: string;
@@ -107,10 +139,14 @@ export class ForgeApi {
   profiles = () => this.call<Profile[]>('GET', '/api/profiles');
   sessions = () => this.call<Session[]>('GET', '/api/sessions');
   config = () => this.call<Config>('GET', '/api/config');
-  start = (req: { profile: string; cwd?: string; title?: string; cols?: number; rows?: number }) => this.call<Session>('POST', '/api/sessions', req);
+  start = (req: { profile: string; cwd?: string; title?: string; cols?: number; rows?: number; resume?: string }) => this.call<Session>('POST', '/api/sessions', req);
   rename = (id: string, title: string) => this.call<Session>('PATCH', `/api/sessions/${encodeURIComponent(id)}`, { title });
   close = (id: string, force = false) => this.call<void>('DELETE', `/api/sessions/${encodeURIComponent(id)}${force ? '?force=1' : ''}`);
   seen = (id: string) => this.call<Session>('POST', `/api/sessions/${encodeURIComponent(id)}/seen`);
+  whoami = () => this.call<Whoami>('GET', '/api/whoami');
+  lost = () => this.call<LostPane[]>('GET', '/api/lost');
+  dismissLost = (id: string) => this.call<void>('DELETE', `/api/lost/${encodeURIComponent(id)}`);
+  answer = (id: string, decision: 'allow' | 'deny') => this.call<{ decision: string }>('POST', `/api/sessions/${encodeURIComponent(id)}/answer`, { decision });
   layout = () => this.call<unknown>('GET', '/api/layout');
   saveLayout = (layout: unknown) => this.call<void>('PUT', '/api/layout', layout);
 

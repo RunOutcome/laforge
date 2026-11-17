@@ -112,3 +112,14 @@ export const Bell = () => (
     <path d="M4 11.5V7a4 4 0 0 1 8 0v4.5l1 1H3l1-1ZM6.5 14h3" />
   </svg>
 );
+export const Eye = () => (
+  <svg {...base} aria-hidden>
+    <path d="M1.5 8S4 3.5 8 3.5 14.5 8 14.5 8 12 12.5 8 12.5 1.5 8 1.5 8Z" />
+    <circle cx="8" cy="8" r="2" />
+  </svg>
+);
+export const Held = () => (
+  <svg {...base} width={11} height={11} aria-hidden>
+    <path d="M8 2.5v9M5 13.5h6M3.5 8.5c0 2.5 2 4 4.5 4s4.5-1.5 4.5-4M6 4.5h4" />
+  </svg>
+);

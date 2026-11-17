@@ -29,9 +29,13 @@ interface Props {
   onFocus: () => void;
   onEnded: () => void;
   register: (h: TerminalHandle | null) => void;
+  /** readOnly watches only: no input, no resize; the terminal keeps the pane's own size (cols, rows). */
+  readOnly?: boolean;
+  cols?: number;
+  rows?: number;
 }
 
-export function TerminalView({ api, session, mode, focused, fontSize, onKey, onFocus, onEnded, register }: Props) {
+export function TerminalView({ api, session, mode, focused, fontSize, onKey, onFocus, onEnded, register, readOnly = false, cols, rows }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const termRef = useRef<Terminal | null>(null);
   const refitRef = useRef<() => void>(() => undefined);
@@ -39,6 +43,8 @@ export function TerminalView({ api, session, mode, focused, fontSize, onKey, onF
   handlers.current = { onKey, onFocus, onEnded };
   const focusedRef = useRef(focused);
   focusedRef.current = focused;
+  const fixed = useRef({ readOnly, cols, rows });
+  fixed.current = { readOnly, cols, rows };
 
   useEffect(() => {
     const el = host.current;
@@ -52,6 +58,8 @@ export function TerminalView({ api, session, mode, focused, fontSize, onKey, onF
       allowProposedApi: true,
       macOptionIsMeta: true,
       theme: terminalTheme(mode),
+      disableStdin: readOnly,
+      cursorInactiveStyle: readOnly ? 'none' : undefined,
     });
     const fit = new FitAddon();
     term.loadAddon(fit);
@@ -76,11 +84,18 @@ export function TerminalView({ api, session, mode, focused, fontSize, onKey, onF
     let size = { cols: 0, rows: 0 };
 
     const sendResize = () => {
+      if (fixed.current.readOnly) return;
       if (socket?.readyState === WebSocket.OPEN && term.cols > 0) {
         socket.send(JSON.stringify({ type: 'resize', cols: term.cols, rows: term.rows }));
       }
     };
     const refit = () => {
+      const f = fixed.current;
+      if (f.readOnly) {
+        // a viewer draws the pane at its own size: fitting would rewrap it
+        if (f.cols && f.rows && (term.cols !== f.cols || term.rows !== f.rows)) term.resize(f.cols, f.rows);
+        return;
+      }
       if (el.offsetWidth < 20 || el.offsetHeight < 20) return;
       try {
         fit.fit();
@@ -145,10 +160,15 @@ export function TerminalView({ api, session, mode, focused, fontSize, onKey, onF
     };
     connect();
 
+    const send = (data: string) => {
+      if (!fixed.current.readOnly && socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'input', data }));
+    };
     const input = term.onData((data) => {
+      if (fixed.current.readOnly) return;
       if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'input', data }));
     });
     const binary = term.onBinary((data) => {
+      if (fixed.current.readOnly) return;
       if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'input', data }));
     });
     const focusIn = () => handlers.current.onFocus();
@@ -159,9 +179,7 @@ export function TerminalView({ api, session, mode, focused, fontSize, onKey, onF
 
     register({
       focus: () => term.focus(),
-      send: (data) => {
-        if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'input', data }));
-      },
+      send,
     });
 
     return () => {
@@ -195,5 +213,9 @@ export function TerminalView({ api, session, mode, focused, fontSize, onKey, onF
     if (focused) termRef.current?.focus();
   }, [focused]);
 
-  return <div className="term-host" ref={host} />;
+  useEffect(() => {
+    if (readOnly) refitRef.current(); // the pane was resized by its owner
+  }, [readOnly, cols, rows]);
+
+  return <div className={`term-host ${readOnly ? 'is-read-only' : ''}`} ref={host} />;
 }

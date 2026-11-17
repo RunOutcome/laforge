@@ -70,3 +70,22 @@ describe('status', () => {
     expect(S.ago('2026-01-01T00:00:00Z', t + 49 * 3600000)).toBe('2d');
   });
 });
+
+describe('nest', () => {
+  const byId = (a: { id: string }, b: { id: string }) => a.id.localeCompare(b.id);
+  const tree = (list: { id: string; depth: number }[]) => list.map((x) => `${'-'.repeat(x.depth)}${x.id}`);
+
+  it('puts children under their parent, siblings in order', () => {
+    const items = [{ id: 'c', parent: 'a' }, { id: 'a' }, { id: 'b' }, { id: 'd', parent: 'c' }, { id: 'e', parent: 'a' }];
+    expect(tree(S.nest(items, byId))).toEqual(['a', '-c', '--d', '-e', 'b']);
+  });
+
+  it('keeps an orphan at the top level', () => {
+    expect(tree(S.nest([{ id: 'x', parent: 'gone' }, { id: 'a' }], byId))).toEqual(['a', 'x']);
+  });
+
+  it('keeps every item when parents form a cycle', () => {
+    const items = [{ id: 'a', parent: 'b' }, { id: 'b', parent: 'a' }, { id: 'c', parent: 'c' }];
+    expect(tree(S.nest(items, byId)).sort()).toEqual(['-b', 'a', 'c'].sort());
+  });
+});
