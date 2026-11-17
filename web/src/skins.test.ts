@@ -8,7 +8,7 @@ import * as K from './skins';
 const skin = (name: string, more: Partial<K.Skin> = {}): K.Skin => ({ name, label: name, builtin: false, ...more });
 
 describe('skin loader', () => {
-  const list: K.SkinList = { default: 'console', skins: [skin('classic', { builtin: true }), skin('console', { layout: 'rail', mode: 'dark' }), skin('paper')] };
+  const list: K.SkinList = { default: 'console', skins: [skin('classic', { builtin: true }), skin('console', { layout: 'rail' }), skin('paper')] };
 
   it("takes the browser's choice when the forge still has it", () => {
     expect(K.pick(list, 'paper').name).toBe('paper');
@@ -25,17 +25,20 @@ describe('skin loader', () => {
     expect(K.pick({ default: 'x', skins: [] }, null)).toBe(K.classic);
   });
 
-  it('forces the mode a skin draws, and reads its layout', () => {
-    expect(K.modeOf(skin('a', { mode: 'dark' }), 'light')).toBe('dark');
-    expect(K.modeOf(skin('a', { mode: 'both' }), 'light')).toBe('light');
+  it("draws the viewer's mode, and reads its layout", () => {
+    expect(K.modeOf(skin('a'), 'light')).toBe('light');
     expect(K.modeOf(skin('a'), 'dark')).toBe('dark');
     expect(K.layoutOf(skin('a', { layout: 'rail' }))).toBe('rail');
     expect(K.layoutOf(skin('a', { layout: 'sideways' as K.SkinLayout }))).toBe('classic');
   });
 
-  it('lays the skin terminal palette over the base', () => {
-    const t = K.terminalOf(skin('a', { terminal: { background: '#000000', red: '#ff0000' } }), { background: '#111111', foreground: '#eeeeee' });
-    expect(t).toEqual({ background: '#000000', foreground: '#eeeeee', red: '#ff0000' });
+  it("lays the skin's terminal palette for the mode over the base", () => {
+    const s = skin('a', { terminal: { dark: { background: '#000000', red: '#ff0000' }, light: { background: '#fafafa' } } });
+    const base = { background: '#111111', foreground: '#eeeeee' };
+    expect(K.terminalOf(s, base, 'dark')).toEqual({ background: '#000000', foreground: '#eeeeee', red: '#ff0000' });
+    expect(K.terminalOf(s, base, 'light')).toEqual({ background: '#fafafa', foreground: '#eeeeee' });
+    expect(K.terminalOf(skin('b', { terminal: { dark: { background: '#000000' } } }), base, 'light')).toBe(base);
+    expect(K.terminalOf(skin('c'), base, 'dark')).toBe(base);
   });
 
   it("serves a skin's stylesheets from its folder", () => {
@@ -129,5 +132,13 @@ describe('rail', () => {
   it('counts working, need you and done for the footer', () => {
     const list = [pane('a', '/', { word: 'working' }), pane('b', '/', { word: 'blocked' }), pane('c', '/', { word: 'error' }), pane('d', '/', { word: 'done' }), pane('e', '/', { word: 'done', seen: true }), pane('f', '/')];
     expect(R.counts(list)).toEqual({ working: 1, needYou: 2, done: 1 });
+  });
+
+  it('pads counts and stamps dates for skins', () => {
+    expect(R.pad2(4)).toBe('04');
+    expect(R.pad2(12)).toBe('12');
+    expect(R.dateStamp(new Date(2026, 0, 1, 0, 0))).toEqual({ year: '2026', day: '001', tenth: '0' });
+    expect(R.dateStamp(new Date(2026, 10, 16, 23, 20))).toEqual({ year: '2026', day: '320', tenth: '9' });
+    expect(R.dateStamp(new Date(2024, 11, 31, 12, 0))).toEqual({ year: '2024', day: '366', tenth: '5' });
   });
 });

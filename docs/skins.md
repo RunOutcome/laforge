@@ -15,7 +15,8 @@ its own content type, `nosniff` and a sandboxing policy, so even an SVG
 cannot run script. Anything a skin draws, it draws with CSS.
 
 LaForge ships two skins: **classic** (its own look, light and dark) and
-**console** (a black control-room look in the rail layout). A skin you
+**console** (forge steel: graphite or light steel, square frames on a rule
+grid, in the rail layout). Both draw light and dark. A skin you
 install is used in the browser that picks it. The forge's default skin is
 what other browsers see until they pick their own.
 
@@ -48,9 +49,11 @@ whose stylesheet fails to load falls back to classic.
   "author": "You",
   "license": "Apache-2.0",
   "layout": "classic",
-  "mode": "dark",
   "css": ["skin.css"],
-  "terminal": { "background": "#0d1418", "foreground": "#e3e9ec", "cursor": "#d4a04c" }
+  "terminal": {
+    "dark": { "background": "#0d1418", "foreground": "#e3e9ec", "cursor": "#d4a04c" },
+    "light": { "background": "#f4f1ea", "foreground": "#1b262c", "cursor": "#9a6d1c" }
+  }
 }
 ```
 
@@ -60,25 +63,32 @@ whose stylesheet fails to load falls back to classic.
 | `label` | What people see in the palette. Defaults to `name`. |
 | `description`, `version`, `author`, `license` | Shown in `la skin list`; say what licence your files are under. |
 | `layout` | `classic` (tabs above panes) or `rail` (spaces and crew in a rail at the left). Defaults to `classic`. |
-| `mode` | `dark` or `light` forces that mode; `both` (the default) follows the viewer's choice. |
 | `css` | The stylesheets, in order, relative to the folder. Optional: a skin may change only the terminal palette. |
-| `terminal` | The terminal's colours. Keys: `background`, `foreground`, `cursor`, `cursorAccent`, `selectionBackground`, `selectionForeground`, `black`, `red`, `green`, `yellow`, `blue`, `magenta`, `cyan`, `white` and `brightBlack` … `brightWhite`. Values are `#hex` or `rgb()`/`rgba()`. Keys left out keep the mode's own colours. |
+| `terminal` | The terminal's colours for each mode: `{"dark": {…}, "light": {…}}`. Keys in each: `background`, `foreground`, `cursor`, `cursorAccent`, `selectionBackground`, `selectionForeground`, `black`, `red`, `green`, `yellow`, `blue`, `magenta`, `cyan`, `white` and `brightBlack` … `brightWhite`. Values are `#hex` or `rgb()`/`rgba()`. Keys left out keep the mode's own colours. |
 
 Unknown fields are refused, so a typo is caught when you install.
+
+Every skin draws both modes. The viewer picks light or dark (or follows the
+system); the client sets `data-mode` on the root and uses `terminal.dark` or
+`terminal.light`. A mode left out of `terminal` keeps the client's own
+palette for that mode.
 
 ## How a skin is applied
 
 The client adds one `<link rel="stylesheet">` per `css` entry, from
-`/skins/<name>/<file>`, and sets two attributes on the root element:
+`/skins/<name>/<file>`, and sets attributes on the root element (`data-mode` follows the viewer):
 
 ```html
 <html data-skin="harbour" data-layout="classic" data-mode="dark">
 ```
 
-Scope every rule to your skin, so nothing leaks while a switch is under way:
+Scope every rule to your skin, so nothing leaks while a switch is under way.
+Put colours under each mode, and shapes and faces under the skin alone:
 
 ```css
-:root[data-skin='harbour'] { --acc: #d4a04c; }
+:root[data-skin='harbour'] { --radius-pane: 4px; }
+:root[data-skin='harbour'][data-mode='dark'] { --acc: #d4a04c; }
+:root[data-skin='harbour'][data-mode='light'] { --acc: #9a6d1c; }
 [data-skin='harbour'] .pane-title { letter-spacing: 0.04em; }
 ```
 
@@ -96,8 +106,10 @@ so do not load anything from the network.
 
 ## Custom properties
 
-Most of a skin is setting these on `:root[data-skin='<name>']`. Classic sets
-them on `:root` (light) and `:root[data-mode='dark']`.
+Most of a skin is setting these: the colours on
+`:root[data-skin='<name>'][data-mode='dark']` and `…[data-mode='light']`, the
+rest on `:root[data-skin='<name>']`. Classic sets them on `:root` (light) and
+`:root[data-mode='dark']`.
 
 **Colours**
 
@@ -211,13 +223,18 @@ attributes. These are stable: a skin may rely on them.
 | --- | --- |
 | `.rail` | the rail at the left (a drawer below 640px) |
 | `.rail-machine`, `.rail-label`, `.rail-host` | the machine's name |
-| `.rail-section.rail-spaces`, `.rail-title`, `.rail-count` | the Spaces section |
+| `.rail-section.rail-spaces`, `.rail-title`, `.rail-count[data-padded]` | the Spaces section; its title carries the number of spaces |
 | `.rail-space[data-space][data-index]`, `.rail-space.is-active` | a space; `data-space` is its name (`""` for All), `data-index` its position modulo 8, for colour blocks |
 | `.rail-add`, `.rail-new-space` | New space and its form |
 | `.rail-section.rail-crew`, `.crew-row[data-status]`, `.crew-row.is-current` | the Crew and its rows |
 | `.crew-bar`, `.crew-name`, `.crew-sub`, `.crew-msg` | a crew row's parts |
+| `.crew-word[data-status]`, `.crew-space` | inside `.crew-sub`: the status word and the space, to restyle or reword |
+| `.rail-link[data-state]`, `.rail-link-name`, `.rail-link-state` | below the crew: the link to the forge, `online` or `offline` |
+| `.rail-menu` | the rail's last item, opening the command palette |
 | `.rail-header`, `.rail-when`, `.rail-date`, `.rail-time`, `.rail-space-title`, `.rail-toggle` | the header |
+| `.rail-when[data-year][data-day][data-tenth]` | a numeric date for skins: the year, the day of the year in three digits and the tenth of the day (`2026`, `320`, `9`) |
 | `.rail-footer`, `.rf-counts`, `.rf-count[data-status]` | the footer and its counts (`working`, `blocked` for need you, `done`) |
+| `.rf-count[data-kind]`, `.rf-num[data-padded]`, `.rf-word` | each count's kind (`working`, `need-you`, `done`, `machines`), its number and its word; the `machines` count is hidden unless a skin shows it |
 | `.rail-scrim` | behind the open drawer on a phone |
 
 ## The two layouts
@@ -237,12 +254,26 @@ the clock).
   most urgent first, with Allow and Deny inline.
 - Below 640px the rail becomes a drawer, opened with `.rail-toggle`.
 
+**Counts and labels.** Every count in the rail (`.rail-count`, `.rf-num`) has
+`data-padded`, the number with at least two digits (`05`). Skins that number
+things or relabel them do it in CSS, without new markup:
+
+```css
+/* "SPACES 05" */
+[data-skin='x'] .rail-title .rail-count { font-size: 0; }
+[data-skin='x'] .rail-title .rail-count::before { content: attr(data-padded); font-size: 16px; }
+/* "Needs you" for the blocked word in a crew row */
+[data-skin='x'] .crew-word[data-status='blocked'] { font-size: 0; }
+[data-skin='x'] .crew-word[data-status='blocked']::before { content: 'Needs you'; font-size: 11px; }
+```
+
 The client draws the rail's structure plainly; a rail skin gives it its
-look. `forge/skins/console/skin.css` is a full example: elbow bars that join
-the rail to the header and footer (a thick `border-top` on `.rail-header`, a
-coloured `.rail-machine`, and a `radial-gradient` corner on
-`.rail-header::before`), colour blocks from `.rail-space[data-index]`, and
-tabs coloured by `.tab[data-status]`.
+look. `forge/skins/console/skin.css` is a full example in both modes: a thin
+rule grid on the ground (two `linear-gradient`s on `.forge`), square frames
+with a chamfered corner (`clip-path` on `.pane` and a diagonal edge in
+`.pane::after`), numbered spaces from a CSS counter on `.rail-space`, status
+squares from `.crew-row[data-status] .crew-bar` and `.rf-count[data-kind]`,
+and tabs with a status stripe from `.tab[data-status]`.
 
 ## A minimal skin
 
@@ -255,13 +286,16 @@ harbour/
 `skin.json`:
 
 ```json
-{ "name": "harbour", "label": "Harbour", "license": "Apache-2.0", "mode": "dark", "css": ["skin.css"] }
+{ "name": "harbour", "label": "Harbour", "license": "Apache-2.0", "css": ["skin.css"] }
 ```
 
 `skin.css`:
 
 ```css
 :root[data-skin='harbour'] {
+  --radius-pane: 4px;
+}
+:root[data-skin='harbour'][data-mode='dark'] {
   --side: #0d1418;
   --canvas: #0d1418;
   --card: #132026;
@@ -269,7 +303,15 @@ harbour/
   --line: #24363e;
   --acc: #d4a04c;
   --acc-fill: #b9852f;
-  --radius-pane: 4px;
+}
+:root[data-skin='harbour'][data-mode='light'] {
+  --side: #f4f1ea;
+  --canvas: #f4f1ea;
+  --card: #fbfaf6;
+  --term: #fbfaf6;
+  --line: #d6d0c2;
+  --acc: #9a6d1c;
+  --acc-fill: #9a6d1c;
 }
 [data-skin='harbour'] .tab.is-active { box-shadow: inset 0 -2px 0 var(--acc); }
 ```
@@ -282,6 +324,7 @@ Then `la skin install ./harbour` and pick **Skin: Harbour** in ⌘K.
 - Nothing from the network: bundle what you use.
 - Fonts need a licence that lets you bundle them (SIL OFL, for instance); put
   the licence text in the skin.
-- Scope rules to `[data-skin='<name>']`.
+- Scope rules to `[data-skin='<name>']`, and colours to each `[data-mode]`.
+- Draw both light and dark.
 - Draw only what the hooks give you; do not depend on other class names,
   which may change.

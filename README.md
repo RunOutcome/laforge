@@ -196,7 +196,8 @@ The link reaches only people who can reach the forge's address, which is
 ### Skins
 
 A skin changes how the forge looks. **Classic** is LaForge's own; **Console**
-is a black control-room look with spaces and the crew in a rail at the left.
+is forge steel, square frames on a rule grid, with spaces and the crew in a
+rail at the left; both draw light and dark.
 Pick one in ⌘K (**Skin: …**); each browser keeps its own choice, and **Make
 … the forge default** sets what others see. `la skin install DIR`, `la skin
 list`, `la skin use NAME` and `la skin remove NAME` manage them. A skin is

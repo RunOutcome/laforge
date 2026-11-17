@@ -11,6 +11,8 @@ import type { Mode } from './theme';
 
 export type SkinLayout = 'classic' | 'rail';
 
+export type TerminalColours = Partial<Record<Exclude<keyof ITheme, 'extendedAnsi'>, string>>;
+
 export interface Skin {
   name: string;
   label: string;
@@ -19,9 +21,9 @@ export interface Skin {
   author?: string;
   license?: string;
   layout?: SkinLayout;
-  mode?: 'dark' | 'light' | 'both';
   css?: string[];
-  terminal?: Partial<Record<Exclude<keyof ITheme, 'extendedAnsi'>, string>>;
+  /** terminal is the xterm palette for each mode; every skin draws both. */
+  terminal?: { dark?: TerminalColours; light?: TerminalColours };
   builtin: boolean;
 }
 
@@ -31,7 +33,7 @@ export interface SkinList {
 }
 
 /** classic is the client's own look; it needs nothing from the forge. */
-export const classic: Skin = { name: 'classic', label: 'Classic', layout: 'classic', mode: 'both', builtin: true };
+export const classic: Skin = { name: 'classic', label: 'Classic', layout: 'classic', builtin: true };
 
 const key = 'laforge.skin';
 
@@ -62,13 +64,14 @@ export function pick(list: SkinList | null, choice: string | null): Skin {
 /** layoutOf is the skin's layout; anything unknown is classic. */
 export const layoutOf = (skin: Skin): SkinLayout => (skin.layout === 'rail' ? 'rail' : 'classic');
 
-/** modeOf is the mode to draw: the skin's own when it draws only one, else the viewer's. */
-export const modeOf = (skin: Skin, viewer: Mode): Mode => (skin.mode === 'dark' || skin.mode === 'light' ? skin.mode : viewer);
+/** modeOf is the mode to draw. Every skin draws light and dark, so it is the viewer's. */
+export const modeOf = (_skin: Skin, viewer: Mode): Mode => viewer;
 
-/** terminalOf is the skin's terminal palette over the base one. */
-export function terminalOf(skin: Skin, base: ITheme): ITheme {
-  if (!skin.terminal) return base;
-  return { ...base, ...skin.terminal } as ITheme;
+/** terminalOf is the skin's terminal palette for the mode, over the base one. */
+export function terminalOf(skin: Skin, base: ITheme, mode: Mode): ITheme {
+  const own = skin.terminal?.[mode];
+  if (!own) return base;
+  return { ...base, ...own } as ITheme;
 }
 
 /** cssUrls are a skin's stylesheets, as the forge serves them. */

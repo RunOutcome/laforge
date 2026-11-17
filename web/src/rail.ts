@@ -70,3 +70,14 @@ export function tabsIn(
   }
   return out;
 }
+
+/** pad2 is a count with at least two digits ("04"), for skins that number things. */
+export const pad2 = (n: number): string => String(n).padStart(2, '0');
+
+/** dateStamp is a compact numeric date for skins: the year, the day of the year (3 digits) and the tenth of the day. */
+export function dateStamp(d: Date): { year: string; day: string; tenth: string } {
+  const start = new Date(d.getFullYear(), 0, 1);
+  const day = Math.floor((new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() - start.getTime()) / 86400000) + 1;
+  const tenth = Math.floor(((d.getHours() * 60 + d.getMinutes()) / 1440) * 10);
+  return { year: String(d.getFullYear()), day: String(day).padStart(3, '0'), tenth: String(tenth) };
+}
