@@ -202,6 +202,7 @@ Pick one in ⌘K (**Skin: …**); each browser keeps its own choice, and **Make
 list`, `la skin use NAME` and `la skin remove NAME` manage them. A skin is
 stylesheets, fonts and images, never code: see [docs/skins.md](docs/skins.md)
 to make one.
+More skins to install are in the [skin gallery](skins/README.md).
 
 ### Profiles
 

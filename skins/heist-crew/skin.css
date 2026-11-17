@@ -1,0 +1,427 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+/* SPDX-FileCopyrightText: 2026 COR Holdings, LLC */
+
+/* Heist Crew: the job laid out on a blueprint. A blue ground with a fine
+   and a coarse grid, white technical line work, dimension ticks on the
+   panes, stencilled monospace labels, tabs as numbered steps of the plan.
+   Red means someone has been made by security. Layout: classic. System
+   faces only. */
+
+:root[data-skin='heist-crew'] {
+  --h-blue: #0d3263;
+  --h-blue-deep: #092548;
+  --h-blue-ink: #0b2a4f;
+  --h-line: rgba(255, 255, 255, 0.85);
+  --h-line-soft: rgba(255, 255, 255, 0.35);
+  --h-grid: rgba(255, 255, 255, 0.07);
+  --h-grid-major: rgba(255, 255, 255, 0.13);
+  --h-red: #ff5b5b;
+  --h-yellow: #ffd866;
+  --h-green: #7ee0b0;
+  --h-stencil: 'Courier New', 'Courier Prime', ui-monospace, Menlo, monospace;
+
+  --canvas: var(--h-blue);
+  --side: var(--h-blue-deep);
+  --sunken: #082040;
+  --card: rgba(9, 37, 72, 0.92);
+  --term: var(--h-blue-ink);
+  --hover: rgba(255, 255, 255, 0.08);
+  --press: rgba(255, 255, 255, 0.16);
+  --line: rgba(255, 255, 255, 0.55);
+  --line-2: rgba(255, 255, 255, 0.2);
+  --tx: #ffffff;
+  --tx-2: #cfe0f5;
+  --tx-3: #8fb0d6;
+  --acc: #ffffff;
+  --acc-500: #ffffff;
+  --acc-100: rgba(255, 255, 255, 0.14);
+  --acc-fill: #ffffff;
+  --on-acc: var(--h-blue-deep);
+  --ai: var(--h-yellow);
+  --ai-600: #ffe699;
+  --ai-100: rgba(255, 216, 102, 0.22);
+  --ai-50: rgba(255, 216, 102, 0.1);
+  --red: var(--h-red);
+  --red-50: rgba(255, 91, 91, 0.18);
+  --amber: var(--h-yellow);
+  --amber-50: rgba(255, 216, 102, 0.14);
+  --green: var(--h-green);
+  --todo: #8fb0d6;
+  --on-red: #ffffff;
+  --scrim: rgba(4, 18, 36, 0.7);
+  --e2: none;
+  --e3: 0 0 0 1px rgba(255, 255, 255, 0.6);
+  --shadow-tab: none;
+  --font-ui: var(--h-stencil);
+  --font-mono: var(--h-stencil);
+  --font-display: 'Futura', 'Century Gothic', 'Trebuchet MS', sans-serif;
+  --radius-pane: 0;
+  --radius-dialog: 0;
+  --radius-card: 0;
+  --radius-mono: 0;
+  --radius-control: 0;
+  --radius-button: 0;
+  --radius-button-sm: 0;
+  --radius-chip: 0;
+  --topbar-height: 46px;
+  --statusbar-height: 30px;
+  --pane-head-height: 32px;
+  --work-gap: 18px;
+  --pane-gap: 10px;
+}
+
+[data-skin='heist-crew'] body,
+[data-skin='heist-crew'] .forge {
+  background-color: var(--h-blue);
+  background-image:
+    linear-gradient(var(--h-grid-major) 1px, transparent 1px),
+    linear-gradient(90deg, var(--h-grid-major) 1px, transparent 1px),
+    linear-gradient(var(--h-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--h-grid) 1px, transparent 1px),
+    radial-gradient(ellipse at 50% 40%, rgba(255, 255, 255, 0.06), transparent 70%);
+  background-size: 100px 100px, 100px 100px, 20px 20px, 20px 20px, 100% 100%;
+  font-family: var(--h-stencil);
+}
+
+/* ---------- title block: the top bar ---------- */
+[data-skin='heist-crew'] .topbar {
+  background: rgba(9, 37, 72, 0.88);
+  border-bottom: 2px solid var(--h-line);
+  box-shadow: 0 3px 0 -1px var(--h-blue), 0 4px 0 -1px var(--h-line-soft);
+}
+
+[data-skin='heist-crew'] .brand {
+  padding-right: 14px;
+  border-right: 1px solid var(--h-line-soft);
+}
+
+[data-skin='heist-crew'] .brand-name {
+  font: 700 15px/1 var(--font-display);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #fff;
+}
+
+[data-skin='heist-crew'] .brand-name::after {
+  content: ' / THE JOB';
+  font: 400 11px/1 var(--h-stencil);
+  letter-spacing: 0.1em;
+  color: var(--tx-3);
+}
+
+/* tabs: numbered steps of the plan */
+[data-skin='heist-crew'] .tabs {
+  counter-reset: heist-step;
+}
+
+[data-skin='heist-crew'] .tab {
+  counter-increment: heist-step;
+  height: 30px;
+  padding: 0 12px;
+  border: 1px dashed var(--h-line-soft);
+  background: transparent;
+  color: var(--tx-2);
+  font: 700 12.5px/1 var(--h-stencil);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  box-shadow: none;
+}
+
+[data-skin='heist-crew'] .tab::before {
+  content: 'STEP ' counter(heist-step, decimal-leading-zero);
+  margin-right: 8px;
+  padding-right: 8px;
+  border-right: 1px solid var(--h-line-soft);
+  font-size: 10.5px;
+  color: var(--tx-3);
+}
+
+[data-skin='heist-crew'] .tab:hover {
+  border-style: solid;
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+}
+
+[data-skin='heist-crew'] .tab.is-active {
+  border: 2px solid #fff;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+[data-skin='heist-crew'] .tab.is-active::before {
+  color: #fff;
+}
+
+[data-skin='heist-crew'] .tab[data-status='blocked'],
+[data-skin='heist-crew'] .tab[data-status='error'],
+[data-skin='heist-crew'] .tab[data-status='failed'] {
+  border: 2px solid var(--h-red);
+  color: var(--h-red);
+  background: rgba(255, 91, 91, 0.1);
+}
+
+[data-skin='heist-crew'] .tab[data-status='blocked']::before,
+[data-skin='heist-crew'] .tab[data-status='error']::before,
+[data-skin='heist-crew'] .tab[data-status='failed']::before {
+  content: 'MADE';
+  color: var(--h-red);
+  border-right-color: var(--h-red);
+}
+
+[data-skin='heist-crew'] .tab[data-status='done']::before {
+  content: '✓ ' counter(heist-step, decimal-leading-zero);
+  color: var(--h-green);
+}
+
+[data-skin='heist-crew'] .tab[data-status='working'] {
+  border-color: var(--h-yellow);
+}
+
+[data-skin='heist-crew'] .tab-count {
+  border: 1px solid currentColor;
+  background: transparent;
+  color: inherit;
+}
+
+[data-skin='heist-crew'] .new-pane-btn,
+[data-skin='heist-crew'] .cmd-btn {
+  border: 1px solid #fff;
+  background: transparent;
+  color: #fff;
+  font: 700 12px/1 var(--h-stencil);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+[data-skin='heist-crew'] .new-pane-btn:hover,
+[data-skin='heist-crew'] .cmd-btn:hover {
+  background: #fff;
+  color: var(--h-blue-deep);
+}
+
+[data-skin='heist-crew'] .cmd-btn kbd {
+  border: 1px solid currentColor;
+  background: transparent;
+  color: inherit;
+}
+
+[data-skin='heist-crew'] .icon-btn {
+  color: #fff;
+}
+
+[data-skin='heist-crew'] .icon-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* ---------- panes: drawings with dimension lines ---------- */
+[data-skin='heist-crew'] .pane {
+  position: relative;
+  border: 1.5px solid var(--h-line);
+  background: var(--term);
+  box-shadow: 0 0 0 4px var(--h-blue-ink), 0 0 0 5px var(--h-line-soft);
+}
+
+[data-skin='heist-crew'] .pane::before {
+  /* registration ticks at each corner */
+  content: '';
+  position: absolute;
+  inset: 3px;
+  z-index: 2;
+  pointer-events: none;
+  background:
+    linear-gradient(#fff, #fff) top left / 1px 8px,
+    linear-gradient(#fff, #fff) top left / 8px 1px,
+    linear-gradient(#fff, #fff) top right / 1px 8px,
+    linear-gradient(#fff, #fff) top right / 8px 1px,
+    linear-gradient(#fff, #fff) bottom left / 1px 8px,
+    linear-gradient(#fff, #fff) bottom left / 8px 1px,
+    linear-gradient(#fff, #fff) bottom right / 1px 8px,
+    linear-gradient(#fff, #fff) bottom right / 8px 1px;
+  background-repeat: no-repeat;
+  opacity: 0.7;
+}
+
+[data-skin='heist-crew'] .pane[data-active='true'] {
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 4px var(--h-blue-ink), 0 0 0 5px #fff;
+}
+
+[data-skin='heist-crew'] .pane[data-status='blocked'],
+[data-skin='heist-crew'] .pane[data-status='error'],
+[data-skin='heist-crew'] .pane[data-status='failed'] {
+  border-color: var(--h-red);
+  box-shadow: 0 0 0 4px var(--h-blue-ink), 0 0 0 5px var(--h-red);
+}
+
+[data-skin='heist-crew'] .pane[data-status='blocked']::after,
+[data-skin='heist-crew'] .pane[data-status='error']::after {
+  /* the security sweep */
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent, rgba(255, 91, 91, 0.16) 50%, transparent);
+  background-size: 100% 40%;
+  background-repeat: no-repeat;
+  animation: heist-sweep 3.2s ease-in-out infinite;
+}
+
+[data-skin='heist-crew'] .pane-head {
+  background: rgba(9, 37, 72, 0.95);
+  border-bottom: 1px solid var(--h-line-soft);
+  background-image: repeating-linear-gradient(90deg, transparent 0 9px, var(--h-line-soft) 9px 10px);
+  background-size: 100% 4px;
+  background-repeat: no-repeat;
+  background-position: bottom;
+}
+
+[data-skin='heist-crew'] .pane-title {
+  font: 700 13px/1 var(--h-stencil);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #fff;
+}
+
+[data-skin='heist-crew'] .pane-cwd,
+[data-skin='heist-crew'] .pane-msg {
+  color: var(--tx-3);
+  font-style: italic;
+}
+
+[data-skin='heist-crew'] .pane[data-status='blocked'] .pane-msg {
+  color: var(--h-red);
+}
+
+[data-skin='heist-crew'] .chip {
+  border: 1px solid var(--h-line-soft);
+  background: transparent;
+  color: #fff;
+}
+
+[data-skin='heist-crew'] .badge {
+  border: 1.5px solid currentColor;
+  background: transparent;
+  font: 700 10.5px/1 var(--h-stencil);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  transform: rotate(-2deg);
+}
+
+[data-skin='heist-crew'] .badge-working { color: var(--h-yellow); }
+[data-skin='heist-crew'] .badge-done { color: var(--h-green); }
+[data-skin='heist-crew'] .badge-idle { color: var(--tx-3); }
+[data-skin='heist-crew'] .badge-blocked,
+[data-skin='heist-crew'] .badge-error {
+  color: #fff;
+  background: var(--h-red);
+  border-color: var(--h-red);
+}
+[data-skin='heist-crew'] .badge-blocked::after {
+  content: ' · MADE';
+}
+
+[data-skin='heist-crew'] .ask .ask-allow {
+  background: #fff;
+  border-color: #fff;
+  color: var(--h-blue-deep);
+}
+
+[data-skin='heist-crew'] .ask .ask-deny {
+  background: transparent;
+  border-color: var(--h-red);
+  color: var(--h-red);
+}
+
+[data-skin='heist-crew'] .gutter::after {
+  background: repeating-linear-gradient(0deg, #fff 0 4px, transparent 4px 8px);
+}
+
+/* empty pane: the picker as a parts list */
+[data-skin='heist-crew'] .profile {
+  border: 1px dashed var(--h-line-soft);
+  background: rgba(9, 37, 72, 0.6);
+}
+
+[data-skin='heist-crew'] .profile:hover {
+  border-style: solid;
+  border-color: #fff;
+}
+
+/* ---------- the footer: the plan's legend ---------- */
+[data-skin='heist-crew'] .statusbar {
+  background: rgba(9, 37, 72, 0.92);
+  border-top: 2px solid var(--h-line);
+  font: 400 11.5px/1 var(--h-stencil);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--tx-2);
+}
+
+[data-skin='heist-crew'] .statusbar::before {
+  content: 'SHEET 1 OF 1 · SCALE 1:1';
+  margin-right: 14px;
+  padding-right: 14px;
+  border-right: 1px solid var(--h-line-soft);
+  color: var(--tx-3);
+  white-space: nowrap;
+}
+
+/* ---------- panels, palette, dialogs ---------- */
+[data-skin='heist-crew'] .agents,
+[data-skin='heist-crew'] .palette,
+[data-skin='heist-crew'] .help,
+[data-skin='heist-crew'] .menu {
+  background: var(--h-blue-deep);
+  border: 2px solid #fff;
+  box-shadow: 6px 6px 0 rgba(4, 18, 36, 0.8);
+}
+
+[data-skin='heist-crew'] .agents-head,
+[data-skin='heist-crew'] .help h2,
+[data-skin='heist-crew'] .pal-group {
+  font-family: var(--h-stencil);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--tx-3);
+}
+
+[data-skin='heist-crew'] .palette li.is-active,
+[data-skin='heist-crew'] .menu-item:hover {
+  background: #fff;
+  color: var(--h-blue-deep);
+}
+
+[data-skin='heist-crew'] .agent-row[data-status='blocked'] {
+  box-shadow: inset 3px 0 0 var(--h-red);
+}
+
+[data-skin='heist-crew'] .view-banner {
+  background: var(--h-red);
+  color: #fff;
+  font-family: var(--h-stencil);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+@keyframes heist-sweep {
+  0% { background-position: 0 -40%; }
+  100% { background-position: 0 140%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-skin='heist-crew'] *,
+  [data-skin='heist-crew'] *::after {
+    animation: none !important;
+  }
+}
+
+@media (max-width: 640px) {
+  [data-skin='heist-crew'] .brand-name::after,
+  [data-skin='heist-crew'] .statusbar::before,
+  [data-skin='heist-crew'] .tab::before {
+    display: none;
+  }
+  [data-skin='heist-crew'] {
+    --work-gap: 10px;
+  }
+}
