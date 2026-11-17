@@ -153,6 +153,8 @@ func (s *Server) routes(web fs.FS) {
 	s.mux.HandleFunc("GET /api/lost", s.auth(s.listLost))
 	s.mux.HandleFunc("DELETE /api/lost/{id}", s.auth(s.dropLost))
 	s.mux.HandleFunc("POST /api/restart", s.auth(s.requestRestart))
+	s.mux.HandleFunc("POST /api/sessions/{id}/input", s.auth(s.sendInput))
+	s.mux.HandleFunc("GET /api/sessions/{id}/output", s.auth(s.readOutput))
 	s.mux.HandleFunc("GET /api/layout", s.auth(s.getLayout))
 	s.mux.HandleFunc("PUT /api/layout", s.auth(s.putLayout))
 	s.mux.HandleFunc("GET /api/config", s.auth(s.getConfig))
@@ -277,6 +279,16 @@ func (s *Server) startSession(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "input", "The body is not JSON.")
 		return
 	}
+	if req.Parent != "" {
+		if _, ok := s.sessions.get(req.Parent); !ok {
+			writeError(w, http.StatusBadRequest, "no_parent", "There is no pane "+req.Parent+" to be the parent.")
+			return
+		}
+	}
+	if len(req.Argv) > 0 {
+		s.startCommand(w, req)
+		return
+	}
 	if req.Profile == "" {
 		req.Profile = "shell"
 	}
@@ -317,7 +329,30 @@ func (s *Server) startSession(w http.ResponseWriter, r *http.Request) {
 			chosen = &c
 		}
 	}
+	if len(req.Args) > 0 {
+		c := *chosen
+		c.Args = append(append([]string{}, c.Args...), req.Args...)
+		chosen = &c
+	}
 	pane, err := s.sessions.start(*chosen, req, s.defaultCwd(), s.opts.Scrollback)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "start", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusCreated, pane)
+}
+
+// startCommand starts req.Argv in a pane of its own (no profile).
+func (s *Server) startCommand(w http.ResponseWriter, req StartRequest) {
+	if strings.TrimSpace(req.Argv[0]) == "" {
+		writeError(w, http.StatusBadRequest, "input", "argv names no command.")
+		return
+	}
+	p := Profile{Name: "command", Label: strings.Join(req.Argv, " "), Command: req.Argv[0], Args: req.Argv[1:]}
+	if len(p.Label) > 60 {
+		p.Label = p.Label[:59] + "…"
+	}
+	pane, err := s.sessions.start(p, req, s.defaultCwd(), s.opts.Scrollback)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "start", err.Error())
 		return
@@ -403,6 +438,7 @@ func (s *Server) stream(w http.ResponseWriter, r *http.Request) {
 			}
 			switch m.Type {
 			case "input":
+				e.markHuman()
 				_ = e.session.Write([]byte(m.Data))
 			case "resize":
 				_ = e.session.Resize(m.Cols, m.Rows)

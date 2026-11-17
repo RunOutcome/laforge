@@ -106,6 +106,22 @@ func Main(cfg Config, args []string) int {
 		err = c.report(args[1:])
 	case "restart":
 		err = c.restart(args[1:])
+	case "run":
+		err = c.run(args[1:])
+	case "ls":
+		err = c.ls(args[1:])
+	case "send":
+		err = c.send(args[1:])
+	case "read":
+		err = c.read(args[1:])
+	case "wait":
+		err = c.wait(args[1:])
+	case "events":
+		err = c.events(args[1:])
+	case "close":
+		err = c.closePane(args[1:])
+	case "--skill", "skill":
+		fmt.Fprint(cfg.Stdout, skill(cfg.Prog))
 	case "holder": // started by the forge: one pane's holder process
 		err = holder.RunFromStdin(c.holdersDir(), cfg.Stdin)
 	case "hooks":
@@ -125,6 +141,10 @@ func Main(cfg Config, args []string) int {
 		var u usageError
 		if errors.As(err, &u) {
 			return 2
+		}
+		var code exitCode
+		if errors.As(err, &code) {
+			return int(code)
 		}
 		fmt.Fprintf(cfg.Stderr, "%s: %v\n", cfg.Prog, err)
 		return 1
@@ -149,6 +169,11 @@ Usage:
   %[1]s down [--container]
                      stop the forge and every pane in it (they can be
                      resumed after the next up)
+  %[1]s run [--bg] [--name N] PROFILE|COMMAND [ARGS…]
+                     run a pane (from a pane: a child that ends with it)
+  %[1]s ls | send PANE TEXT | read PANE | wait PANE… | close PANE
+                     list, type into, read, wait for and close panes
+  %[1]s --skill      how an agent uses LaForge, in one read
   %[1]s hooks install [claude|codex]
                      let Claude Code and Codex report their status to LaForge
                      (also: hooks status, hooks uninstall)

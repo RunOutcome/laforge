@@ -78,6 +78,7 @@ func (s *Server) changed(id string) {
 		s.last[id] = p
 		s.mu.Unlock()
 		s.events.publish("pane.changed", p)
+		s.family(id, p, false)
 		return
 	}
 	s.mu.Lock()
@@ -86,6 +87,7 @@ func (s *Server) changed(id string) {
 	s.mu.Unlock()
 	if had {
 		s.events.publish("pane.closed", p)
+		s.family(id, p, true)
 	}
 }
 

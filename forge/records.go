@@ -33,7 +33,11 @@ type record struct {
 	Wrapped      bool          `json:"wrapped,omitempty"`
 	StartedAt    time.Time     `json:"startedAt"`
 	// LostAt is when the forge found the pane's program gone.
-	LostAt *time.Time `json:"lostAt,omitempty"`
+	LostAt  *time.Time        `json:"lostAt,omitempty"`
+	Parent  string            `json:"parent,omitempty"`
+	Outlive bool              `json:"outlive,omitempty"`
+	Notes   bool              `json:"notes,omitempty"`
+	Labels  map[string]string `json:"labels,omitempty"`
 }
 
 func (r record) json() json.RawMessage { raw, _ := json.Marshal(r); return raw }
@@ -59,7 +63,7 @@ func (e *entry) record(id string, started time.Time) record {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	return record{ID: id, Profile: e.profile, Title: e.title, Cwd: e.cwd, Command: e.command, After: e.after, AgentExit: e.agentExit,
-		AgentSession: e.agentSession, Wrapped: e.wrapped, StartedAt: started}
+		AgentSession: e.agentSession, Wrapped: e.wrapped, StartedAt: started, Parent: e.parent, Outlive: e.outlive, Notes: e.notes, Labels: e.labels}
 }
 
 func (s *sessions) recordsDir() string { return filepath.Join(s.home, "panes") }
@@ -148,7 +152,7 @@ func (s *sessions) adoptHeld(r record, scrollback int) error {
 		}
 	}
 	e := &entry{profile: r.Profile, title: r.Title, cwd: r.Cwd, command: r.Command, after: r.After, agentExit: r.AgentExit,
-		agentSession: r.AgentSession, wrapped: r.Wrapped, held: client}
+		agentSession: r.AgentSession, wrapped: r.Wrapped, held: client, parent: r.Parent, outlive: r.Outlive, notes: r.Notes, labels: r.Labels}
 	first := client.First().Session
 	e.session = terminal.Attach(id, client, terminal.LaunchSpec{Command: r.Command, Columns: first.Columns, Rows: first.Rows}, scrollback,
 		func(*terminal.Session) { s.notify(id) })

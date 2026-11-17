@@ -40,6 +40,14 @@ type Pane struct {
 	AgentSession *AgentSession `json:"agentSession,omitempty"`
 	// Held is set when the pane runs in a holder process and outlives the forge.
 	Held bool `json:"held"`
+	// Parent is the pane this one was started from (la run inside a pane);
+	// Outlive keeps it running when the parent ends; Notes tells the parent
+	// when it needs attention or ends.
+	Parent  string `json:"parent,omitempty"`
+	Outlive bool   `json:"outlive,omitempty"`
+	Notes   bool   `json:"notes,omitempty"`
+	// Labels are the starter's own names for the pane (an Outcome item, a role).
+	Labels map[string]string `json:"labels,omitempty"`
 }
 
 // AgentSession names an agent's own conversation (claude --resume <id>).
@@ -67,6 +75,15 @@ type entry struct {
 	held *holder.Client
 	// wrapped: the pane runs an agent in the wrapper that leaves a shell.
 	wrapped bool
+
+	parent  string
+	outlive bool
+	notes   bool
+	labels  map[string]string
+	noted   string // the last change the parent was told of
+
+	lastHuman time.Time  // when a viewer last typed
+	sendMu    sync.Mutex // one send at a time
 }
 
 // sessions holds every session the forge has started.
@@ -98,6 +115,17 @@ type StartRequest struct {
 	// Resume names a lost pane to start again in its folder, continuing its
 	// agent's own session when the profile can.
 	Resume string `json:"resume,omitempty"`
+	// Args are added after the profile's own (a prompt for an agent).
+	Args []string `json:"args,omitempty"`
+	// Argv runs this command instead of a profile's (la run make test).
+	Argv []string `json:"argv,omitempty"`
+	// Parent makes the pane a child of a running pane; OutliveParent keeps
+	// it running when the parent ends; Notes types a note into the parent
+	// when the child is blocked, errs, is done or ends.
+	Parent        string            `json:"parent,omitempty"`
+	OutliveParent bool              `json:"outliveParent,omitempty"`
+	Notes         bool              `json:"notes,omitempty"`
+	Labels        map[string]string `json:"labels,omitempty"`
 }
 
 // strippedEnv are variables of the process that started the forge that would
@@ -163,7 +191,8 @@ func (s *sessions) start(p Profile, req StartRequest, defaultCwd string, scrollb
 	if title == "" {
 		title = p.Label
 	}
-	e := &entry{profile: p.Name, title: title, cwd: cwd, command: display, wrapped: wrapped}
+	e := &entry{profile: p.Name, title: title, cwd: cwd, command: display, wrapped: wrapped,
+		parent: req.Parent, outlive: req.OutliveParent, notes: req.Notes && req.Parent != "", labels: req.Labels}
 	onChange := func(*terminal.Session) { s.notify(id) }
 	var agentExits <-chan int
 	if s.holders.Usable(id) {
@@ -249,7 +278,8 @@ func (e *entry) pane() Pane {
 		view.Command = e.command
 	}
 	seen := e.seen && view.Since == nil || e.seenAt != nil && view.Since != nil && !view.Since.After(*e.seenAt)
-	return Pane{SessionView: view, Profile: e.profile, Title: e.title, Cwd: e.cwd, After: e.after, AgentExit: e.agentExit, Seen: seen, AgentSession: e.agentSession, Held: e.held != nil}
+	return Pane{SessionView: view, Profile: e.profile, Title: e.title, Cwd: e.cwd, After: e.after, AgentExit: e.agentExit, Seen: seen, AgentSession: e.agentSession, Held: e.held != nil,
+		Parent: e.parent, Outlive: e.outlive, Notes: e.notes, Labels: e.labels}
 }
 
 // markSeen records that a viewer looked at the pane as it is now.
