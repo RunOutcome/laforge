@@ -172,6 +172,16 @@ func (s *Server) routes(web fs.FS) {
 	}))
 	s.mux.HandleFunc("POST /api/sessions/{id}/ask", s.auth(s.askPermission))
 	s.mux.HandleFunc("POST /api/sessions/{id}/answer", s.auth(s.answerAsk))
+	s.mux.HandleFunc("GET /api/skins", s.auth(s.listSkins))
+	s.mux.HandleFunc("PUT /api/skins/default", s.auth(s.setDefaultSkin))
+	s.mux.HandleFunc("DELETE /api/skins/{name}", s.auth(s.removeSkin))
+	s.mux.HandleFunc("GET /skins/{name}/{file...}", func(w http.ResponseWriter, r *http.Request) {
+		if _, viewing := s.viewer(r); !s.authorized(r) && !viewing {
+			http.Error(w, "Present this forge's token.", http.StatusUnauthorized)
+			return
+		}
+		s.skinFile(w, r)
+	})
 	s.mux.HandleFunc("POST /api/shares", s.auth(s.createShare))
 	s.mux.HandleFunc("GET /api/shares", s.auth(s.listShares))
 	s.mux.HandleFunc("DELETE /api/shares/{token}", s.auth(s.dropShare))

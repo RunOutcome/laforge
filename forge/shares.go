@@ -136,6 +136,8 @@ func (s *Server) viewOnly(w http.ResponseWriter, r *http.Request, pane string) {
 		writeJSON(w, http.StatusOK, []Profile{})
 	case r.URL.Path == "/api/layout":
 		writeJSON(w, http.StatusOK, nil)
+	case r.URL.Path == "/api/skins":
+		s.listSkins(w, r) // the watcher sees the pane in the forge's look
 	default:
 		writeError(w, http.StatusForbidden, "read_only", "This link opens one pane only.")
 	}

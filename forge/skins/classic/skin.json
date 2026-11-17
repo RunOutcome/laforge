@@ -1,0 +1,10 @@
+{
+  "name": "classic",
+  "label": "Classic",
+  "description": "LaForge's own look: tabs above panes, light and dark.",
+  "version": "1",
+  "author": "LaForge",
+  "license": "Apache-2.0",
+  "layout": "classic",
+  "mode": "both"
+}
