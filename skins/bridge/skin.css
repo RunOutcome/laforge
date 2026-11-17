@@ -7,6 +7,26 @@
    needs the captain. Layout: rail. System faces only. */
 
 :root[data-skin='bridge'] {
+  --b-cut: 12px;
+  --font-ui: 'Avenir Next Condensed', 'DIN Condensed', 'Roboto Condensed', 'Arial Narrow', system-ui, sans-serif;
+  --font-display: 'Avenir Next Condensed', 'DIN Condensed', 'Roboto Condensed', 'Arial Narrow', sans-serif;
+  --font-mono: 'SF Mono', Menlo, 'JetBrains Mono', Consolas, monospace;
+  --radius-pane: 0;
+  --radius-dialog: 0;
+  --radius-card: 0;
+  --radius-mono: 2px;
+  --radius-control: 2px;
+  --radius-button: 2px;
+  --radius-button-sm: 2px;
+  --radius-chip: 2px;
+  --rail-width: 248px;
+  --topbar-height: 42px;
+  --statusbar-height: 30px;
+  --work-gap: 10px;
+  --pane-gap: 6px;
+}
+
+:root[data-skin='bridge'][data-mode='dark'] {
   --b-steel: #1b2730;
   --b-steel-2: #24343f;
   --b-steel-hi: #3a4f5d;
@@ -17,8 +37,6 @@
   --b-alert: #ff4d5e;
   --b-amber: #ffc857;
   --b-green: #5be3a0;
-  --b-cut: 12px;
-
   --canvas: var(--b-deck);
   --side: #0a1218;
   --sunken: #050a0e;
@@ -51,22 +69,6 @@
   --e2: 0 6px 18px rgba(0, 0, 0, 0.5);
   --e3: 0 14px 40px rgba(0, 0, 0, 0.6);
   --shadow-tab: none;
-  --font-ui: 'Avenir Next Condensed', 'DIN Condensed', 'Roboto Condensed', 'Arial Narrow', system-ui, sans-serif;
-  --font-display: 'Avenir Next Condensed', 'DIN Condensed', 'Roboto Condensed', 'Arial Narrow', sans-serif;
-  --font-mono: 'SF Mono', Menlo, 'JetBrains Mono', Consolas, monospace;
-  --radius-pane: 0;
-  --radius-dialog: 0;
-  --radius-card: 0;
-  --radius-mono: 2px;
-  --radius-control: 2px;
-  --radius-button: 2px;
-  --radius-button-sm: 2px;
-  --radius-chip: 2px;
-  --rail-width: 248px;
-  --topbar-height: 42px;
-  --statusbar-height: 30px;
-  --work-gap: 10px;
-  --pane-gap: 6px;
 }
 
 [data-skin='bridge'] body,
@@ -560,6 +562,137 @@
   font-family: var(--font-mono);
   letter-spacing: 0.14em;
   text-transform: uppercase;
+}
+
+/* ---------- light: the day watch. Pale steel, navy ink, deep-teal readouts ---------- */
+:root[data-skin='bridge'][data-mode='light'] {
+  --b-steel: #d3dde4;
+  --b-steel-2: #e2eaef;
+  --b-steel-hi: #8ea3b1;
+  --b-deck: #e9eff3;
+  --b-cyan: #00809c;
+  --b-cyan-dim: rgba(0, 110, 136, 0.7);
+  --b-cyan-glow: rgba(0, 128, 156, 0.18);
+  --b-alert: #d0283b;
+  --b-amber: #a86a00;
+  --b-green: #13895a;
+
+  --canvas: var(--b-deck);
+  --side: #dfe7ec;
+  --sunken: #d5dfe6;
+  --card: #f4f8fa;
+  --term: #f7fafc;
+  --hover: rgba(0, 128, 156, 0.08);
+  --press: rgba(0, 128, 156, 0.16);
+  --line: #a9bac5;
+  --line-2: #c9d5dd;
+  --tx: #0d2230;
+  --tx-2: #34505f;
+  --tx-3: #5d7684;
+  --acc: var(--b-cyan);
+  --acc-500: #1aa3c2;
+  --acc-100: rgba(0, 128, 156, 0.14);
+  --acc-fill: #00809c;
+  --on-acc: #ffffff;
+  --ai: #6a3fc9;
+  --ai-600: #5530a8;
+  --ai-100: rgba(106, 63, 201, 0.18);
+  --ai-50: rgba(106, 63, 201, 0.08);
+  --red: var(--b-alert);
+  --red-50: rgba(208, 40, 59, 0.1);
+  --amber: var(--b-amber);
+  --amber-50: rgba(168, 106, 0, 0.12);
+  --green: var(--b-green);
+  --todo: #6f8794;
+  --on-red: #ffffff;
+  --scrim: rgba(20, 40, 52, 0.4);
+  --e2: 0 6px 18px rgba(20, 40, 52, 0.16);
+  --e3: 0 14px 40px rgba(20, 40, 52, 0.22);
+}
+
+[data-skin='bridge'][data-mode='light'] body,
+[data-skin='bridge'][data-mode='light'] .forge {
+  background:
+    radial-gradient(ellipse at 60% -20%, rgba(0, 128, 156, 0.08), transparent 60%),
+    repeating-linear-gradient(0deg, rgba(13, 34, 48, 0.025) 0 1px, transparent 1px 3px),
+    var(--b-deck);
+}
+[data-skin='bridge'][data-mode='light'] .rail {
+  background: linear-gradient(180deg, #e4ebf0, #d6e0e7);
+  box-shadow: inset -6px 0 12px rgba(20, 40, 52, 0.08);
+}
+[data-skin='bridge'][data-mode='light'] .rail-space:hover { background: rgba(0, 128, 156, 0.07); }
+[data-skin='bridge'][data-mode='light'] .rail-space.is-active {
+  background: linear-gradient(90deg, rgba(0, 128, 156, 0.14), transparent 85%);
+}
+[data-skin='bridge'][data-mode='light'] .crew-row {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.7), transparent);
+}
+[data-skin='bridge'][data-mode='light'] .crew-row.is-current {
+  background: linear-gradient(90deg, rgba(0, 128, 156, 0.12), transparent);
+}
+[data-skin='bridge'][data-mode='light'] .crew-row[data-status='blocked'],
+[data-skin='bridge'][data-mode='light'] .crew-row[data-status='error'] {
+  border-color: rgba(208, 40, 59, 0.55);
+  animation-name: bridge-alert-day;
+}
+[data-skin='bridge'][data-mode='light'] .rail-header {
+  background: linear-gradient(180deg, #edf2f5, #e0e8ed);
+}
+[data-skin='bridge'][data-mode='light'] .rail-header::before {
+  background: linear-gradient(90deg, transparent, rgba(0, 128, 156, 0.08) 48%, rgba(0, 128, 156, 0.2) 50%, transparent 51%);
+  background-size: 50% 100%;
+  background-repeat: no-repeat;
+}
+[data-skin='bridge'][data-mode='light'] .topbar { background: #e0e8ed; }
+[data-skin='bridge'][data-mode='light'] .tab.is-active {
+  background: linear-gradient(180deg, #1597b4, var(--b-cyan));
+}
+[data-skin='bridge'][data-mode='light'] .tab[data-status='blocked']:not(.is-active),
+[data-skin='bridge'][data-mode='light'] .tab[data-status='error']:not(.is-active) {
+  background: linear-gradient(180deg, #e0404f, #b81f30);
+}
+[data-skin='bridge'][data-mode='light'] .tab-count { background: rgba(13, 34, 48, 0.1); }
+[data-skin='bridge'][data-mode='light'] .tab.is-active .tab-count,
+[data-skin='bridge'][data-mode='light'] .tab[data-status='blocked']:not(.is-active) .tab-count {
+  background: rgba(255, 255, 255, 0.25);
+}
+[data-skin='bridge'][data-mode='light'] .new-pane-btn,
+[data-skin='bridge'][data-mode='light'] .cmd-btn { background: rgba(0, 128, 156, 0.06); }
+[data-skin='bridge'][data-mode='light'] .icon-btn:hover { background: rgba(0, 128, 156, 0.1); }
+[data-skin='bridge'][data-mode='light'] .pane {
+  box-shadow: inset 0 0 0 1px #fff, 0 1px 3px rgba(20, 40, 52, 0.12);
+}
+[data-skin='bridge'][data-mode='light'] .pane[data-active='true'] {
+  border-color: rgba(0, 128, 156, 0.6);
+  box-shadow: inset 0 0 0 1px #fff, 0 0 0 1px rgba(0, 128, 156, 0.15), 0 2px 10px rgba(0, 128, 156, 0.12);
+}
+[data-skin='bridge'][data-mode='light'] .pane[data-status='blocked'],
+[data-skin='bridge'][data-mode='light'] .pane[data-status='error'] {
+  animation-name: bridge-alert-border-day;
+}
+[data-skin='bridge'][data-mode='light'] .pane-head { border-bottom-color: var(--b-steel-hi); }
+[data-skin='bridge'][data-mode='light'] .badge-done { background: rgba(19, 137, 90, 0.1); }
+[data-skin='bridge'][data-mode='light'] .ask .ask-allow { color: #ffffff; }
+[data-skin='bridge'][data-mode='light'] .rail-footer { background: #e0e8ed; }
+[data-skin='bridge'][data-mode='light'] .agents,
+[data-skin='bridge'][data-mode='light'] .palette,
+[data-skin='bridge'][data-mode='light'] .help,
+[data-skin='bridge'][data-mode='light'] .menu {
+  background: #f4f8fa;
+  box-shadow: 0 0 0 1px rgba(20, 40, 52, 0.08), 0 18px 50px rgba(20, 40, 52, 0.2);
+}
+[data-skin='bridge'][data-mode='light'] .palette li.is-active { background: rgba(0, 128, 156, 0.12); }
+[data-skin='bridge'][data-mode='light'] .view-banner { background: #e0e8ed; }
+
+@keyframes bridge-alert-day {
+  0%, 100% { box-shadow: inset 0 0 0 rgba(208, 40, 59, 0); }
+  50% { box-shadow: inset 0 0 16px rgba(208, 40, 59, 0.22); }
+}
+
+@keyframes bridge-alert-border-day {
+  0%, 100% { border-color: var(--b-alert); }
+  50% { border-color: #f0a3ab; }
 }
 
 @keyframes bridge-sweep {

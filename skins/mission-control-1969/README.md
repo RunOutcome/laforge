@@ -8,6 +8,8 @@ they are active. The header is a wall display, and the footer is a strip of
 teleprinter paper with tractor-feed holes. Faces come from the system's own
 fonts.
 
+Both modes: **dark** is the room in flight (green phosphor on black glass), **light** is the room with the lights up (painted walls, daylight on the glass, dark-green phosphor).
+
 | State | In the room |
 | --- | --- |
 | working | amber lamp, blinking: `HOLD` |

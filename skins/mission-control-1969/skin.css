@@ -7,6 +7,24 @@
    as a strip of teleprinter paper. Layout: rail. System faces only. */
 
 :root[data-skin='mission-control-1969'] {
+  --font-ui: 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;
+  --font-display: 'Futura', 'Century Gothic', 'Helvetica Neue', sans-serif;
+  --font-mono: 'Courier New', 'Courier', ui-monospace, monospace;
+  --radius-pane: 14px;
+  --radius-dialog: 8px;
+  --radius-card: 6px;
+  --radius-control: 4px;
+  --radius-button: 4px;
+  --radius-button-sm: 3px;
+  --radius-chip: 3px;
+  --rail-width: 252px;
+  --topbar-height: 44px;
+  --statusbar-height: 32px;
+  --work-gap: 12px;
+  --pane-gap: 10px;
+}
+
+:root[data-skin='mission-control-1969'][data-mode='dark'] {
   --m-beige: #cfc3a4;
   --m-beige-2: #b8ab8a;
   --m-beige-3: #9d9070;
@@ -22,7 +40,6 @@
   --m-hold: #ffc23d;
   --m-paper: #f2ecd8;
   --m-ink: #2b2a26;
-
   --canvas: var(--m-olive-3);
   --side: var(--m-olive-2);
   --sunken: #2a2c19;
@@ -55,21 +72,6 @@
   --e2: 0 3px 0 rgba(0, 0, 0, 0.35);
   --e3: 0 12px 30px rgba(0, 0, 0, 0.5);
   --shadow-tab: none;
-  --font-ui: 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;
-  --font-display: 'Futura', 'Century Gothic', 'Helvetica Neue', sans-serif;
-  --font-mono: 'Courier New', 'Courier', ui-monospace, monospace;
-  --radius-pane: 14px;
-  --radius-dialog: 8px;
-  --radius-card: 6px;
-  --radius-control: 4px;
-  --radius-button: 4px;
-  --radius-button-sm: 3px;
-  --radius-chip: 3px;
-  --rail-width: 252px;
-  --topbar-height: 44px;
-  --statusbar-height: 32px;
-  --work-gap: 12px;
-  --pane-gap: 10px;
 }
 
 [data-skin='mission-control-1969'] body,
@@ -604,6 +606,138 @@
   font-family: var(--font-mono);
   letter-spacing: 0.1em;
   text-transform: uppercase;
+}
+
+/* ---------- light: the room with the lights up. Painted walls, beige
+   consoles, daylight on the glass: pale screens with dark green phosphor ---------- */
+:root[data-skin='mission-control-1969'][data-mode='light'] {
+  --m-beige: #d8cdb0;
+  --m-beige-2: #c4b895;
+  --m-beige-3: #a39674;
+  --m-olive: #6b7050;
+  --m-olive-2: #535839;
+  --m-olive-3: #e2dccb;
+  --m-phos: #0f6b2c;
+  --m-phos-dim: rgba(15, 107, 44, 0.72);
+  --m-phos-glow: rgba(15, 107, 44, 0.12);
+  --m-glass: #e6eedf;
+  --m-go: #36c22a;
+  --m-nogo: #ee4a26;
+  --m-hold: #f2b01e;
+  --m-paper: #f7f2e0;
+  --m-ink: #2b2a26;
+  --canvas: var(--m-olive-3);
+  --side: #d6cfba;
+  --sunken: #cfc8b2;
+  --card: #ede7d6;
+  --term: var(--m-glass);
+  --hover: rgba(43, 42, 38, 0.06);
+  --press: rgba(43, 42, 38, 0.12);
+  --line: #8f8566;
+  --line-2: #c9c1a8;
+  --tx: #24231f;
+  --tx-2: #4a4632;
+  --tx-3: #756d55;
+  --acc: var(--m-phos);
+  --acc-500: #1f8a3f;
+  --acc-100: rgba(15, 107, 44, 0.12);
+  --acc-fill: #1f8a3f;
+  --on-acc: #ffffff;
+  --ai: #9a6a00;
+  --ai-600: #7d5600;
+  --ai-100: rgba(154, 106, 0, 0.16);
+  --ai-50: rgba(154, 106, 0, 0.08);
+  --red: #c8321a;
+  --red-50: rgba(200, 50, 26, 0.1);
+  --amber: #9a6a00;
+  --amber-50: rgba(242, 176, 30, 0.16);
+  --green: #1f7a12;
+  --todo: #8c8566;
+  --on-red: #ffffff;
+  --scrim: rgba(43, 42, 38, 0.35);
+  --e2: 0 3px 0 rgba(0, 0, 0, 0.12);
+  --e3: 0 12px 30px rgba(0, 0, 0, 0.18);
+}
+
+[data-skin='mission-control-1969'][data-mode='light'] body,
+[data-skin='mission-control-1969'][data-mode='light'] .forge {
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(255, 255, 255, 0.5), transparent 60%),
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.015) 0 1px, transparent 1px 4px),
+    var(--m-olive-3);
+}
+[data-skin='mission-control-1969'][data-mode='light'] .rail { border-right-color: var(--m-beige-3); }
+[data-skin='mission-control-1969'][data-mode='light'] .rail-machine {
+  box-shadow: inset 0 0 0 3px var(--m-beige-3), inset 0 0 18px rgba(15, 107, 44, 0.1);
+}
+[data-skin='mission-control-1969'][data-mode='light'] .rail-header {
+  border-bottom-color: var(--m-beige-2);
+  box-shadow: inset 0 0 40px rgba(15, 107, 44, 0.08);
+}
+[data-skin='mission-control-1969'][data-mode='light'] .rail-header::after {
+  background: repeating-linear-gradient(0deg, rgba(15, 60, 25, 0.06) 0 1px, transparent 1px 3px);
+}
+[data-skin='mission-control-1969'][data-mode='light'] .icon-btn:hover { background: rgba(15, 107, 44, 0.1); }
+[data-skin='mission-control-1969'][data-mode='light'] .topbar {
+  background: linear-gradient(180deg, #d3cbb3, #c7bea3);
+  border-bottom-color: var(--m-beige-3);
+}
+[data-skin='mission-control-1969'][data-mode='light'] .tab {
+  border-color: #8f8566;
+  background: linear-gradient(180deg, #ece4cc, var(--m-beige));
+  color: var(--m-ink);
+  box-shadow: 0 3px 0 var(--m-beige-3), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+[data-skin='mission-control-1969'][data-mode='light'] .tab:hover {
+  background: linear-gradient(180deg, #f4eedb, #e0d6bb);
+}
+[data-skin='mission-control-1969'][data-mode='light'] .tab.is-active {
+  background: linear-gradient(180deg, #6b7050, var(--m-olive-2));
+  color: #f2ecd8;
+  box-shadow: 0 1px 0 var(--m-beige-3), inset 0 2px 3px rgba(0, 0, 0, 0.35);
+}
+[data-skin='mission-control-1969'][data-mode='light'] .tab.is-active .tab-name,
+[data-skin='mission-control-1969'][data-mode='light'] .tab.is-active .tab-actions button { color: #f2ecd8; }
+[data-skin='mission-control-1969'][data-mode='light'] .tab-count { background: rgba(0, 0, 0, 0.12); }
+[data-skin='mission-control-1969'][data-mode='light'] .tab.is-active .tab-count { background: rgba(255, 255, 255, 0.2); }
+[data-skin='mission-control-1969'][data-mode='light'] .cmd-btn,
+[data-skin='mission-control-1969'][data-mode='light'] .new-pane-btn { border-color: #8f8566; }
+[data-skin='mission-control-1969'][data-mode='light'] .pane {
+  box-shadow:
+    inset 0 0 0 2px #8f8566,
+    inset 0 0 50px rgba(15, 107, 44, 0.08),
+    0 0 0 1px #8f8566,
+    0 4px 0 rgba(0, 0, 0, 0.12);
+}
+[data-skin='mission-control-1969'][data-mode='light'] .pane::after {
+  background:
+    repeating-linear-gradient(0deg, rgba(15, 60, 25, 0.05) 0 1px, transparent 1px 3px),
+    radial-gradient(ellipse at 50% 50%, transparent 65%, rgba(60, 70, 40, 0.12));
+}
+[data-skin='mission-control-1969'][data-mode='light'] .pane[data-active='true'] {
+  box-shadow:
+    inset 0 0 0 2px #6b6450,
+    inset 0 0 60px rgba(15, 107, 44, 0.1),
+    0 0 0 1px #6b6450,
+    0 4px 0 rgba(0, 0, 0, 0.14);
+}
+[data-skin='mission-control-1969'][data-mode='light'] .pane[data-status='blocked'],
+[data-skin='mission-control-1969'][data-mode='light'] .pane[data-status='error'] { border-color: #dba08a; }
+[data-skin='mission-control-1969'][data-mode='light'] .pane-head { border-bottom-color: #8f8566; }
+[data-skin='mission-control-1969'][data-mode='light'] .term-host { text-shadow: none; }
+[data-skin='mission-control-1969'][data-mode='light'] .profile {
+  background: rgba(15, 107, 44, 0.04);
+  border-color: rgba(15, 107, 44, 0.25);
+}
+[data-skin='mission-control-1969'][data-mode='light'] .rail-footer { box-shadow: inset 0 3px 4px rgba(0, 0, 0, 0.1); }
+[data-skin='mission-control-1969'][data-mode='light'] .rail-footer::before {
+  background: radial-gradient(circle, var(--m-beige-3) 2px, transparent 2.5px) 0 0 / 16px 5px repeat-x;
+}
+[data-skin='mission-control-1969'][data-mode='light'] .agents,
+[data-skin='mission-control-1969'][data-mode='light'] .palette,
+[data-skin='mission-control-1969'][data-mode='light'] .help,
+[data-skin='mission-control-1969'][data-mode='light'] .menu {
+  box-shadow: 0 0 0 1px #8f8566, 0 20px 50px rgba(0, 0, 0, 0.2);
 }
 
 @keyframes mc-blink {

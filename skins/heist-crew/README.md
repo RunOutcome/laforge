@@ -7,6 +7,8 @@ Every tab is a numbered step of the plan (`STEP 01`, `STEP 02`, …), and the
 footer is the drawing's title block. Labels use a typewriter monospace,
 headings a geometric face, all from the system's own fonts.
 
+Both modes: **dark** is the blueprint (white lines on blue), **light** is a whiteprint (blue line work on white drafting film).
+
 | State | On the job |
 | --- | --- |
 | working | yellow outline on the step, a yellow stamp on the pane |

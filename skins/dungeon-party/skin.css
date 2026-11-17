@@ -10,6 +10,29 @@
 
 :root[data-skin='dungeon-party'] {
   /* the skin's own colours */
+
+  /* the forge's tokens */
+  --shadow-tab: none;
+  --font-ui: 'Palatino', 'Palatino Linotype', 'Book Antiqua', 'Georgia', serif;
+  --font-display: 'Herculanum', 'Copperplate', 'Trajan Pro', 'Palatino', serif;
+  --d-font-label: 'Copperplate', 'Copperplate Gothic Light', 'Palatino', serif;
+  --radius-pane: 6px;
+  --radius-dialog: 8px;
+  --radius-card: 6px;
+  --radius-control: 4px;
+  --radius-button: 4px;
+  --radius-button-sm: 3px;
+  --radius-chip: 3px;
+  --rail-width: 256px;
+  --topbar-height: 42px;
+  --statusbar-height: 30px;
+  --pane-head-height: 34px;
+  --work-gap: 10px;
+  --pane-gap: 6px;
+}
+
+/* colours: dark, the original */
+:root[data-skin='dungeon-party'][data-mode='dark'] {
   --d-wood: #2a1c12;
   --d-wood-2: #22170f;
   --d-parch: #e9d9b4;
@@ -24,8 +47,6 @@
   --d-seal: #9e2b25;
   --d-slate: #15110d;
   --d-candle: rgba(255, 186, 92, 0.16);
-
-  /* the forge's tokens */
   --canvas: #1f150e;
   --side: #22170f;
   --sunken: #1a120c;
@@ -57,23 +78,227 @@
   --scrim: rgba(12, 8, 4, 0.74);
   --e2: 0 3px 8px rgba(0, 0, 0, 0.5);
   --e3: 0 18px 50px rgba(0, 0, 0, 0.65);
-  --shadow-tab: none;
-  --font-ui: 'Palatino', 'Palatino Linotype', 'Book Antiqua', 'Georgia', serif;
-  --font-display: 'Herculanum', 'Copperplate', 'Trajan Pro', 'Palatino', serif;
-  --d-font-label: 'Copperplate', 'Copperplate Gothic Light', 'Palatino', serif;
-  --radius-pane: 6px;
-  --radius-dialog: 8px;
-  --radius-card: 6px;
-  --radius-control: 4px;
-  --radius-button: 4px;
-  --radius-button-sm: 3px;
-  --radius-chip: 3px;
-  --rail-width: 256px;
-  --topbar-height: 42px;
-  --statusbar-height: 30px;
-  --pane-head-height: 34px;
-  --work-gap: 10px;
-  --pane-gap: 6px;
+  --m-1: rgba(0, 0, 0, 0);
+  --m-2: rgba(0, 0, 0, 0.35);
+  --m-3: rgba(255, 220, 160, 0.025);
+  --m-4: rgba(0, 0, 0, 0.04);
+  --m-5: rgba(255, 220, 160, 0.02);
+  --m-6: #2a1c12;
+  --m-7: #1d140d;
+  --m-8: rgba(255, 255, 255, 0.25);
+  --m-9: rgba(120, 80, 30, 0.22);
+  --m-10: rgba(120, 75, 25, 0.55);
+  --m-11: rgba(80, 50, 15, 0.8);
+  --m-12: rgba(0, 0, 0, 0.55);
+  --m-13: rgba(0, 0, 0, 0.12);
+  --m-14: #6b4526;
+  --m-15: #4a2e17;
+  --m-16: rgba(255, 220, 160, 0.25);
+  --m-17: #2e1c0d;
+  --m-18: rgba(0, 0, 0, 0.4);
+  --m-19: #c9c1b2;
+  --m-20: #4a443d;
+  --m-21: rgba(0, 0, 0, 0.5);
+  --m-22: rgba(90, 65, 39, 0.35);
+  --m-23: rgba(255, 255, 255, 0.35);
+  --m-24: #3a2a1a;
+  --m-25: #2f5b8a;
+  --m-26: #3f6b2e;
+  --m-27: #7a3f8a;
+  --m-28: #b5791f;
+  --m-29: #26706a;
+  --m-30: #5a3a22;
+  --m-31: #8a2b4a;
+  --m-32: rgba(90, 65, 39, 0.1);
+  --m-33: rgba(90, 65, 39, 0.16);
+  --m-34: rgba(90, 65, 39, 0.5);
+  --m-35: rgba(255, 250, 235, 0.6);
+  --m-36: rgba(90, 65, 39, 0.18);
+  --m-37: #f6ead0;
+  --m-38: #cdb282;
+  --m-39: rgba(0, 0, 0, 0.3);
+  --m-40: #fbe3a6;
+  --m-41: #d79b37;
+  --m-42: #3a240c;
+  --m-43: #dfeec4;
+  --m-44: #86a94f;
+  --m-45: #23380f;
+  --m-46: rgba(0, 0, 0, 0.25);
+  --m-47: #e0644c;
+  --m-48: #9e2b25;
+  --m-49: #fff3db;
+  --m-50: #8a5a10;
+  --m-51: rgba(227, 178, 79, 0.35);
+  --m-52: rgba(0, 0, 0, 0.6);
+  --m-53: rgba(227, 178, 79, 0.18);
+  --m-54: #3c2615;
+  --m-55: #6b4729;
+  --m-56: #48301b;
+  --m-57: #8a2b25;
+  --m-58: #5e1b17;
+  --m-59: #ff7a5c;
+  --m-60: #8a6a3a;
+  --m-61: #261b11;
+  --m-62: rgba(255, 220, 160, 0.15);
+  --m-63: rgba(227, 178, 79, 0.1);
+  --m-64: #1a1410;
+  --m-65: #9a7a3e;
+  --m-66: rgba(227, 178, 79, 0.22);
+  --m-67: #56703a;
+  --m-68: #b8ad98;
+  --m-69: #2c2420;
+  --m-70: #1f1915;
+  --m-71: #120e0b;
+  --m-72: rgba(227, 178, 79, 0.15);
+  --m-73: #1f150e;
+  --m-74: #c94a36;
+  --m-75: rgba(0, 0, 0, 0.28);
+  --m-76: rgba(0, 0, 0, 0.2);
+  --m-77: rgba(174, 208, 123, 0.75);
+  --m-78: rgba(227, 178, 79, 0.08);
+  --m-79: rgba(227, 178, 79, 0.04);
+  --m-80: #ec7a62;
+  --m-81: #2c2016;
+  --m-82: #1f160f;
+  --m-83: rgba(255, 186, 92, 0.5);
+  --m-84: rgba(255, 186, 92, 0.85);
+  --m-85: rgba(212, 85, 63, 0.2);
+  --m-86: rgba(212, 85, 63, 0.5);
+}
+
+/* colours: light */
+:root[data-skin='dungeon-party'][data-mode='light'] {
+  --d-wood: #2a1c12;
+  --d-wood-2: #22170f;
+  --d-parch: #e9d9b4;
+  --d-parch-2: #d9c393;
+  --d-parch-edge: #a9824a;
+  --d-ink: #2b1d10;
+  --d-ink-2: #5a4127;
+  --d-gold: #e3b24f;
+  --d-gold-2: #f5d27e;
+  --d-iron: #4a443d;
+  --d-iron-2: #6d665c;
+  --d-seal: #9e2b25;
+  --d-slate: #f3e8cc;
+  --d-candle: rgba(255, 214, 140, 0.35);
+  --canvas: #e6d3a8;
+  --side: #dcc595;
+  --sunken: #d4bb88;
+  --card: #f1e4c4;
+  --term: #f3e8cc;
+  --hover: rgba(120, 75, 25, 0.1);
+  --press: rgba(120, 75, 25, 0.18);
+  --line: #b89a66;
+  --line-2: #cdb382;
+  --tx: #2b1d10;
+  --tx-2: #5a4127;
+  --tx-3: #7f6646;
+  --acc: #8a5a10;
+  --acc-500: #a8761f;
+  --acc-100: rgba(176, 120, 30, 0.2);
+  --acc-fill: #b5791f;
+  --on-acc: #fff6e0;
+  --ai: #7a3f8a;
+  --ai-600: #62306f;
+  --ai-100: rgba(122, 63, 138, 0.2);
+  --ai-50: rgba(122, 63, 138, 0.1);
+  --red: #b23a24;
+  --red-50: rgba(178, 58, 36, 0.14);
+  --amber: #a8761f;
+  --amber-50: rgba(168, 118, 31, 0.15);
+  --green: #4f7a22;
+  --todo: #8a7356;
+  --on-red: #fff6e0;
+  --scrim: rgba(60, 40, 15, 0.45);
+  --e2: 0 3px 8px rgba(60, 35, 10, 0.25);
+  --e3: 0 18px 50px rgba(60, 35, 10, 0.35);
+  --m-1: rgba(120, 80, 30, 0);
+  --m-2: rgba(120, 80, 30, 0.14);
+  --m-3: rgba(255, 255, 255, 0.12);
+  --m-4: rgba(120, 80, 30, 0.03);
+  --m-5: rgba(255, 255, 255, 0.08);
+  --m-6: #e6d3a8;
+  --m-7: #d6bd8a;
+  --m-8: rgba(255, 255, 255, 0.25);
+  --m-9: rgba(120, 80, 30, 0.22);
+  --m-10: rgba(120, 75, 25, 0.55);
+  --m-11: rgba(80, 50, 15, 0.8);
+  --m-12: rgba(0, 0, 0, 0.55);
+  --m-13: rgba(0, 0, 0, 0.12);
+  --m-14: #6b4526;
+  --m-15: #4a2e17;
+  --m-16: rgba(255, 220, 160, 0.25);
+  --m-17: #2e1c0d;
+  --m-18: rgba(0, 0, 0, 0.4);
+  --m-19: #c9c1b2;
+  --m-20: #4a443d;
+  --m-21: rgba(60, 35, 10, 0.28);
+  --m-22: rgba(90, 65, 39, 0.35);
+  --m-23: rgba(255, 255, 255, 0.35);
+  --m-24: #3a2a1a;
+  --m-25: #2f5b8a;
+  --m-26: #3f6b2e;
+  --m-27: #7a3f8a;
+  --m-28: #b5791f;
+  --m-29: #26706a;
+  --m-30: #5a3a22;
+  --m-31: #8a2b4a;
+  --m-32: rgba(90, 65, 39, 0.1);
+  --m-33: rgba(90, 65, 39, 0.16);
+  --m-34: rgba(90, 65, 39, 0.5);
+  --m-35: rgba(255, 250, 235, 0.6);
+  --m-36: rgba(90, 65, 39, 0.18);
+  --m-37: #f6ead0;
+  --m-38: #cdb282;
+  --m-39: rgba(0, 0, 0, 0.3);
+  --m-40: #fbe3a6;
+  --m-41: #d79b37;
+  --m-42: #3a240c;
+  --m-43: #dfeec4;
+  --m-44: #86a94f;
+  --m-45: #23380f;
+  --m-46: rgba(0, 0, 0, 0.25);
+  --m-47: #e0644c;
+  --m-48: #9e2b25;
+  --m-49: #fff3db;
+  --m-50: #8a5a10;
+  --m-51: rgba(255, 240, 200, 0.6);
+  --m-52: rgba(60, 35, 10, 0.25);
+  --m-53: rgba(90, 60, 25, 0.25);
+  --m-54: #3c2615;
+  --m-55: #6b4729;
+  --m-56: #48301b;
+  --m-57: #8a2b25;
+  --m-58: #5e1b17;
+  --m-59: #ff7a5c;
+  --m-60: #8a6a3a;
+  --m-61: #261b11;
+  --m-62: rgba(255, 220, 160, 0.15);
+  --m-63: rgba(227, 178, 79, 0.1);
+  --m-64: rgba(60, 35, 10, 0.35);
+  --m-65: #9a7a3e;
+  --m-66: rgba(200, 140, 40, 0.35);
+  --m-67: #56703a;
+  --m-68: #b8ad98;
+  --m-69: #2c2420;
+  --m-70: #1f1915;
+  --m-71: #120e0b;
+  --m-72: rgba(227, 178, 79, 0.15);
+  --m-73: #1f150e;
+  --m-74: #c94a36;
+  --m-75: rgba(0, 0, 0, 0.28);
+  --m-76: rgba(0, 0, 0, 0.2);
+  --m-77: rgba(70, 105, 30, 0.85);
+  --m-78: rgba(227, 178, 79, 0.08);
+  --m-79: rgba(227, 178, 79, 0.04);
+  --m-80: #b23a24;
+  --m-81: #2c2016;
+  --m-82: #1f160f;
+  --m-83: rgba(255, 186, 92, 0.5);
+  --m-84: rgba(255, 186, 92, 0.85);
+  --m-85: rgba(212, 85, 63, 0.2);
+  --m-86: rgba(212, 85, 63, 0.5);
 }
 
 /* the table: dark wood, a candle's pool of light */
@@ -81,9 +306,9 @@
 [data-skin='dungeon-party'] .forge {
   background:
     radial-gradient(ellipse 60% 55% at 62% 18%, var(--d-candle), transparent 70%),
-    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0) 0 180px, rgba(0, 0, 0, 0.35) 180px 182px),
-    repeating-linear-gradient(90deg, rgba(255, 220, 160, 0.025) 0 3px, rgba(0, 0, 0, 0.04) 3px 9px, rgba(255, 220, 160, 0.02) 9px 17px),
-    linear-gradient(180deg, #2a1c12, #1d140d);
+    repeating-linear-gradient(90deg, var(--m-1) 0 180px, var(--m-2) 180px 182px),
+    repeating-linear-gradient(90deg, var(--m-3) 0 3px, var(--m-4) 3px 9px, var(--m-5) 9px 17px),
+    linear-gradient(180deg, var(--m-6), var(--m-7));
   font-family: var(--font-ui);
 }
 
@@ -93,13 +318,13 @@
   border-right: 0;
   border-radius: 4px 10px 6px 12px;
   background:
-    radial-gradient(ellipse at 30% 20%, rgba(255, 255, 255, 0.25), transparent 55%),
-    radial-gradient(ellipse at 80% 90%, rgba(120, 80, 30, 0.22), transparent 60%),
+    radial-gradient(ellipse at 30% 20%, var(--m-8), transparent 55%),
+    radial-gradient(ellipse at 80% 90%, var(--m-9), transparent 60%),
     linear-gradient(180deg, var(--d-parch), var(--d-parch-2));
   box-shadow:
-    inset 0 0 24px rgba(120, 75, 25, 0.55),
-    inset 0 0 3px rgba(80, 50, 15, 0.8),
-    0 8px 24px rgba(0, 0, 0, 0.55);
+    inset 0 0 24px var(--m-10),
+    inset 0 0 3px var(--m-11),
+    0 8px 24px var(--m-12);
   color: var(--d-ink);
 }
 
@@ -109,9 +334,9 @@
   padding: 12px 14px 10px;
   border-radius: 4px;
   background:
-    repeating-linear-gradient(180deg, rgba(0, 0, 0, 0) 0 9px, rgba(0, 0, 0, 0.12) 9px 10px),
-    linear-gradient(180deg, #6b4526, #4a2e17);
-  box-shadow: inset 0 1px 0 rgba(255, 220, 160, 0.25), 0 3px 0 #2e1c0d, 0 6px 10px rgba(0, 0, 0, 0.4);
+    repeating-linear-gradient(180deg, var(--m-1) 0 9px, var(--m-13) 9px 10px),
+    linear-gradient(180deg, var(--m-14), var(--m-15));
+  box-shadow: inset 0 1px 0 var(--m-16), 0 3px 0 var(--m-17), 0 6px 10px var(--m-18);
   text-align: center;
   align-items: center;
 }
@@ -125,7 +350,7 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, #c9c1b2, #4a443d 70%);
+  background: radial-gradient(circle at 35% 35%, var(--m-19), var(--m-20) 70%);
 }
 [data-skin='dungeon-party'] .rail-machine::before {
   left: 8px;
@@ -154,12 +379,12 @@
   font: 400 22px/1.1 var(--font-display);
   letter-spacing: 0.06em;
   color: var(--d-gold-2);
-  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.5);
+  text-shadow: 0 2px 0 var(--m-21);
 }
 
 [data-skin='dungeon-party'] .rail-title {
   padding: 12px 18px 6px;
-  border-bottom: 1px solid rgba(90, 65, 39, 0.35);
+  border-bottom: 1px solid var(--m-22);
   margin: 0 14px 4px;
   font: 400 13px/1 var(--d-font-label);
   letter-spacing: 0.22em;
@@ -210,33 +435,33 @@
   height: 14px;
   margin-top: -7px;
   border-radius: 50% 46% 52% 48%;
-  background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.35), transparent 40%), var(--seal, var(--d-seal));
-  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.35);
+  background: radial-gradient(circle at 35% 30%, var(--m-23), transparent 40%), var(--seal, var(--d-seal));
+  box-shadow: 0 1px 1px var(--m-2);
 }
 
 [data-skin='dungeon-party'] .rail-space[data-space='']::before {
-  --seal: #3a2a1a;
+  --seal: var(--m-24);
 }
 [data-skin='dungeon-party'] .rail-space[data-index='1']::before {
-  --seal: #2f5b8a;
+  --seal: var(--m-25);
 }
 [data-skin='dungeon-party'] .rail-space[data-index='2']::before {
-  --seal: #3f6b2e;
+  --seal: var(--m-26);
 }
 [data-skin='dungeon-party'] .rail-space[data-index='3']::before {
-  --seal: #7a3f8a;
+  --seal: var(--m-27);
 }
 [data-skin='dungeon-party'] .rail-space[data-index='4']::before {
-  --seal: #b5791f;
+  --seal: var(--m-28);
 }
 [data-skin='dungeon-party'] .rail-space[data-index='5']::before {
-  --seal: #26706a;
+  --seal: var(--m-29);
 }
 [data-skin='dungeon-party'] .rail-space[data-index='6']::before {
-  --seal: #5a3a22;
+  --seal: var(--m-30);
 }
 [data-skin='dungeon-party'] .rail-space[data-index='7']::before {
-  --seal: #8a2b4a;
+  --seal: var(--m-31);
 }
 
 [data-skin='dungeon-party'] .rail-space .rail-count {
@@ -245,12 +470,12 @@
 }
 
 [data-skin='dungeon-party'] .rail-space:hover {
-  background: rgba(90, 65, 39, 0.1);
+  background: var(--m-32);
   color: var(--d-ink);
 }
 
 [data-skin='dungeon-party'] .rail-space.is-active {
-  background: rgba(90, 65, 39, 0.16);
+  background: var(--m-33);
   color: var(--d-ink);
   font-weight: 700;
   box-shadow: inset 3px 0 0 var(--d-seal);
@@ -259,14 +484,14 @@
 [data-skin='dungeon-party'] .rail-add {
   margin: 4px 12px;
   border-radius: 3px;
-  border: 1px dashed rgba(90, 65, 39, 0.5);
+  border: 1px dashed var(--m-34);
   color: var(--d-ink-2);
   font: 400 12px/1 var(--d-font-label);
   letter-spacing: 0.12em;
 }
 
 [data-skin='dungeon-party'] .rail-new-space input {
-  background: rgba(255, 250, 235, 0.6);
+  background: var(--m-35);
   border-color: var(--d-parch-edge);
   color: var(--d-ink);
 }
@@ -281,11 +506,11 @@
 }
 
 [data-skin='dungeon-party'] .crew-row:hover {
-  background: rgba(90, 65, 39, 0.1);
+  background: var(--m-32);
 }
 
 [data-skin='dungeon-party'] .crew-row.is-current {
-  background: rgba(90, 65, 39, 0.18);
+  background: var(--m-36);
 }
 
 [data-skin='dungeon-party'] .crew-row .crew-bar,
@@ -296,8 +521,8 @@
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #f6ead0, #cdb282 70%);
-  box-shadow: inset 0 0 0 1.5px var(--d-ink-2), 0 1px 2px rgba(0, 0, 0, 0.3);
+  background: radial-gradient(circle at 35% 30%, var(--m-37), var(--m-38) 70%);
+  box-shadow: inset 0 0 0 1.5px var(--d-ink-2), 0 1px 2px var(--m-39);
   display: grid;
   place-items: center;
 }
@@ -309,22 +534,22 @@
 }
 
 [data-skin='dungeon-party'] .crew-row[data-status='working'] .crew-bar {
-  background: radial-gradient(circle at 35% 30%, #fbe3a6, #d79b37 70%);
+  background: radial-gradient(circle at 35% 30%, var(--m-40), var(--m-41) 70%);
   animation: dungeon-party-candle 1.8s ease-in-out infinite;
 }
 [data-skin='dungeon-party'] .crew-row[data-status='working'] .crew-bar::before {
   content: '⚔';
   font-size: 16px;
-  color: #3a240c;
+  color: var(--m-42);
 }
 
 [data-skin='dungeon-party'] .crew-row[data-status='done'] .crew-bar {
-  background: radial-gradient(circle at 35% 30%, #dfeec4, #86a94f 70%);
+  background: radial-gradient(circle at 35% 30%, var(--m-43), var(--m-44) 70%);
 }
 [data-skin='dungeon-party'] .crew-row[data-status='done'] .crew-bar::before {
   content: '✦';
   font-size: 15px;
-  color: #23380f;
+  color: var(--m-45);
 }
 
 /* blocked: a d20 that only you can roll */
@@ -335,9 +560,9 @@
   height: 30px;
   clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
   background:
-    linear-gradient(150deg, transparent 49%, rgba(0, 0, 0, 0.25) 50%, transparent 52%),
-    linear-gradient(30deg, transparent 49%, rgba(0, 0, 0, 0.25) 50%, transparent 52%),
-    linear-gradient(180deg, #e0644c, #9e2b25);
+    linear-gradient(150deg, transparent 49%, var(--m-46) 50%, transparent 52%),
+    linear-gradient(30deg, transparent 49%, var(--m-46) 50%, transparent 52%),
+    linear-gradient(180deg, var(--m-47), var(--m-48));
   box-shadow: none;
   animation: dungeon-party-roll 2.4s ease-in-out infinite;
 }
@@ -345,7 +570,7 @@
 [data-skin='dungeon-party'] .crew-row[data-status='error'] .crew-bar::before {
   content: '20';
   font: 700 11px/1 var(--font-ui);
-  color: #fff3db;
+  color: var(--m-49);
 }
 
 [data-skin='dungeon-party'] .crew-name {
@@ -368,10 +593,10 @@
   content: 'your roll · ';
 }
 [data-skin='dungeon-party'] .crew-row[data-status='working'] .crew-sub {
-  color: #8a5a10;
+  color: var(--m-50);
 }
 [data-skin='dungeon-party'] .crew-row[data-status='done'] .crew-sub {
-  color: #3f6b2e;
+  color: var(--m-26);
 }
 
 [data-skin='dungeon-party'] .crew-msg {
@@ -385,9 +610,9 @@
 }
 
 [data-skin='dungeon-party'] .crew-row .ask-allow {
-  background: #3f6b2e;
-  border-color: #3f6b2e;
-  color: #fff3db;
+  background: var(--m-26);
+  border-color: var(--m-26);
+  color: var(--m-49);
 }
 [data-skin='dungeon-party'] .crew-row .ask-deny {
   background: transparent;
@@ -419,7 +644,7 @@
   font: 400 34px/1 var(--font-display);
   letter-spacing: 0.05em;
   color: var(--d-gold);
-  text-shadow: 0 0 18px rgba(227, 178, 79, 0.35), 0 2px 0 rgba(0, 0, 0, 0.6);
+  text-shadow: 0 0 18px var(--m-51), 0 2px 0 var(--m-52);
 }
 
 [data-skin='dungeon-party'] .rail-space-title::before {
@@ -434,7 +659,7 @@
 /* tabs: hanging banners, notched at the foot */
 [data-skin='dungeon-party'] .topbar {
   background: transparent;
-  border-bottom: 1px solid rgba(227, 178, 79, 0.18);
+  border-bottom: 1px solid var(--m-53);
 }
 
 [data-skin='dungeon-party'] .tab {
@@ -443,7 +668,7 @@
   border: 0;
   border-radius: 0;
   clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 82%, 0 100%);
-  background: linear-gradient(180deg, #5a3a22, #3c2615);
+  background: linear-gradient(180deg, var(--m-30), var(--m-54));
   color: var(--tx-2);
   font: 400 13px/1 var(--d-font-label);
   letter-spacing: 0.1em;
@@ -452,12 +677,12 @@
 }
 
 [data-skin='dungeon-party'] .tab:hover {
-  background: linear-gradient(180deg, #6b4729, #48301b);
+  background: linear-gradient(180deg, var(--m-55), var(--m-56));
   color: var(--tx);
 }
 
 [data-skin='dungeon-party'] .tab.is-active {
-  background: linear-gradient(180deg, #8a2b25, #5e1b17);
+  background: linear-gradient(180deg, var(--m-57), var(--m-58));
   color: var(--d-gold-2);
 }
 
@@ -467,39 +692,39 @@
 }
 [data-skin='dungeon-party'] .tab[data-status='blocked'] .dot,
 [data-skin='dungeon-party'] .tab[data-status='error'] .dot {
-  background: #ff7a5c;
-  box-shadow: 0 0 6px #ff7a5c;
+  background: var(--m-59);
+  box-shadow: 0 0 6px var(--m-59);
 }
 [data-skin='dungeon-party'] .tab[data-status='done'] .dot {
   background: var(--green);
 }
 
 [data-skin='dungeon-party'] .tab-count {
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--m-39);
   color: var(--d-gold-2);
 }
 
 [data-skin='dungeon-party'] .new-pane-btn,
 [data-skin='dungeon-party'] .cmd-btn {
   height: 30px;
-  border: 1px solid #8a6a3a;
-  background: linear-gradient(180deg, #3a2a1a, #261b11);
+  border: 1px solid var(--m-60);
+  background: linear-gradient(180deg, var(--m-24), var(--m-61));
   color: var(--d-gold-2);
   font: 400 12px/1 var(--d-font-label);
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  box-shadow: inset 0 1px 0 rgba(255, 220, 160, 0.15);
+  box-shadow: inset 0 1px 0 var(--m-62);
 }
 
 [data-skin='dungeon-party'] .new-pane-btn:hover,
 [data-skin='dungeon-party'] .cmd-btn:hover {
   border-color: var(--d-gold);
-  color: #fff3db;
+  color: var(--m-49);
 }
 
 [data-skin='dungeon-party'] .cmd-btn kbd {
-  border-color: #8a6a3a;
-  background: rgba(0, 0, 0, 0.3);
+  border-color: var(--m-60);
+  background: var(--m-39);
   color: var(--d-gold-2);
 }
 
@@ -509,7 +734,7 @@
 
 [data-skin='dungeon-party'] .icon-btn:hover {
   color: var(--d-gold-2);
-  background: rgba(227, 178, 79, 0.1);
+  background: var(--m-63);
 }
 
 /* panes: slates bound in iron, rivets at the corners */
@@ -518,37 +743,37 @@
   border: 3px solid var(--d-iron);
   background: var(--d-slate);
   box-shadow:
-    inset 0 0 0 1px rgba(0, 0, 0, 0.6),
-    0 0 0 1px #1a1410,
-    0 10px 24px rgba(0, 0, 0, 0.5);
+    inset 0 0 0 1px var(--m-52),
+    0 0 0 1px var(--m-64),
+    0 10px 24px var(--m-21);
 }
 
 [data-skin='dungeon-party'] .pane[data-active='true'] {
-  border-color: #9a7a3e;
+  border-color: var(--m-65);
   box-shadow:
-    inset 0 0 0 1px rgba(0, 0, 0, 0.6),
-    0 0 0 1px #1a1410,
-    0 0 26px rgba(227, 178, 79, 0.22),
-    0 10px 24px rgba(0, 0, 0, 0.5);
+    inset 0 0 0 1px var(--m-52),
+    0 0 0 1px var(--m-64),
+    0 0 26px var(--m-66),
+    0 10px 24px var(--m-21);
 }
 
 [data-skin='dungeon-party'] .pane[data-status='blocked'],
 [data-skin='dungeon-party'] .pane[data-status='error'] {
-  border-color: #8a2b25;
+  border-color: var(--m-57);
   animation: dungeon-party-alarm 2.4s ease-in-out infinite;
 }
 
 [data-skin='dungeon-party'] .pane[data-status='done'] {
-  border-color: #56703a;
+  border-color: var(--m-67);
 }
 
 [data-skin='dungeon-party'] .pane-head {
   padding: 0 14px;
   background:
-    radial-gradient(circle 3px at 7px 50%, #b8ad98 0, #4a443d 80%, transparent 100%),
-    radial-gradient(circle 3px at calc(100% - 7px) 50%, #b8ad98 0, #4a443d 80%, transparent 100%),
-    linear-gradient(180deg, #2c2420, #1f1915);
-  border-bottom: 2px solid #120e0b;
+    radial-gradient(circle 3px at 7px 50%, var(--m-68) 0, var(--m-20) 80%, transparent 100%),
+    radial-gradient(circle 3px at calc(100% - 7px) 50%, var(--m-68) 0, var(--m-20) 80%, transparent 100%),
+    linear-gradient(180deg, var(--m-69), var(--m-70));
+  border-bottom: 2px solid var(--m-71);
 }
 
 [data-skin='dungeon-party'] .pane-title {
@@ -568,7 +793,7 @@
 }
 
 [data-skin='dungeon-party'] .chip {
-  background: rgba(227, 178, 79, 0.15);
+  background: var(--m-72);
   color: var(--d-gold-2);
   font-family: var(--d-font-label);
 }
@@ -578,11 +803,11 @@
   font: 400 10.5px/1 var(--d-font-label);
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: #1f150e;
+  color: var(--m-73);
 }
 
 [data-skin='dungeon-party'] .badge::before {
-  background: #1f150e;
+  background: var(--m-73);
 }
 
 [data-skin='dungeon-party'] .badge-working {
@@ -590,12 +815,12 @@
 }
 [data-skin='dungeon-party'] .badge-blocked,
 [data-skin='dungeon-party'] .badge-error {
-  background: #c94a36;
-  color: #fff3db;
+  background: var(--m-74);
+  color: var(--m-49);
 }
 [data-skin='dungeon-party'] .badge-blocked::before,
 [data-skin='dungeon-party'] .badge-error::before {
-  background: #fff3db;
+  background: var(--m-49);
 }
 [data-skin='dungeon-party'] .badge-done {
   background: var(--green);
@@ -618,13 +843,13 @@
   place-items: center;
   clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
   background:
-    linear-gradient(150deg, transparent 49%, rgba(0, 0, 0, 0.28) 50%, transparent 52%),
-    linear-gradient(30deg, transparent 49%, rgba(0, 0, 0, 0.28) 50%, transparent 52%),
-    linear-gradient(90deg, transparent 49.3%, rgba(0, 0, 0, 0.2) 50%, transparent 50.7%),
-    linear-gradient(180deg, #e0644c, #8a2b25);
+    linear-gradient(150deg, transparent 49%, var(--m-75) 50%, transparent 52%),
+    linear-gradient(30deg, transparent 49%, var(--m-75) 50%, transparent 52%),
+    linear-gradient(90deg, transparent 49.3%, var(--m-76) 50%, transparent 50.7%),
+    linear-gradient(180deg, var(--m-47), var(--m-57));
   font: 700 20px/1 var(--font-ui);
-  color: #fff3db;
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.5);
+  color: var(--m-49);
+  text-shadow: 0 1px 0 var(--m-21);
   pointer-events: none;
   animation: dungeon-party-roll 2.4s ease-in-out infinite;
 }
@@ -637,13 +862,13 @@
   z-index: 2;
   font: italic 400 14px/1 var(--font-ui);
   letter-spacing: 0.04em;
-  color: rgba(174, 208, 123, 0.75);
+  color: var(--m-77);
   pointer-events: none;
 }
 
 /* lost panes: revive at the inn */
 [data-skin='dungeon-party'] .lost-pane {
-  background: radial-gradient(ellipse at 50% 40%, rgba(227, 178, 79, 0.08), transparent 60%);
+  background: radial-gradient(ellipse at 50% 40%, var(--m-78), transparent 60%);
 }
 
 [data-skin='dungeon-party'] .lost-pane::before {
@@ -657,12 +882,12 @@
 }
 
 [data-skin='dungeon-party'] .lost-actions button {
-  border-color: #8a6a3a;
+  border-color: var(--m-60);
   color: var(--d-gold-2);
 }
 
 [data-skin='dungeon-party'] .ended {
-  background: repeating-linear-gradient(135deg, rgba(227, 178, 79, 0.04) 0 12px, transparent 12px 24px);
+  background: repeating-linear-gradient(135deg, var(--m-79) 0 12px, transparent 12px 24px);
 }
 
 [data-skin='dungeon-party'] .gutter::after {
@@ -671,7 +896,7 @@
 
 /* the footer */
 [data-skin='dungeon-party'] .rail-footer {
-  border-top: 1px solid rgba(227, 178, 79, 0.18);
+  border-top: 1px solid var(--m-53);
   background: transparent;
   font: 400 12px/1 var(--d-font-label);
   letter-spacing: 0.12em;
@@ -683,7 +908,7 @@
   color: var(--d-gold);
 }
 [data-skin='dungeon-party'] .rf-count[data-status='blocked'] {
-  color: #ec7a62;
+  color: var(--m-80);
 }
 [data-skin='dungeon-party'] .rf-count[data-status='done'] {
   color: var(--green);
@@ -699,9 +924,9 @@
 [data-skin='dungeon-party'] .palette,
 [data-skin='dungeon-party'] .help,
 [data-skin='dungeon-party'] .menu {
-  background: linear-gradient(180deg, #2c2016, #1f160f);
-  border: 2px solid #8a6a3a;
-  box-shadow: var(--e3), inset 0 0 0 1px rgba(0, 0, 0, 0.6);
+  background: linear-gradient(180deg, var(--m-81), var(--m-82));
+  border: 2px solid var(--m-60);
+  box-shadow: var(--e3), inset 0 0 0 1px var(--m-52);
 }
 
 [data-skin='dungeon-party'] .agents-head,
@@ -714,7 +939,7 @@
 }
 
 [data-skin='dungeon-party'] .palette li.is-active {
-  background: #8a2b25;
+  background: var(--m-57);
   color: var(--d-gold-2);
 }
 
@@ -723,26 +948,26 @@
 }
 
 [data-skin='dungeon-party'] .agent-row[data-status='blocked'] {
-  box-shadow: inset 3px 0 0 #c94a36;
+  box-shadow: inset 3px 0 0 var(--m-74);
 }
 [data-skin='dungeon-party'] .agent-row[data-status='working'] {
   box-shadow: inset 3px 0 0 var(--d-gold);
 }
 
 [data-skin='dungeon-party'] .ask .ask-allow {
-  background: #56703a;
-  border-color: #56703a;
-  color: #fff3db;
+  background: var(--m-67);
+  border-color: var(--m-67);
+  color: var(--m-49);
 }
 
 [data-skin='dungeon-party'] .ask .ask-deny {
   background: transparent;
-  border-color: #c94a36;
-  color: #ec7a62;
+  border-color: var(--m-74);
+  color: var(--m-80);
 }
 
 [data-skin='dungeon-party'] .view-banner {
-  background: #5e1b17;
+  background: var(--m-58);
   color: var(--d-gold-2);
   font-family: var(--d-font-label);
   letter-spacing: 0.14em;
@@ -750,8 +975,8 @@
 }
 
 @keyframes dungeon-party-candle {
-  0%, 100% { box-shadow: inset 0 0 0 1.5px #8a5a10, 0 0 6px rgba(255, 186, 92, 0.5); }
-  50% { box-shadow: inset 0 0 0 1.5px #8a5a10, 0 0 12px rgba(255, 186, 92, 0.85); }
+  0%, 100% { box-shadow: inset 0 0 0 1.5px var(--m-50), 0 0 6px var(--m-83); }
+  50% { box-shadow: inset 0 0 0 1.5px var(--m-50), 0 0 12px var(--m-84); }
 }
 
 @keyframes dungeon-party-roll {
@@ -762,8 +987,8 @@
 }
 
 @keyframes dungeon-party-alarm {
-  0%, 100% { box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.6), 0 0 0 1px #1a1410, 0 0 8px rgba(212, 85, 63, 0.2); }
-  50% { box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.6), 0 0 0 1px #1a1410, 0 0 26px rgba(212, 85, 63, 0.5); }
+  0%, 100% { box-shadow: inset 0 0 0 1px var(--m-52), 0 0 0 1px var(--m-64), 0 0 8px var(--m-85); }
+  50% { box-shadow: inset 0 0 0 1px var(--m-52), 0 0 0 1px var(--m-64), 0 0 26px var(--m-86); }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -797,3 +1022,11 @@
     font-size: 15px;
   }
 }
+
+/* light only: rules the dark look cannot share */
+[data-skin='dungeon-party'][data-mode='light'] .tab { color: #cbb88f; }
+[data-skin='dungeon-party'][data-mode='light'] .tab:hover { color: #f0e4c8; }
+[data-skin='dungeon-party'][data-mode='light'] .pane-msg { color: #cbb88f; }
+[data-skin='dungeon-party'][data-mode='light'] .pane-cwd { color: #8f7b5c; }
+[data-skin='dungeon-party'][data-mode='light'] .rail-space-title { color: #8a5a10; text-shadow: 0 1px 0 rgba(255, 245, 220, 0.8); }
+[data-skin='dungeon-party'][data-mode='light'] .rf-count[data-status='working'] { color: #8a5a10; }

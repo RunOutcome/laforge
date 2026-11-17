@@ -8,7 +8,31 @@
    faces only. */
 
 :root[data-skin='heist-crew'] {
+  --h-stencil: 'Courier New', 'Courier Prime', ui-monospace, Menlo, monospace;
+  --font-ui: var(--h-stencil);
+  --font-mono: var(--h-stencil);
+  --font-display: 'Futura', 'Century Gothic', 'Trebuchet MS', sans-serif;
+  --radius-pane: 0;
+  --radius-dialog: 0;
+  --radius-card: 0;
+  --radius-mono: 0;
+  --radius-control: 0;
+  --radius-button: 0;
+  --radius-button-sm: 0;
+  --radius-chip: 0;
+  --topbar-height: 46px;
+  --statusbar-height: 30px;
+  --pane-head-height: 32px;
+  --work-gap: 18px;
+  --pane-gap: 10px;
+}
+
+:root[data-skin='heist-crew'][data-mode='dark'] {
   --h-blue: #0d3263;
+  --h-ink: #fff;
+  --h-ink-rgb: 255, 255, 255;
+  --h-panel-rgb: 9, 37, 72;
+  --h-shadow-rgb: 4, 18, 36;
   --h-blue-deep: #092548;
   --h-blue-ink: #0b2a4f;
   --h-line: rgba(255, 255, 255, 0.85);
@@ -18,8 +42,6 @@
   --h-red: #ff5b5b;
   --h-yellow: #ffd866;
   --h-green: #7ee0b0;
-  --h-stencil: 'Courier New', 'Courier Prime', ui-monospace, Menlo, monospace;
-
   --canvas: var(--h-blue);
   --side: var(--h-blue-deep);
   --sunken: #082040;
@@ -52,22 +74,6 @@
   --e2: none;
   --e3: 0 0 0 1px rgba(255, 255, 255, 0.6);
   --shadow-tab: none;
-  --font-ui: var(--h-stencil);
-  --font-mono: var(--h-stencil);
-  --font-display: 'Futura', 'Century Gothic', 'Trebuchet MS', sans-serif;
-  --radius-pane: 0;
-  --radius-dialog: 0;
-  --radius-card: 0;
-  --radius-mono: 0;
-  --radius-control: 0;
-  --radius-button: 0;
-  --radius-button-sm: 0;
-  --radius-chip: 0;
-  --topbar-height: 46px;
-  --statusbar-height: 30px;
-  --pane-head-height: 32px;
-  --work-gap: 18px;
-  --pane-gap: 10px;
 }
 
 [data-skin='heist-crew'] body,
@@ -78,14 +84,14 @@
     linear-gradient(90deg, var(--h-grid-major) 1px, transparent 1px),
     linear-gradient(var(--h-grid) 1px, transparent 1px),
     linear-gradient(90deg, var(--h-grid) 1px, transparent 1px),
-    radial-gradient(ellipse at 50% 40%, rgba(255, 255, 255, 0.06), transparent 70%);
+    radial-gradient(ellipse at 50% 40%, rgba(var(--h-ink-rgb), 0.06), transparent 70%);
   background-size: 100px 100px, 100px 100px, 20px 20px, 20px 20px, 100% 100%;
   font-family: var(--h-stencil);
 }
 
 /* ---------- title block: the top bar ---------- */
 [data-skin='heist-crew'] .topbar {
-  background: rgba(9, 37, 72, 0.88);
+  background: rgba(var(--h-panel-rgb), 0.88);
   border-bottom: 2px solid var(--h-line);
   box-shadow: 0 3px 0 -1px var(--h-blue), 0 4px 0 -1px var(--h-line-soft);
 }
@@ -99,7 +105,7 @@
   font: 700 15px/1 var(--font-display);
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: #fff;
+  color: var(--h-ink);
 }
 
 [data-skin='heist-crew'] .brand-name::after {
@@ -138,18 +144,18 @@
 
 [data-skin='heist-crew'] .tab:hover {
   border-style: solid;
-  background: rgba(255, 255, 255, 0.06);
-  color: #fff;
+  background: rgba(var(--h-ink-rgb), 0.06);
+  color: var(--h-ink);
 }
 
 [data-skin='heist-crew'] .tab.is-active {
-  border: 2px solid #fff;
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
+  border: 2px solid var(--h-ink);
+  background: rgba(var(--h-ink-rgb), 0.1);
+  color: var(--h-ink);
 }
 
 [data-skin='heist-crew'] .tab.is-active::before {
-  color: #fff;
+  color: var(--h-ink);
 }
 
 [data-skin='heist-crew'] .tab[data-status='blocked'],
@@ -185,9 +191,9 @@
 
 [data-skin='heist-crew'] .new-pane-btn,
 [data-skin='heist-crew'] .cmd-btn {
-  border: 1px solid #fff;
+  border: 1px solid var(--h-ink);
   background: transparent;
-  color: #fff;
+  color: var(--h-ink);
   font: 700 12px/1 var(--h-stencil);
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -195,7 +201,7 @@
 
 [data-skin='heist-crew'] .new-pane-btn:hover,
 [data-skin='heist-crew'] .cmd-btn:hover {
-  background: #fff;
+  background: var(--h-ink);
   color: var(--h-blue-deep);
 }
 
@@ -206,11 +212,11 @@
 }
 
 [data-skin='heist-crew'] .icon-btn {
-  color: #fff;
+  color: var(--h-ink);
 }
 
 [data-skin='heist-crew'] .icon-btn:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(var(--h-ink-rgb), 0.12);
 }
 
 /* ---------- panes: drawings with dimension lines ---------- */
@@ -229,21 +235,21 @@
   z-index: 2;
   pointer-events: none;
   background:
-    linear-gradient(#fff, #fff) top left / 1px 8px,
-    linear-gradient(#fff, #fff) top left / 8px 1px,
-    linear-gradient(#fff, #fff) top right / 1px 8px,
-    linear-gradient(#fff, #fff) top right / 8px 1px,
-    linear-gradient(#fff, #fff) bottom left / 1px 8px,
-    linear-gradient(#fff, #fff) bottom left / 8px 1px,
-    linear-gradient(#fff, #fff) bottom right / 1px 8px,
-    linear-gradient(#fff, #fff) bottom right / 8px 1px;
+    linear-gradient(var(--h-ink), var(--h-ink)) top left / 1px 8px,
+    linear-gradient(var(--h-ink), var(--h-ink)) top left / 8px 1px,
+    linear-gradient(var(--h-ink), var(--h-ink)) top right / 1px 8px,
+    linear-gradient(var(--h-ink), var(--h-ink)) top right / 8px 1px,
+    linear-gradient(var(--h-ink), var(--h-ink)) bottom left / 1px 8px,
+    linear-gradient(var(--h-ink), var(--h-ink)) bottom left / 8px 1px,
+    linear-gradient(var(--h-ink), var(--h-ink)) bottom right / 1px 8px,
+    linear-gradient(var(--h-ink), var(--h-ink)) bottom right / 8px 1px;
   background-repeat: no-repeat;
   opacity: 0.7;
 }
 
 [data-skin='heist-crew'] .pane[data-active='true'] {
-  border: 2px solid #fff;
-  box-shadow: 0 0 0 4px var(--h-blue-ink), 0 0 0 5px #fff;
+  border: 2px solid var(--h-ink);
+  box-shadow: 0 0 0 4px var(--h-blue-ink), 0 0 0 5px var(--h-ink);
 }
 
 [data-skin='heist-crew'] .pane[data-status='blocked'],
@@ -267,7 +273,7 @@
 }
 
 [data-skin='heist-crew'] .pane-head {
-  background: rgba(9, 37, 72, 0.95);
+  background: rgba(var(--h-panel-rgb), 0.95);
   border-bottom: 1px solid var(--h-line-soft);
   background-image: repeating-linear-gradient(90deg, transparent 0 9px, var(--h-line-soft) 9px 10px);
   background-size: 100% 4px;
@@ -279,7 +285,7 @@
   font: 700 13px/1 var(--h-stencil);
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: #fff;
+  color: var(--h-ink);
 }
 
 [data-skin='heist-crew'] .pane-cwd,
@@ -295,7 +301,7 @@
 [data-skin='heist-crew'] .chip {
   border: 1px solid var(--h-line-soft);
   background: transparent;
-  color: #fff;
+  color: var(--h-ink);
 }
 
 [data-skin='heist-crew'] .badge {
@@ -312,7 +318,7 @@
 [data-skin='heist-crew'] .badge-idle { color: var(--tx-3); }
 [data-skin='heist-crew'] .badge-blocked,
 [data-skin='heist-crew'] .badge-error {
-  color: #fff;
+  color: #ffffff;
   background: var(--h-red);
   border-color: var(--h-red);
 }
@@ -321,8 +327,8 @@
 }
 
 [data-skin='heist-crew'] .ask .ask-allow {
-  background: #fff;
-  border-color: #fff;
+  background: var(--h-ink);
+  border-color: var(--h-ink);
   color: var(--h-blue-deep);
 }
 
@@ -333,23 +339,23 @@
 }
 
 [data-skin='heist-crew'] .gutter::after {
-  background: repeating-linear-gradient(0deg, #fff 0 4px, transparent 4px 8px);
+  background: repeating-linear-gradient(0deg, var(--h-ink) 0 4px, transparent 4px 8px);
 }
 
 /* empty pane: the picker as a parts list */
 [data-skin='heist-crew'] .profile {
   border: 1px dashed var(--h-line-soft);
-  background: rgba(9, 37, 72, 0.6);
+  background: rgba(var(--h-panel-rgb), 0.6);
 }
 
 [data-skin='heist-crew'] .profile:hover {
   border-style: solid;
-  border-color: #fff;
+  border-color: var(--h-ink);
 }
 
 /* ---------- the footer: the plan's legend ---------- */
 [data-skin='heist-crew'] .statusbar {
-  background: rgba(9, 37, 72, 0.92);
+  background: rgba(var(--h-panel-rgb), 0.92);
   border-top: 2px solid var(--h-line);
   font: 400 11.5px/1 var(--h-stencil);
   letter-spacing: 0.08em;
@@ -372,8 +378,8 @@
 [data-skin='heist-crew'] .help,
 [data-skin='heist-crew'] .menu {
   background: var(--h-blue-deep);
-  border: 2px solid #fff;
-  box-shadow: 6px 6px 0 rgba(4, 18, 36, 0.8);
+  border: 2px solid var(--h-ink);
+  box-shadow: 6px 6px 0 rgba(var(--h-shadow-rgb), 0.8);
 }
 
 [data-skin='heist-crew'] .agents-head,
@@ -387,7 +393,7 @@
 
 [data-skin='heist-crew'] .palette li.is-active,
 [data-skin='heist-crew'] .menu-item:hover {
-  background: #fff;
+  background: var(--h-ink);
   color: var(--h-blue-deep);
 }
 
@@ -397,10 +403,77 @@
 
 [data-skin='heist-crew'] .view-banner {
   background: var(--h-red);
-  color: #fff;
+  color: #ffffff;
   font-family: var(--h-stencil);
   letter-spacing: 0.12em;
   text-transform: uppercase;
+}
+
+/* ---------- light: a whiteprint. Blue line work on white drafting film ---------- */
+:root[data-skin='heist-crew'][data-mode='light'] {
+  --h-blue: #f2f5f9;
+  --h-ink: #123a78;
+  --h-ink-rgb: 18, 58, 120;
+  --h-panel-rgb: 233, 239, 247;
+  --h-shadow-rgb: 18, 58, 120;
+  --h-blue-deep: #e4ecf6;
+  --h-blue-ink: #fbfcfe;
+  --h-line: rgba(18, 58, 120, 0.85);
+  --h-line-soft: rgba(18, 58, 120, 0.35);
+  --h-grid: rgba(18, 58, 120, 0.06);
+  --h-grid-major: rgba(18, 58, 120, 0.12);
+  --h-red: #d02f2f;
+  --h-yellow: #9a6b00;
+  --h-green: #17845a;
+  --canvas: var(--h-blue);
+  --side: var(--h-blue-deep);
+  --sunken: #dde6f1;
+  --card: rgba(233, 239, 247, 0.95);
+  --term: var(--h-blue-ink);
+  --hover: rgba(18, 58, 120, 0.07);
+  --press: rgba(18, 58, 120, 0.14);
+  --line: rgba(18, 58, 120, 0.55);
+  --line-2: rgba(18, 58, 120, 0.2);
+  --tx: #0e2f63;
+  --tx-2: #2f5288;
+  --tx-3: #5a77a3;
+  --acc: #123a78;
+  --acc-500: #2b5aa6;
+  --acc-100: rgba(18, 58, 120, 0.12);
+  --acc-fill: #123a78;
+  --on-acc: #ffffff;
+  --ai: var(--h-yellow);
+  --ai-600: #7d5600;
+  --ai-100: rgba(154, 107, 0, 0.16);
+  --ai-50: rgba(154, 107, 0, 0.08);
+  --red: var(--h-red);
+  --red-50: rgba(208, 47, 47, 0.1);
+  --amber: var(--h-yellow);
+  --amber-50: rgba(154, 107, 0, 0.1);
+  --green: var(--h-green);
+  --todo: #5a77a3;
+  --on-red: #ffffff;
+  --scrim: rgba(18, 40, 80, 0.35);
+  --e2: none;
+  --e3: 0 0 0 1px rgba(18, 58, 120, 0.6);
+}
+
+[data-skin='heist-crew'][data-mode='light'] .pane[data-status='blocked']::after,
+[data-skin='heist-crew'][data-mode='light'] .pane[data-status='error']::after {
+  background: linear-gradient(180deg, transparent, rgba(208, 47, 47, 0.1) 50%, transparent);
+  background-size: 100% 40%;
+  background-repeat: no-repeat;
+}
+[data-skin='heist-crew'][data-mode='light'] .tab[data-status='blocked'],
+[data-skin='heist-crew'][data-mode='light'] .tab[data-status='error'],
+[data-skin='heist-crew'][data-mode='light'] .tab[data-status='failed'] {
+  background: rgba(208, 47, 47, 0.07);
+}
+[data-skin='heist-crew'][data-mode='light'] .agents,
+[data-skin='heist-crew'][data-mode='light'] .palette,
+[data-skin='heist-crew'][data-mode='light'] .help,
+[data-skin='heist-crew'][data-mode='light'] .menu {
+  box-shadow: 6px 6px 0 rgba(18, 58, 120, 0.25);
 }
 
 @keyframes heist-sweep {

@@ -1,0 +1,49 @@
+{
+  "id": "official",
+  "name": "Official",
+  "description": "The skins released with LaForge. Each draws light and dark.",
+  "skins": [
+    {
+      "name": "ant-colony",
+      "label": "Ant Colony",
+      "description": "A cross-section of the nest: soil strata, chambers for panes, the crew as ants and a glowing scent trail on whatever is busy.",
+      "path": "ant-colony"
+    },
+    {
+      "name": "bridge",
+      "label": "Bridge",
+      "description": "A ship's bridge: cold steel bezels, cyan readouts, crew at their stations, red alert when someone needs you.",
+      "path": "bridge"
+    },
+    {
+      "name": "dungeon-party",
+      "label": "Dungeon Party",
+      "description": "A candlelit tavern table: a parchment roster of adventurers, a quest log of spaces, and a d20 when only you can roll.",
+      "path": "dungeon-party"
+    },
+    {
+      "name": "heist-crew",
+      "label": "Heist Crew",
+      "description": "The job on a blueprint: white line work on a blue grid, every tab a step of the plan, red when someone's been made.",
+      "path": "heist-crew"
+    },
+    {
+      "name": "kitchen-pass",
+      "label": "Kitchen Pass",
+      "description": "The line on a busy night: tabs are order tickets on a rail, panes are stainless stations under heat lamps, and blocked calls for Chef.",
+      "path": "kitchen-pass"
+    },
+    {
+      "name": "mission-control-1969",
+      "label": "Mission Control 1969",
+      "description": "A flight control room: green phosphor screens in beige consoles, go/no-go lamps for every station, a teleprinter strip of the log.",
+      "path": "mission-control-1969"
+    },
+    {
+      "name": "newsroom",
+      "label": "Newsroom",
+      "description": "Newsprint and ink: a masthead, serif headlines, column rules, and rubber stamps for the editor's desk and the press.",
+      "path": "newsroom"
+    }
+  ]
+}

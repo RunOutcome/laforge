@@ -8,6 +8,24 @@
    light. System faces only. */
 
 :root[data-skin='kitchen-pass'] {
+  --font-ui: 'Avenir Next', 'Helvetica Neue', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'Courier New', ui-monospace, Menlo, monospace;
+  --font-display: 'Avenir Next Condensed', 'Helvetica Neue', 'Arial Narrow', sans-serif;
+  --radius-pane: 6px;
+  --radius-dialog: 6px;
+  --radius-card: 4px;
+  --radius-control: 2px;
+  --radius-button: 3px;
+  --radius-button-sm: 3px;
+  --radius-chip: 3px;
+  --topbar-height: 54px;
+  --statusbar-height: 30px;
+  --pane-head-height: 34px;
+  --work-gap: 12px;
+  --pane-gap: 8px;
+}
+
+:root[data-skin='kitchen-pass'][data-mode='light'] {
   --k-steel-1: #e9ecee;
   --k-steel-2: #c9cfd3;
   --k-steel-3: #a6aeb4;
@@ -19,7 +37,6 @@
   --k-fire: #e03131;
   --k-basil: #2b8a3e;
   --k-tile: #f3f1ec;
-
   --canvas: var(--k-tile);
   --side: var(--k-steel-1);
   --sunken: #e6e2d9;
@@ -52,21 +69,6 @@
   --e2: 0 2px 6px rgba(42, 38, 34, 0.14);
   --e3: 0 10px 30px rgba(42, 38, 34, 0.2);
   --shadow-tab: 0 3px 6px rgba(42, 38, 34, 0.18);
-  --font-ui: 'Avenir Next', 'Helvetica Neue', 'Segoe UI', system-ui, sans-serif;
-  --font-mono: 'Courier New', ui-monospace, Menlo, monospace;
-  --font-display: 'Avenir Next Condensed', 'Helvetica Neue', 'Arial Narrow', sans-serif;
-  --radius-pane: 6px;
-  --radius-dialog: 6px;
-  --radius-card: 4px;
-  --radius-control: 2px;
-  --radius-button: 3px;
-  --radius-button-sm: 3px;
-  --radius-chip: 3px;
-  --topbar-height: 54px;
-  --statusbar-height: 30px;
-  --pane-head-height: 34px;
-  --work-gap: 12px;
-  --pane-gap: 8px;
 }
 
 [data-skin='kitchen-pass'] body,
@@ -389,6 +391,160 @@
   font-family: var(--font-display);
   letter-spacing: 0.12em;
   text-transform: uppercase;
+}
+
+/* ---------- dark: closing time. Lights down, gunmetal steel, slate tile,
+   the tickets still white on the rail and the heat lamps the brightest
+   thing in the room ---------- */
+:root[data-skin='kitchen-pass'][data-mode='dark'] {
+  --k-steel-1: #3a4046;
+  --k-steel-2: #2c3136;
+  --k-steel-3: #4b535a;
+  --k-paper: #f6f1e4;
+  --k-paper-edge: #d9cfb8;
+  --k-ink: #2a2622;
+  --k-lamp: #ffa630;
+  --k-lamp-glow: rgba(255, 166, 48, 0.4);
+  --k-fire: #ff5a4f;
+  --k-basil: #4fbf68;
+  --k-tile: #1d2124;
+  --canvas: var(--k-tile);
+  --side: #262b2f;
+  --sunken: #181b1e;
+  --card: #2a2f34;
+  --term: #171512;
+  --hover: rgba(255, 255, 255, 0.06);
+  --press: rgba(255, 255, 255, 0.12);
+  --line: #4b535a;
+  --line-2: #33393e;
+  --tx: #ece7dc;
+  --tx-2: #bdb5a8;
+  --tx-3: #8d867b;
+  --acc: #ff9a4a;
+  --acc-500: #ffb070;
+  --acc-100: rgba(255, 154, 74, 0.16);
+  --acc-fill: #f06a1c;
+  --on-acc: #1a0d00;
+  --ai: #6aaeff;
+  --ai-600: #93c4ff;
+  --ai-100: rgba(106, 174, 255, 0.2);
+  --ai-50: rgba(106, 174, 255, 0.1);
+  --red: var(--k-fire);
+  --red-50: rgba(255, 90, 79, 0.16);
+  --amber: #ffb547;
+  --amber-50: rgba(255, 166, 48, 0.16);
+  --green: var(--k-basil);
+  --todo: #8d867b;
+  --on-red: #ffffff;
+  --scrim: rgba(0, 0, 0, 0.6);
+  --e2: 0 2px 8px rgba(0, 0, 0, 0.5);
+  --e3: 0 10px 30px rgba(0, 0, 0, 0.6);
+  --shadow-tab: 0 3px 8px rgba(0, 0, 0, 0.5);
+}
+
+[data-skin='kitchen-pass'][data-mode='dark'] body,
+[data-skin='kitchen-pass'][data-mode='dark'] .forge {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+}
+[data-skin='kitchen-pass'][data-mode='dark'] .topbar {
+  background: linear-gradient(180deg, #4a5157 0%, var(--k-steel-1) 30%, var(--k-steel-2) 70%, #202428 100%);
+  border-bottom-color: #15181b;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.12) inset, 0 3px 10px rgba(0, 0, 0, 0.5);
+}
+[data-skin='kitchen-pass'][data-mode='dark'] .topbar::after {
+  background: linear-gradient(180deg, #15181b, #5a636a);
+}
+[data-skin='kitchen-pass'][data-mode='dark'] .brand-name { color: var(--tx); }
+[data-skin='kitchen-pass'][data-mode='dark'] .tab {
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.55);
+}
+[data-skin='kitchen-pass'][data-mode='dark'] .tab:hover,
+[data-skin='kitchen-pass'][data-mode='dark'] .tab.is-active {
+  background: #fffaf0;
+}
+[data-skin='kitchen-pass'][data-mode='dark'] .tab.is-active {
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.6), 0 0 24px rgba(255, 166, 48, 0.18);
+}
+[data-skin='kitchen-pass'][data-mode='dark'] .tab::before { background: #8a8177; }
+[data-skin='kitchen-pass'][data-mode='dark'] .tab.is-active::before { background: var(--k-ink); }
+[data-skin='kitchen-pass'][data-mode='dark'] .tab[data-status='working']::before { background: var(--k-lamp); }
+[data-skin='kitchen-pass'][data-mode='dark'] .tab[data-status='done']::before { background: #2b8a3e; }
+[data-skin='kitchen-pass'][data-mode='dark'] .tab[data-status='blocked']::before,
+[data-skin='kitchen-pass'][data-mode='dark'] .tab[data-status='error']::before,
+[data-skin='kitchen-pass'][data-mode='dark'] .tab[data-status='failed']::before { background: #e03131; }
+[data-skin='kitchen-pass'][data-mode='dark'] .cmd-btn {
+  border-color: #15181b;
+  background: linear-gradient(180deg, #4a5157, #2c3136);
+  color: var(--tx);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.12) inset, 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+[data-skin='kitchen-pass'][data-mode='dark'] .new-pane-btn {
+  border-color: #8a3305;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.25) inset, 0 0 14px rgba(255, 140, 40, 0.25);
+}
+[data-skin='kitchen-pass'][data-mode='dark'] .cmd-btn kbd {
+  border-color: #5a636a;
+  background: rgba(0, 0, 0, 0.3);
+  color: var(--tx-2);
+}
+[data-skin='kitchen-pass'][data-mode='dark'] .icon-btn { color: #c3c9ce; }
+[data-skin='kitchen-pass'][data-mode='dark'] .pane {
+  border-color: #15181b;
+  box-shadow: 0 0 0 4px var(--k-steel-2), 0 0 0 5px #4b535a, 0 6px 16px rgba(0, 0, 0, 0.5);
+}
+[data-skin='kitchen-pass'][data-mode='dark'] .pane[data-active='true'] {
+  box-shadow: 0 0 0 4px var(--k-steel-1), 0 0 0 5px #c9cfd3, 0 8px 20px rgba(0, 0, 0, 0.55);
+}
+[data-skin='kitchen-pass'][data-mode='dark'] .pane[data-status='working'] {
+  box-shadow: 0 0 0 4px var(--k-steel-2), 0 0 0 5px #4b535a, 0 -12px 48px -6px var(--k-lamp-glow), 0 6px 16px rgba(0, 0, 0, 0.5);
+}
+[data-skin='kitchen-pass'][data-mode='dark'] .pane[data-status='working']::after {
+  background: radial-gradient(ellipse at 50% -30%, rgba(255, 166, 48, 0.28), transparent 70%);
+}
+[data-skin='kitchen-pass'][data-mode='dark'] .pane[data-status='blocked'],
+[data-skin='kitchen-pass'][data-mode='dark'] .pane[data-status='error'],
+[data-skin='kitchen-pass'][data-mode='dark'] .pane[data-status='failed'] {
+  box-shadow: 0 0 0 4px #4a1f1d, 0 0 0 5px var(--k-fire), 0 6px 18px rgba(255, 90, 79, 0.25);
+}
+[data-skin='kitchen-pass'][data-mode='dark'] .pane-head {
+  background: linear-gradient(180deg, #474e54, var(--k-steel-1) 45%, #2c3136);
+  border-bottom-color: #15181b;
+}
+[data-skin='kitchen-pass'][data-mode='dark'] .pane-title { color: var(--tx); }
+[data-skin='kitchen-pass'][data-mode='dark'] .chip {
+  background: #1d2124;
+  border-color: #4b535a;
+  color: var(--tx);
+}
+[data-skin='kitchen-pass'][data-mode='dark'] .badge-done { color: #08210f; }
+[data-skin='kitchen-pass'][data-mode='dark'] .badge-idle { background: #3a4046; }
+[data-skin='kitchen-pass'][data-mode='dark'] .ask .ask-allow { color: #08210f; }
+[data-skin='kitchen-pass'][data-mode='dark'] .ask .ask-deny { background: transparent; }
+[data-skin='kitchen-pass'][data-mode='dark'] .gutter::after { background: #5a636a; }
+[data-skin='kitchen-pass'][data-mode='dark'] .profile {
+  background: #2a2f34;
+  border-color: #3a4046;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+[data-skin='kitchen-pass'][data-mode='dark'] .statusbar {
+  background: linear-gradient(180deg, #2c3136, #202428);
+  border-top-color: #15181b;
+  color: #c3c9ce;
+}
+[data-skin='kitchen-pass'][data-mode='dark'] .agents,
+[data-skin='kitchen-pass'][data-mode='dark'] .palette,
+[data-skin='kitchen-pass'][data-mode='dark'] .help,
+[data-skin='kitchen-pass'][data-mode='dark'] .menu {
+  background: #2a2f34;
+  border-color: #15181b;
+  border-top-color: var(--k-lamp);
+}
+[data-skin='kitchen-pass'][data-mode='dark'] .palette li.is-active { background: rgba(255, 166, 48, 0.18); }
+[data-skin='kitchen-pass'][data-mode='dark'] .view-banner {
+  background: var(--k-lamp);
+  color: #1a0d00;
 }
 
 @keyframes kitchen-lamp {

@@ -8,6 +8,28 @@
 
 :root[data-skin='ant-colony'] {
   /* the skin's own colours */
+
+  /* the forge's tokens */
+  --shadow-tab: none;
+  --font-ui: 'Avenir Next', 'Avenir', 'Segoe UI', 'Helvetica Neue', sans-serif;
+  --font-display: 'Avenir Next Condensed', 'Futura', 'Arial Narrow', sans-serif-condensed, sans-serif;
+  --radius-pane: 26px;
+  --radius-dialog: 22px;
+  --radius-card: 16px;
+  --radius-control: 999px;
+  --radius-button: 999px;
+  --radius-button-sm: 999px;
+  --radius-chip: 999px;
+  --rail-width: 244px;
+  --topbar-height: 42px;
+  --statusbar-height: 30px;
+  --pane-head-height: 32px;
+  --work-gap: 10px;
+  --pane-gap: 8px;
+}
+
+/* colours: dark, the original */
+:root[data-skin='ant-colony'][data-mode='dark'] {
   --a-grass: #6f9a3a;
   --a-grass-dark: #4b6e22;
   --a-topsoil: #3b2817;
@@ -19,8 +41,6 @@
   --a-honey: #ffcf6e;
   --a-chamber: #1a120b;
   --a-ant: #140c06;
-
-  /* the forge's tokens */
   --canvas: #24180e;
   --side: #2b1d11;
   --sunken: #1d140c;
@@ -52,32 +72,176 @@
   --scrim: rgba(15, 9, 4, 0.72);
   --e2: 0 2px 6px rgba(0, 0, 0, 0.45);
   --e3: 0 14px 40px rgba(0, 0, 0, 0.6);
-  --shadow-tab: none;
-  --font-ui: 'Avenir Next', 'Avenir', 'Segoe UI', 'Helvetica Neue', sans-serif;
-  --font-display: 'Avenir Next Condensed', 'Futura', 'Arial Narrow', sans-serif-condensed, sans-serif;
-  --radius-pane: 26px;
-  --radius-dialog: 22px;
-  --radius-card: 16px;
-  --radius-control: 999px;
-  --radius-button: 999px;
-  --radius-button-sm: 999px;
-  --radius-chip: 999px;
-  --rail-width: 244px;
-  --topbar-height: 42px;
-  --statusbar-height: 30px;
-  --pane-head-height: 32px;
-  --work-gap: 10px;
-  --pane-gap: 8px;
+  --m-1: rgba(199, 154, 94, 0.35);
+  --m-2: rgba(199, 154, 94, 0.3);
+  --m-3: rgba(91, 74, 58, 0.6);
+  --m-4: #3b2817;
+  --m-5: #33230f;
+  --m-6: #2c1e10;
+  --m-7: #2a1c0f;
+  --m-8: #24180d;
+  --m-9: #20150b;
+  --m-10: #1b1209;
+  --m-11: #160f07;
+  --m-12: rgba(0, 0, 0, 0.35);
+  --m-13: #2f2012;
+  --m-14: #2b1d10;
+  --m-15: #8fbf55;
+  --m-16: #0d0804;
+  --m-17: rgba(0, 0, 0, 0.4);
+  --m-18: rgba(0, 0, 0, 0.7);
+  --m-19: rgba(199, 154, 94, 0.18);
+  --m-20: rgba(0, 0, 0, 0.6);
+  --m-21: #22170e;
+  --m-22: rgba(255, 255, 255, 0.25);
+  --m-23: rgba(242, 169, 59, 0.35);
+  --m-24: rgba(26, 15, 5, 0.65);
+  --m-25: rgba(199, 154, 94, 0.4);
+  --m-26: rgba(242, 169, 59, 0.08);
+  --m-27: rgba(242, 169, 59, 0.22);
+  --m-28: #6b4f33;
+  --m-29: #a07a52;
+  --m-30: #b07a2a;
+  --m-31: rgba(242, 169, 59, 0.7);
+  --m-32: #8e3a2c;
+  --m-33: #5d7334;
+  --m-34: rgba(255, 207, 110, 0.85);
+  --m-35: #000000;
+  --m-36: rgba(59, 40, 23, 0);
+  --m-37: #79a945;
+  --m-38: rgba(0, 0, 0, 0.45);
+  --m-39: rgba(199, 154, 94, 0.2);
+  --m-40: rgba(242, 169, 59, 0.25);
+  --m-41: rgba(242, 169, 59, 0.18);
+  --m-42: #1a0f05;
+  --m-43: rgba(26, 15, 5, 0.2);
+  --m-44: rgba(242, 169, 59, 0.12);
+  --m-45: rgba(0, 0, 0, 0.75);
+  --m-46: #3a2818;
+  --m-47: rgba(255, 207, 110, 0.5);
+  --m-48: rgba(224, 96, 74, 0.3);
+  --m-49: rgba(157, 187, 90, 0.35);
+  --m-50: #2a1c10;
+  --m-51: #1f150c;
+  --m-52: rgba(199, 154, 94, 0.25);
+  --m-53: rgba(242, 169, 59, 0.15);
+  --m-54: #20160c;
+  --m-55: rgba(0, 0, 0, 0.5);
+  --m-56: rgba(199, 154, 94, 0.06);
+  --m-57: rgba(242, 169, 59, 0.45);
+}
+
+/* colours: light */
+:root[data-skin='ant-colony'][data-mode='light'] {
+  --a-grass: #4f6e29;
+  --a-grass-dark: #2b3f14;
+  --a-topsoil: #e2d0bf;
+  --a-loam: #e7d8ca;
+  --a-clay: #5d3d22;
+  --a-sand: #ac7c3c;
+  --a-stone: #c2b3a5;
+  --a-amber: #e18d0f;
+  --a-honey: #f5b845;
+  --a-chamber: #eee4db;
+  --a-ant: #f3e8df;
+  --canvas: #ebded3;
+  --side: #e8d9cd;
+  --sunken: #ede2d9;
+  --card: #e7d8c9;
+  --term: #eee4db;
+  --hover: rgba(225, 141, 15, 0.1);
+  --press: rgba(225, 141, 15, 0.18);
+  --line: #d7c3b1;
+  --line-2: #e0cfc0;
+  --tx: #2a1a0c;
+  --tx-2: #5a3f24;
+  --tx-3: #8a6c4b;
+  --acc: #b8690a;
+  --acc-500: #ffb02d;
+  --acc-100: rgba(225, 141, 15, 0.18);
+  --acc-fill: #b3741a;
+  --on-acc: #1a0f05;
+  --ai: #7d993f;
+  --ai-600: #9dc04d;
+  --ai-100: rgba(125, 153, 63, 0.28);
+  --ai-50: rgba(125, 153, 63, 0.14);
+  --red: #ca3b23;
+  --red-50: rgba(202, 59, 35, 0.16);
+  --amber: #e18d0f;
+  --amber-50: rgba(225, 141, 15, 0.15);
+  --green: #7d993f;
+  --todo: #a5917d;
+  --on-red: #fff6e8;
+  --scrim: rgba(15, 9, 4, 0.324);
+  --e2: 0 2px 6px rgba(0, 0, 0, 0.203);
+  --e3: 0 14px 40px rgba(0, 0, 0, 0.27);
+  --m-1: rgba(172, 124, 60, 0.35);
+  --m-2: rgba(172, 124, 60, 0.3);
+  --m-3: rgba(194, 179, 165, 0.6);
+  --m-4: #e2d0bf;
+  --m-5: #eadac6;
+  --m-6: #e9dacc;
+  --m-7: #eadbce;
+  --m-8: #ecdfd3;
+  --m-9: #eee1d6;
+  --m-10: #f0e5da;
+  --m-11: #f2e9de;
+  --m-12: rgba(0, 0, 0, 0.158);
+  --m-13: #e7d8c9;
+  --m-14: #e9dacd;
+  --m-15: #709c3b;
+  --m-16: #f5ece5;
+  --m-17: rgba(255, 250, 240, 0.7);
+  --m-18: rgba(0, 0, 0, 0.315);
+  --m-19: rgba(172, 124, 60, 0.18);
+  --m-20: rgba(0, 0, 0, 0.27);
+  --m-21: #ebdfd5;
+  --m-22: rgba(255, 255, 255, 0.25);
+  --m-23: rgba(225, 141, 15, 0.35);
+  --m-24: rgba(26, 15, 5, 0.6);
+  --m-25: rgba(172, 124, 60, 0.4);
+  --m-26: rgba(225, 141, 15, 0.08);
+  --m-27: rgba(225, 141, 15, 0.22);
+  --m-28: #42301f;
+  --m-29: #aa8b6a;
+  --m-30: #7f581e;
+  --m-31: rgba(225, 141, 15, 0.7);
+  --m-32: #5f271e;
+  --m-33: #3b4921;
+  --m-34: rgba(255, 187, 49, 0.85);
+  --m-35: #f5f5f5;
+  --m-36: rgba(226, 208, 191, 0);
+  --m-37: #5a7e33;
+  --m-38: rgba(255, 250, 240, 0.7);
+  --m-39: rgba(172, 124, 60, 0.2);
+  --m-40: rgba(225, 141, 15, 0.25);
+  --m-41: rgba(140, 90, 30, 0.14);
+  --m-42: #f5e7d9;
+  --m-43: rgba(26, 15, 5, 0.09);
+  --m-44: rgba(225, 141, 15, 0.12);
+  --m-45: rgba(0, 0, 0, 0.338);
+  --m-46: #e1d0c0;
+  --m-47: rgba(255, 187, 49, 0.5);
+  --m-48: rgba(202, 59, 35, 0.3);
+  --m-49: rgba(125, 153, 63, 0.35);
+  --m-50: #e9dace;
+  --m-51: #ede1d7;
+  --m-52: rgba(172, 124, 60, 0.25);
+  --m-53: rgba(225, 141, 15, 0.15);
+  --m-54: #ede1d6;
+  --m-55: rgba(0, 0, 0, 0.225);
+  --m-56: rgba(172, 124, 60, 0.06);
+  --m-57: rgba(225, 141, 15, 0.45);
 }
 
 /* the ground: soil strata, darker with depth */
 [data-skin='ant-colony'] body,
 [data-skin='ant-colony'] .forge {
   background:
-    radial-gradient(ellipse 3px 2px at 12% 30%, rgba(199, 154, 94, 0.35) 98%, transparent),
-    radial-gradient(ellipse 2px 2px at 64% 58%, rgba(199, 154, 94, 0.3) 98%, transparent),
-    radial-gradient(ellipse 4px 3px at 82% 84%, rgba(91, 74, 58, 0.6) 98%, transparent),
-    linear-gradient(180deg, #3b2817 0%, #33230f 22%, #2c1e10 22.4%, #2a1c0f 48%, #24180d 48.4%, #20150b 74%, #1b1209 74.4%, #160f07 100%);
+    radial-gradient(ellipse 3px 2px at 12% 30%, var(--m-1) 98%, transparent),
+    radial-gradient(ellipse 2px 2px at 64% 58%, var(--m-2) 98%, transparent),
+    radial-gradient(ellipse 4px 3px at 82% 84%, var(--m-3) 98%, transparent),
+    linear-gradient(180deg, var(--m-4) 0%, var(--m-5) 22%, var(--m-6) 22.4%, var(--m-7) 48%, var(--m-8) 48.4%, var(--m-9) 74%, var(--m-10) 74.4%, var(--m-11) 100%);
   background-size: 140px 90px, 110px 70px, 170px 120px, 100% 100%;
   font-family: var(--font-ui);
 }
@@ -86,8 +250,8 @@
 [data-skin='ant-colony'] .rail {
   border-right: 0;
   background:
-    linear-gradient(90deg, transparent calc(100% - 6px), rgba(0, 0, 0, 0.35) 100%),
-    repeating-linear-gradient(180deg, #2f2012 0 38px, #2b1d10 38px 76px);
+    linear-gradient(90deg, transparent calc(100% - 6px), var(--m-12) 100%),
+    repeating-linear-gradient(180deg, var(--m-13) 0 38px, var(--m-14) 38px 76px);
 }
 
 [data-skin='ant-colony'] .rail-machine {
@@ -95,8 +259,8 @@
   min-height: 76px;
   padding: 22px 16px 10px;
   background:
-    linear-gradient(180deg, #8fbf55 0, var(--a-grass) 10px, var(--a-grass-dark) 16px, var(--a-topsoil) 17px, var(--a-topsoil) 100%);
-  border-bottom: 2px dashed rgba(199, 154, 94, 0.35);
+    linear-gradient(180deg, var(--m-15) 0, var(--a-grass) 10px, var(--a-grass-dark) 16px, var(--a-topsoil) 17px, var(--a-topsoil) 100%);
+  border-bottom: 2px dashed var(--m-1);
 }
 
 [data-skin='ant-colony'] .rail-machine::before {
@@ -109,7 +273,7 @@
   height: 18px;
   border-radius: 54px 54px 0 0;
   background:
-    radial-gradient(ellipse 5px 6px at 50% 100%, #0d0804 96%, transparent),
+    radial-gradient(ellipse 5px 6px at 50% 100%, var(--m-16) 96%, transparent),
     radial-gradient(ellipse at 50% 100%, var(--a-sand) 0 60%, var(--a-clay) 61% 100%);
 }
 
@@ -122,7 +286,7 @@
 [data-skin='ant-colony'] .rail-host {
   font: 700 24px/1 var(--font-display);
   color: var(--tx);
-  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.4);
+  text-shadow: 0 2px 0 var(--m-17);
 }
 
 [data-skin='ant-colony'] .rail-title {
@@ -146,8 +310,8 @@
   border-radius: 999px;
   background: var(--a-chamber);
   box-shadow:
-    inset 0 3px 6px rgba(0, 0, 0, 0.7),
-    inset 0 -1px 0 rgba(199, 154, 94, 0.18);
+    inset 0 3px 6px var(--m-18),
+    inset 0 -1px 0 var(--m-19);
   font: 600 15px/1 var(--font-display);
   letter-spacing: 0.04em;
   color: var(--tx-2);
@@ -164,7 +328,7 @@
   margin-top: -4px;
   border-radius: 4px 0 0 4px;
   background: var(--a-chamber);
-  box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.6);
+  box-shadow: inset 0 2px 3px var(--m-20);
 }
 
 [data-skin='ant-colony'] .rail-space .rail-count {
@@ -182,25 +346,25 @@
 
 [data-skin='ant-colony'] .rail-space:hover {
   color: var(--tx);
-  background: #22170e;
+  background: var(--m-21);
 }
 
 [data-skin='ant-colony'] .rail-space.is-active {
   color: var(--on-acc);
   background: radial-gradient(ellipse at 50% 40%, var(--a-honey), var(--a-amber) 70%);
   box-shadow:
-    inset 0 2px 4px rgba(255, 255, 255, 0.25),
-    0 0 14px rgba(242, 169, 59, 0.35);
+    inset 0 2px 4px var(--m-22),
+    0 0 14px var(--m-23);
 }
 
 [data-skin='ant-colony'] .rail-space.is-active .rail-count {
-  color: rgba(26, 15, 5, 0.65);
+  color: var(--m-24);
 }
 
 [data-skin='ant-colony'] .rail-add {
   margin: 4px 12px 4px 22px;
   border-radius: 999px;
-  border: 1px dashed rgba(199, 154, 94, 0.4);
+  border: 1px dashed var(--m-25);
   color: var(--a-sand);
   font: 600 13px/1 var(--font-display);
   letter-spacing: 0.08em;
@@ -217,8 +381,8 @@
 }
 
 [data-skin='ant-colony'] .crew-row.is-current {
-  background: rgba(242, 169, 59, 0.08);
-  box-shadow: inset 0 0 0 1px rgba(242, 169, 59, 0.22);
+  background: var(--m-26);
+  box-shadow: inset 0 0 0 1px var(--m-27);
 }
 
 [data-skin='ant-colony'] .crew-row .crew-bar,
@@ -233,30 +397,30 @@
     radial-gradient(circle 4px at 26px 7px, var(--ant-col, var(--a-ant)) 96%, transparent),
     radial-gradient(circle 3.5px at 18px 7px, var(--ant-col, var(--a-ant)) 96%, transparent),
     radial-gradient(ellipse 7px 5.5px at 8px 7px, var(--ant-col, var(--a-ant)) 96%, transparent),
-    linear-gradient(60deg, transparent 46%, var(--ant-leg, #6b4f33) 46% 54%, transparent 54%) 13px 0 / 10px 14px no-repeat,
-    linear-gradient(-60deg, transparent 46%, var(--ant-leg, #6b4f33) 46% 54%, transparent 54%) 13px 0 / 10px 14px no-repeat,
-    linear-gradient(25deg, transparent 44%, var(--ant-leg, #6b4f33) 44% 56%, transparent 56%) 27px -1px / 5px 8px no-repeat;
+    linear-gradient(60deg, transparent 46%, var(--ant-leg, var(--m-28)) 46% 54%, transparent 54%) 13px 0 / 10px 14px no-repeat,
+    linear-gradient(-60deg, transparent 46%, var(--ant-leg, var(--m-28)) 46% 54%, transparent 54%) 13px 0 / 10px 14px no-repeat,
+    linear-gradient(25deg, transparent 44%, var(--ant-leg, var(--m-28)) 44% 56%, transparent 56%) 27px -1px / 5px 8px no-repeat;
   filter: drop-shadow(0 0 0 transparent);
-  --ant-col: #a07a52;
+  --ant-col: var(--m-29);
 }
 
 [data-skin='ant-colony'] .crew-row[data-status='working'] .crew-bar {
   --ant-col: var(--a-amber);
-  --ant-leg: #b07a2a;
-  filter: drop-shadow(0 0 4px rgba(242, 169, 59, 0.7));
+  --ant-leg: var(--m-30);
+  filter: drop-shadow(0 0 4px var(--m-31));
   animation: ant-colony-scurry 0.9s ease-in-out infinite;
 }
 
 [data-skin='ant-colony'] .crew-row[data-status='blocked'] .crew-bar,
 [data-skin='ant-colony'] .crew-row[data-status='error'] .crew-bar {
   --ant-col: var(--red);
-  --ant-leg: #8e3a2c;
+  --ant-leg: var(--m-32);
   animation: ant-colony-wave 0.6s ease-in-out infinite;
 }
 
 [data-skin='ant-colony'] .crew-row[data-status='done'] .crew-bar {
   --ant-col: var(--green);
-  --ant-leg: #5d7334;
+  --ant-leg: var(--m-33);
 }
 
 [data-skin='ant-colony'] .crew-row[data-status='working']::after {
@@ -268,9 +432,9 @@
   bottom: 3px;
   height: 3px;
   border-radius: 3px;
-  background: radial-gradient(circle 1.5px, rgba(255, 207, 110, 0.85) 96%, transparent) 0 0 / 10px 3px repeat-x;
-  -webkit-mask-image: linear-gradient(90deg, transparent, #000 35%, #000);
-  mask-image: linear-gradient(90deg, transparent, #000 35%, #000);
+  background: radial-gradient(circle 1.5px, var(--m-34) 96%, transparent) 0 0 / 10px 3px repeat-x;
+  -webkit-mask-image: linear-gradient(90deg, transparent, var(--m-35) 35%, var(--m-35));
+  mask-image: linear-gradient(90deg, transparent, var(--m-35) 35%, var(--m-35));
   animation: ant-colony-trail 1.4s linear infinite;
 }
 
@@ -310,8 +474,8 @@
   padding: 14px 18px 0 22px;
   border-bottom: 0;
   background:
-    linear-gradient(180deg, #8fbf55 0, var(--a-grass) 10px, var(--a-grass-dark) 16px, transparent 17px),
-    linear-gradient(180deg, var(--a-topsoil), rgba(59, 40, 23, 0));
+    linear-gradient(180deg, var(--m-15) 0, var(--a-grass) 10px, var(--a-grass-dark) 16px, transparent 17px),
+    linear-gradient(180deg, var(--a-topsoil), var(--m-36));
 }
 
 [data-skin='ant-colony'] .rail-header::before {
@@ -323,8 +487,8 @@
   top: -6px;
   height: 10px;
   background:
-    linear-gradient(115deg, transparent 45%, #8fbf55 46% 54%, transparent 55%) 0 0 / 14px 10px repeat-x,
-    linear-gradient(65deg, transparent 45%, #79a945 46% 54%, transparent 55%) 7px 2px / 18px 10px repeat-x;
+    linear-gradient(115deg, transparent 45%, var(--m-15) 46% 54%, transparent 55%) 0 0 / 14px 10px repeat-x,
+    linear-gradient(65deg, transparent 45%, var(--m-37) 46% 54%, transparent 55%) 7px 2px / 18px 10px repeat-x;
   pointer-events: none;
 }
 
@@ -344,7 +508,7 @@
   font: 700 34px/1 var(--font-display);
   letter-spacing: 0.02em;
   color: var(--tx);
-  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.45);
+  text-shadow: 0 2px 0 var(--m-38);
 }
 
 [data-skin='ant-colony'] .rail-space-title::after {
@@ -367,21 +531,21 @@
   padding: 0 16px;
   border: 0;
   background: var(--a-chamber);
-  box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.7), inset 0 -1px 0 rgba(199, 154, 94, 0.2);
+  box-shadow: inset 0 3px 6px var(--m-18), inset 0 -1px 0 var(--m-39);
   color: var(--tx-2);
   font: 600 14px/1 var(--font-display);
   letter-spacing: 0.04em;
 }
 
 [data-skin='ant-colony'] .tab:hover {
-  background: #22170e;
+  background: var(--m-21);
   color: var(--tx);
 }
 
 [data-skin='ant-colony'] .tab.is-active {
   color: var(--tx);
-  background: #2f2012;
-  box-shadow: inset 0 0 0 2px var(--a-amber), 0 0 12px rgba(242, 169, 59, 0.25);
+  background: var(--m-13);
+  box-shadow: inset 0 0 0 2px var(--a-amber), 0 0 12px var(--m-40);
 }
 
 [data-skin='ant-colony'] .tab[data-status='working'] .dot {
@@ -398,7 +562,7 @@
 }
 
 [data-skin='ant-colony'] .tab-count {
-  background: rgba(242, 169, 59, 0.18);
+  background: var(--m-41);
   color: var(--a-honey);
 }
 
@@ -406,17 +570,17 @@
 [data-skin='ant-colony'] .cmd-btn {
   border: 0;
   background: linear-gradient(180deg, var(--a-sand), var(--a-clay));
-  color: #1a0f05;
+  color: var(--m-42);
   font: 600 13px/1 var(--font-display);
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.35);
+  box-shadow: 0 2px 0 var(--m-12);
 }
 
 [data-skin='ant-colony'] .cmd-btn kbd {
   border: 0;
-  background: rgba(26, 15, 5, 0.2);
-  color: #1a0f05;
+  background: var(--m-43);
+  color: var(--m-42);
 }
 
 [data-skin='ant-colony'] .icon-btn {
@@ -425,7 +589,7 @@
 
 [data-skin='ant-colony'] .icon-btn:hover {
   color: var(--a-honey);
-  background: rgba(242, 169, 59, 0.12);
+  background: var(--m-44);
 }
 
 /* panes: chambers carved out of the soil */
@@ -433,17 +597,17 @@
   border: 0;
   background: var(--a-chamber);
   box-shadow:
-    inset 0 6px 14px rgba(0, 0, 0, 0.75),
-    0 0 0 3px #3a2818,
-    0 0 0 4px rgba(199, 154, 94, 0.18);
+    inset 0 6px 14px var(--m-45),
+    0 0 0 3px var(--m-46),
+    0 0 0 4px var(--m-19);
   overflow: hidden;
 }
 
 [data-skin='ant-colony'] .pane[data-active='true'] {
   box-shadow:
-    inset 0 6px 14px rgba(0, 0, 0, 0.75),
+    inset 0 6px 14px var(--m-45),
     0 0 0 3px var(--a-clay),
-    0 0 0 4px rgba(255, 207, 110, 0.5);
+    0 0 0 4px var(--m-47);
 }
 
 [data-skin='ant-colony'] .pane[data-status='working'] {
@@ -453,22 +617,22 @@
 [data-skin='ant-colony'] .pane[data-status='blocked'],
 [data-skin='ant-colony'] .pane[data-status='error'] {
   box-shadow:
-    inset 0 6px 14px rgba(0, 0, 0, 0.75),
+    inset 0 6px 14px var(--m-45),
     0 0 0 3px var(--red),
-    0 0 18px rgba(224, 96, 74, 0.3);
+    0 0 18px var(--m-48);
 }
 
 [data-skin='ant-colony'] .pane[data-status='done'] {
   box-shadow:
-    inset 0 6px 14px rgba(0, 0, 0, 0.75),
-    0 0 0 3px #5d7334,
-    0 0 0 4px rgba(157, 187, 90, 0.35);
+    inset 0 6px 14px var(--m-45),
+    0 0 0 3px var(--m-33),
+    0 0 0 4px var(--m-49);
 }
 
 [data-skin='ant-colony'] .pane-head {
   padding-left: 18px;
-  background: linear-gradient(180deg, #2a1c10, #1f150c);
-  border-bottom: 1px dashed rgba(199, 154, 94, 0.25);
+  background: linear-gradient(180deg, var(--m-50), var(--m-51));
+  border-bottom: 1px dashed var(--m-52);
 }
 
 [data-skin='ant-colony'] .pane-title {
@@ -483,7 +647,7 @@
 }
 
 [data-skin='ant-colony'] .chip {
-  background: rgba(199, 154, 94, 0.2);
+  background: var(--m-39);
   color: var(--a-sand);
 }
 
@@ -491,11 +655,11 @@
   font: 600 11px/1 var(--font-display);
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: #1a0f05;
+  color: var(--m-42);
 }
 
 [data-skin='ant-colony'] .badge::before {
-  background: #1a0f05;
+  background: var(--m-42);
 }
 
 [data-skin='ant-colony'] .badge-working {
@@ -525,7 +689,7 @@
   position: relative;
   height: calc(var(--statusbar-height) + 8px);
   border-top: 0;
-  background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.35));
+  background: linear-gradient(180deg, transparent, var(--m-12));
   font: 600 13px/1 var(--font-display);
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -541,8 +705,8 @@
   height: 4px;
   border-radius: 4px;
   background:
-    linear-gradient(90deg, var(--a-honey), var(--a-amber) 55%, rgba(242, 169, 59, 0.15) 55.5%);
-  box-shadow: 0 0 8px rgba(242, 169, 59, 0.35);
+    linear-gradient(90deg, var(--a-honey), var(--a-amber) 55%, var(--m-53) 55.5%);
+  box-shadow: 0 0 8px var(--m-23);
 }
 
 [data-skin='ant-colony'] .rf-count[data-status='working'] {
@@ -565,9 +729,9 @@
 [data-skin='ant-colony'] .palette,
 [data-skin='ant-colony'] .help,
 [data-skin='ant-colony'] .menu {
-  background: #20160c;
+  background: var(--m-54);
   border: 2px solid var(--a-clay);
-  box-shadow: var(--e3), inset 0 4px 12px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--e3), inset 0 4px 12px var(--m-55);
 }
 
 [data-skin='ant-colony'] .agents-head,
@@ -588,13 +752,13 @@
 
 [data-skin='ant-colony'] .palette li.is-active {
   background: var(--a-amber);
-  color: #1a0f05;
+  color: var(--m-42);
 }
 
 [data-skin='ant-colony'] .ask .ask-allow {
   background: var(--green);
   border-color: var(--green);
-  color: #1a0f05;
+  color: var(--m-42);
 }
 
 [data-skin='ant-colony'] .ask .ask-deny {
@@ -605,7 +769,7 @@
 
 [data-skin='ant-colony'] .lost-pane,
 [data-skin='ant-colony'] .ended {
-  background: repeating-linear-gradient(135deg, rgba(199, 154, 94, 0.06) 0 10px, transparent 10px 20px);
+  background: repeating-linear-gradient(135deg, var(--m-56) 0 10px, transparent 10px 20px);
 }
 
 [data-skin='ant-colony'] .view-banner {
@@ -632,10 +796,10 @@
 
 @keyframes ant-colony-pheromone {
   0%, 100% {
-    box-shadow: inset 0 6px 14px rgba(0, 0, 0, 0.75), 0 0 0 3px var(--a-clay), 0 0 6px rgba(242, 169, 59, 0.15);
+    box-shadow: inset 0 6px 14px var(--m-45), 0 0 0 3px var(--a-clay), 0 0 6px var(--m-53);
   }
   50% {
-    box-shadow: inset 0 6px 14px rgba(0, 0, 0, 0.75), 0 0 0 3px var(--a-amber), 0 0 22px rgba(242, 169, 59, 0.45);
+    box-shadow: inset 0 6px 14px var(--m-45), 0 0 0 3px var(--a-amber), 0 0 22px var(--m-57);
   }
 }
 
@@ -660,3 +824,6 @@
     display: none;
   }
 }
+
+/* light only: rules the dark look cannot share */
+[data-skin='ant-colony'][data-mode='light'] .tab-count { color: #8a5a10; }

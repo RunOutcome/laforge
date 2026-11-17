@@ -9,6 +9,29 @@
 
 :root[data-skin='newsroom'] {
   /* the skin's own colours */
+
+  /* the forge's tokens */
+  --shadow-tab: none;
+  --font-ui: 'Charter', 'Georgia', 'Iowan Old Style', 'Times New Roman', serif;
+  --font-display: 'Didot', 'Bodoni 72', 'Playfair Display', 'Times New Roman', serif;
+  --font-mono: 'American Typewriter', 'Courier New', ui-monospace, monospace;
+  --radius-pane: 0;
+  --radius-dialog: 0;
+  --radius-card: 0;
+  --radius-mono: 0;
+  --radius-control: 0;
+  --radius-button: 0;
+  --radius-button-sm: 0;
+  --radius-chip: 2px;
+  --topbar-height: 58px;
+  --statusbar-height: 28px;
+  --pane-head-height: 40px;
+  --work-gap: 12px;
+  --pane-gap: 8px;
+}
+
+/* colours: light, the original */
+:root[data-skin='newsroom'][data-mode='light'] {
   --n-paper: #f3eee2;
   --n-sheet: #fbf8f0;
   --n-ink: #1d1b17;
@@ -19,8 +42,6 @@
   --n-red: #b3261e;
   --n-blue: #24508c;
   --n-green: #3c6e2f;
-
-  /* the forge's tokens */
   --canvas: #f3eee2;
   --side: #f3eee2;
   --sunken: #ebe5d6;
@@ -52,31 +73,77 @@
   --scrim: rgba(40, 34, 24, 0.45);
   --e2: 0 1px 0 rgba(29, 27, 23, 0.15);
   --e3: 4px 4px 0 rgba(29, 27, 23, 0.85);
-  --shadow-tab: none;
-  --font-ui: 'Charter', 'Georgia', 'Iowan Old Style', 'Times New Roman', serif;
-  --font-display: 'Didot', 'Bodoni 72', 'Playfair Display', 'Times New Roman', serif;
-  --font-mono: 'American Typewriter', 'Courier New', ui-monospace, monospace;
-  --radius-pane: 0;
-  --radius-dialog: 0;
-  --radius-card: 0;
-  --radius-mono: 0;
-  --radius-control: 0;
-  --radius-button: 0;
-  --radius-button-sm: 0;
-  --radius-chip: 2px;
-  --topbar-height: 58px;
-  --statusbar-height: 28px;
-  --pane-head-height: 40px;
-  --work-gap: 12px;
-  --pane-gap: 8px;
+  --m-1: rgba(120, 100, 60, 0.05);
+  --m-2: rgba(120, 100, 60, 0.04);
+  --m-3: rgba(29, 27, 23, 0.05);
+  --m-4: rgba(29, 27, 23, 0.07);
+  --m-5: rgba(29, 27, 23, 0.12);
+  --m-6: rgba(36, 80, 140, 0.72);
+  --m-7: rgba(179, 38, 30, 0.78);
+  --m-8: rgba(138, 100, 0, 0.75);
+  --m-9: rgba(29, 27, 23, 0.85);
+}
+
+/* colours: dark */
+:root[data-skin='newsroom'][data-mode='dark'] {
+  --n-paper: #17171a;
+  --n-sheet: #1f1f23;
+  --n-ink: #ece7dc;
+  --n-ink-2: #bdb6a8;
+  --n-ink-3: #8a8478;
+  --n-rule: #d9d3c6;
+  --n-hair: #3a3936;
+  --n-red: #ef5a4c;
+  --n-blue: #7fa8e0;
+  --n-green: #86b86f;
+  --canvas: #17171a;
+  --side: #17171a;
+  --sunken: #121214;
+  --card: #1f1f23;
+  --term: #1f1f23;
+  --hover: rgba(236, 231, 220, 0.07);
+  --press: rgba(236, 231, 220, 0.13);
+  --line: #d9d3c6;
+  --line-2: #3a3936;
+  --tx: #ece7dc;
+  --tx-2: #bdb6a8;
+  --tx-3: #8a8478;
+  --acc: #ef5a4c;
+  --acc-500: #ff7a6e;
+  --acc-100: rgba(239, 90, 76, 0.16);
+  --acc-fill: #ece7dc;
+  --on-acc: #17171a;
+  --ai: #7fa8e0;
+  --ai-600: #a3c2ec;
+  --ai-100: rgba(127, 168, 224, 0.2);
+  --ai-50: rgba(127, 168, 224, 0.1);
+  --red: #ef5a4c;
+  --red-50: rgba(239, 90, 76, 0.14);
+  --amber: #e0b04a;
+  --amber-50: rgba(224, 176, 74, 0.13);
+  --green: #86b86f;
+  --todo: #8a8478;
+  --on-red: #17171a;
+  --scrim: rgba(0, 0, 0, 0.6);
+  --e2: 0 1px 0 rgba(0, 0, 0, 0.5);
+  --e3: 4px 4px 0 rgba(236, 231, 220, 0.18);
+  --m-1: rgba(236, 231, 220, 0.035);
+  --m-2: rgba(236, 231, 220, 0.03);
+  --m-3: rgba(236, 231, 220, 0.05);
+  --m-4: rgba(236, 231, 220, 0.07);
+  --m-5: rgba(0, 0, 0, 0.45);
+  --m-6: rgba(127, 168, 224, 0.8);
+  --m-7: rgba(239, 90, 76, 0.85);
+  --m-8: rgba(224, 176, 74, 0.8);
+  --m-9: rgba(236, 231, 220, 0.2);
 }
 
 /* the ground: newsprint, a faint grain */
 [data-skin='newsroom'] body,
 [data-skin='newsroom'] .forge {
   background:
-    radial-gradient(circle at 20% 30%, rgba(120, 100, 60, 0.05) 0 1px, transparent 1.5px) 0 0 / 7px 7px,
-    radial-gradient(circle at 70% 60%, rgba(120, 100, 60, 0.04) 0 1px, transparent 1.5px) 0 0 / 11px 11px,
+    radial-gradient(circle at 20% 30%, var(--m-1) 0 1px, transparent 1.5px) 0 0 / 7px 7px,
+    radial-gradient(circle at 70% 60%, var(--m-2) 0 1px, transparent 1.5px) 0 0 / 11px 11px,
     var(--n-paper);
   font-family: var(--font-ui);
   color: var(--n-ink);
@@ -148,7 +215,7 @@
 }
 
 [data-skin='newsroom'] .tab:hover {
-  background: rgba(29, 27, 23, 0.05);
+  background: var(--m-3);
   color: var(--n-ink);
 }
 
@@ -219,7 +286,7 @@
 }
 
 [data-skin='newsroom'] .icon-btn:hover {
-  background: rgba(29, 27, 23, 0.07);
+  background: var(--m-4);
   color: var(--n-ink);
 }
 
@@ -239,7 +306,7 @@
 
 [data-skin='newsroom'] .pane[data-active='true'] {
   border-top-width: 5px;
-  box-shadow: 0 0 0 1px var(--n-rule), 4px 4px 0 rgba(29, 27, 23, 0.12);
+  box-shadow: 0 0 0 1px var(--n-rule), 4px 4px 0 var(--m-5);
 }
 
 [data-skin='newsroom'] .pane-head {
@@ -330,7 +397,7 @@
 
 [data-skin='newsroom'] .pane[data-status='done']::after {
   content: 'Goes to print';
-  color: rgba(36, 80, 140, 0.72);
+  color: var(--m-6);
   transform: rotate(-7deg);
   animation: newsroom-stamp 0.35s cubic-bezier(0.2, 1.6, 0.4, 1) both;
 }
@@ -338,7 +405,7 @@
 [data-skin='newsroom'] .pane[data-status='blocked']::after,
 [data-skin='newsroom'] .pane[data-status='error']::after {
   content: "To the editor's desk";
-  color: rgba(179, 38, 30, 0.78);
+  color: var(--m-7);
   transform: rotate(-4deg);
   animation: newsroom-stamp 0.35s cubic-bezier(0.2, 1.6, 0.4, 1) both;
 }
@@ -350,7 +417,7 @@
   padding: 0 0 3px;
   font: italic 600 13px/1 var(--font-ui);
   letter-spacing: 0.1em;
-  color: rgba(138, 100, 0, 0.75);
+  color: var(--m-8);
   mix-blend-mode: normal;
   animation: newsroom-deadline 1.6s ease-in-out infinite;
 }
@@ -380,7 +447,7 @@
 
 [data-skin='newsroom'] .ended,
 [data-skin='newsroom'] .lost-pane {
-  background: repeating-linear-gradient(0deg, transparent 0 22px, rgba(29, 27, 23, 0.05) 22px 23px);
+  background: repeating-linear-gradient(0deg, transparent 0 22px, var(--m-3) 22px 23px);
 }
 
 /* the footer: the folio line */
@@ -410,7 +477,7 @@
 [data-skin='newsroom'] .menu {
   background: var(--n-sheet);
   border: 1.5px solid var(--n-ink);
-  box-shadow: 5px 5px 0 rgba(29, 27, 23, 0.85);
+  box-shadow: 5px 5px 0 var(--m-9);
 }
 
 [data-skin='newsroom'] .agents-head,
@@ -492,3 +559,8 @@
     font-size: 12px;
   }
 }
+
+/* dark only: rules the light look cannot share */
+[data-skin='newsroom'][data-mode='dark'] .pane[data-status='done']::after,
+[data-skin='newsroom'][data-mode='dark'] .pane[data-status='blocked']::after,
+[data-skin='newsroom'][data-mode='dark'] .pane[data-status='error']::after { mix-blend-mode: screen; }

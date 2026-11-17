@@ -7,6 +7,8 @@ stainless stations with paper-white bodies on a white tile wall. A station
 that is cooking glows under the heat lamp. The footer is the steel shelf of
 the pass. Faces come from the system's own fonts.
 
+Both modes: **light** is the line on a busy night, **dark** is closing time (gunmetal steel and slate tile, the tickets still white under the heat lamps).
+
 | State | On the line |
 | --- | --- |
 | working | the station glows amber under the heat lamp; `WORKING · FIRING`; amber band on the ticket |

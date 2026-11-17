@@ -2,6 +2,8 @@
 
 The forge as the day's paper. It has a newsprint ground, a "Late Edition" masthead over a double rule, section tabs in small capitals and panes set as columns under serif headlines. Rubber stamps mark the work: anything waiting on you goes to the editor's desk, and anything finished goes to print. Classic layout, light.
 
+Both modes: light is the day's newsprint; dark is the night edition, off-white ink on charcoal with the same rules and stamps.
+
 | State | Shown as |
 | --- | --- |
 | working | an italic "On deadline" slug that pulses at the foot of the column |

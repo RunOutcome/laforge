@@ -5,18 +5,19 @@
 
 Skins you can install into any forge. Each one is a folder of stylesheets and
 images (no code, no fonts from the network) built on the hooks in
-[docs/skins.md](../docs/skins.md). They are not built in; install the ones you
-like:
+[docs/skins.md](../docs/skins.md). They are LaForge's **official** collection:
 
 ```
-la skin install ./skins/bridge
-la skin use bridge            # or pick "Skin: Bridge" in ⌘K
+la skin browse official        # what it offers
+la skin install official       # all of them, or official/bridge for one
+la skin use bridge             # or pick "Skin: Bridge" in ⌘K
 ```
 
-Every skin draws the same four states its own way: **working**, **blocked**
-(needs you), **done** and **idle**.
+Every skin draws both light and dark (the viewer picks; each preview shows
+the mode it was first drawn in), and the same four states its own way:
+**working**, **blocked** (needs you), **done** and **idle**.
 
-| Skin | Layout | Mode | The idea |
+| Skin | Layout | First drawn in | The idea |
 | --- | --- | --- | --- |
 | [Ant Colony](ant-colony/) | rail | dark | A cross-section of the nest: soil strata, chambers for panes, the crew as ants and a glowing scent trail on whatever is busy. |
 | [Bridge](bridge/) | rail | dark | A ship's bridge: cold steel bezels, cyan readouts, crew at their stations, red alert when someone needs you. |
