@@ -119,13 +119,14 @@ func (c *cmd) hooks(args []string) error {
 	fs.SetOutput(c.cfg.Stderr)
 	dryRun := fs.Bool("dry-run", false, "show what would change, change nothing")
 	answer := fs.Duration("answer", 0, "Claude Code: hold a permission request this long for Allow or Deny in LaForge (e.g. 90s; it then asks in its terminal)")
-	if err := fs.Parse(args[1:]); err != nil {
+	names, err := parseInterspersed(fs, args[1:])
+	if err != nil {
 		return usageError{err}
 	}
 	if *answer > 9*time.Minute {
 		return usageError{fmt.Errorf("--answer: at most 9m")}
 	}
-	targets, err := pickTargets(fs.Args())
+	targets, err := pickTargets(names)
 	if err != nil {
 		return err
 	}

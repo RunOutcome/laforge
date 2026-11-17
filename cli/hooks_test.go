@@ -275,7 +275,7 @@ func TestAPermissionHookGivesTheAgentTheAnswer(t *testing.T) {
 func TestHooksInstallWithAnswer(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("CLAUDE_CONFIG_DIR", dir)
-	if code, _, errs := run(t, "", "hooks", "install", "--answer", "90s", "claude"); code != 0 {
+	if code, _, errs := run(t, "", "hooks", "install", "claude", "--answer", "90s"); code != 0 {
 		t.Fatal(errs)
 	}
 	var doc struct {
