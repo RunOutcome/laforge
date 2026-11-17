@@ -5,6 +5,7 @@ package forge
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -143,6 +144,10 @@ func (s *sessions) adoptHeld(r record, scrollback int) error {
 	client, err := holder.Dial(s.holders.Dir, id, nil)
 	if err != nil {
 		return err
+	}
+	if p := client.First().Proto; p > holder.Proto {
+		client.Detach()
+		return fmt.Errorf("its holder speaks protocol %d, this forge %d: run the newer la", p, holder.Proto)
 	}
 	// the holder's copy of the record is the newest (the forge gives it every change)
 	if meta := client.First().Meta; len(meta) > 0 {

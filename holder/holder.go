@@ -50,7 +50,13 @@ type View struct {
 	// AgentExit is the agent's exit code, once the wrapper reported it.
 	AgentExit *int `json:"agentExit,omitempty"`
 	HolderPID int  `json:"holderPid"`
+	// Proto is the holder's protocol version. Holders outlive upgrades, so
+	// a newer forge reads it before relying on anything a later version added.
+	Proto int `json:"proto"`
 }
+
+// Proto is this build's holder protocol version.
+const Proto = 1
 
 // Socket is the path of pane id's holder socket in dir.
 func Socket(dir, id string) string { return filepath.Join(dir, id+".sock") }
@@ -216,7 +222,7 @@ func (h *holder) watchAgentExit(r *os.File) {
 func (h *holder) view() View {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	return View{Session: h.session.View(), Meta: h.meta, AgentExit: h.agentExit, HolderPID: os.Getpid()}
+	return View{Session: h.session.View(), Meta: h.meta, AgentExit: h.agentExit, HolderPID: os.Getpid(), Proto: Proto}
 }
 
 func (h *holder) broadcast() {
