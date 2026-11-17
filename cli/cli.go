@@ -42,7 +42,8 @@ type Config struct {
 	// Reexec is the argument prefix that reaches this tree when the current
 	// executable is run again: nil for la, []string{"la"} for out.
 	Reexec []string
-	// Stdout and Stderr default to the process's own.
+	// Stdin, Stdout and Stderr default to the process's own.
+	Stdin          io.Reader
 	Stdout, Stderr io.Writer
 }
 
@@ -74,6 +75,9 @@ func Main(cfg Config, args []string) int {
 	if cfg.Prog == "" {
 		cfg.Prog = "la"
 	}
+	if cfg.Stdin == nil {
+		cfg.Stdin = os.Stdin
+	}
 	if cfg.Stdout == nil {
 		cfg.Stdout = os.Stdout
 	}
@@ -97,6 +101,10 @@ func Main(cfg Config, args []string) int {
 		err = c.open(args[1:])
 	case "serve":
 		err = c.serve(args[1:])
+	case "report":
+		err = c.report(args[1:])
+	case "hooks":
+		err = c.hooks(args[1:])
 	case "notices", "licenses", "licences":
 		fmt.Fprint(cfg.Stdout, forge.Notices())
 	case "version", "--version", "-v":
@@ -134,6 +142,13 @@ Usage:
   %[1]s status       show the running forge and its panes
   %[1]s down [--container]
                      stop the forge and every pane in it
+  %[1]s hooks install [claude|codex]
+                     let Claude Code and Codex report their status to LaForge
+                     (also: hooks status, hooks uninstall)
+  %[1]s report STATE [--kind K] [--msg M]
+                     say what this pane's program is doing: idle, working,
+                     done, blocked, error or clear (programs can also send
+                     OSC 7501 themselves)
   %[1]s version
   %[1]s notices      third-party licences of what la includes
 

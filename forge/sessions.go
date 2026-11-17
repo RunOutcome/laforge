@@ -31,6 +31,9 @@ type Pane struct {
 	// AgentExit that agent's exit code.
 	After     string `json:"after,omitempty"`
 	AgentExit *int   `json:"agentExit,omitempty"`
+	// Seen is set when a viewer has looked at the pane since its status last
+	// changed: a done agent that was seen is shown as idle (Herdr's rule).
+	Seen bool `json:"seen"`
 }
 
 type entry struct {
@@ -43,16 +46,22 @@ type entry struct {
 	after   string // the agent profile this pane ran before it became a shell
 	// agentExit is that agent's exit code.
 	agentExit *int
+	// seenAt is the status time a viewer acknowledged (StatusSince then).
+	seenAt *time.Time
+	seen   bool // a viewer looked before any status
 }
 
 // sessions holds every session the forge has started.
 type sessions struct {
 	mu      sync.RWMutex
 	byID    map[string]*entry
-	changed func()
+	changed func(id string)
+	// home is the forge's folder, given to every pane as LAFORGE_HOME so a
+	// program in it (la report, la run) finds this forge.
+	home string
 }
 
-func newSessions(changed func()) *sessions {
+func newSessions(changed func(id string)) *sessions {
 	return &sessions{byID: map[string]*entry{}, changed: changed}
 }
 
@@ -99,6 +108,9 @@ func (s *sessions) start(p Profile, req StartRequest, defaultCwd string, scrollb
 	}
 	id := newID()
 	env := []string{"LAFORGE_SESSION=" + id, "COLORTERM=truecolor", "TERM_PROGRAM=LaForge"}
+	if s.home != "" {
+		env = append(env, "LAFORGE_HOME="+s.home)
+	}
 	command, args := p.Command, p.Args
 	display := strings.TrimSpace(p.Command + " " + strings.Join(p.Args, " "))
 	var exits *os.File
@@ -128,11 +140,7 @@ func (s *sessions) start(p Profile, req StartRequest, defaultCwd string, scrollb
 		Unset:      strippedEnv,
 		ExtraFiles: extra,
 	}
-	session, err := terminal.Start(id, spec, scrollback, func(*terminal.Session) {
-		if s.changed != nil {
-			s.changed()
-		}
-	})
+	session, err := terminal.Start(id, spec, scrollback, func(*terminal.Session) { s.notify(id) })
 	for _, f := range extra {
 		f.Close() // the child holds its own copy
 	}
@@ -153,10 +161,14 @@ func (s *sessions) start(p Profile, req StartRequest, defaultCwd string, scrollb
 	s.mu.Lock()
 	s.byID[id] = e
 	s.mu.Unlock()
-	if s.changed != nil {
-		s.changed()
-	}
+	s.notify(id)
 	return e.pane(), nil
+}
+
+func (s *sessions) notify(id string) {
+	if s.changed != nil {
+		s.changed(id)
+	}
 }
 
 // wrapsAgents: an agent that exits leaves a shell. Windows has no sh to
@@ -170,7 +182,21 @@ func (e *entry) pane() Pane {
 	if e.command != "" {
 		view.Command = e.command
 	}
-	return Pane{SessionView: view, Profile: e.profile, Title: e.title, Cwd: e.cwd, After: e.after, AgentExit: e.agentExit}
+	seen := e.seen && view.Since == nil || e.seenAt != nil && view.Since != nil && !view.Since.After(*e.seenAt)
+	return Pane{SessionView: view, Profile: e.profile, Title: e.title, Cwd: e.cwd, After: e.after, AgentExit: e.agentExit, Seen: seen}
+}
+
+// markSeen records that a viewer looked at the pane as it is now.
+func (e *entry) markSeen() {
+	since := e.session.View().Since
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if since == nil {
+		e.seen = true
+		return
+	}
+	t := *since
+	e.seenAt = &t
 }
 
 // LoginShell is the user's shell: $SHELL, else /bin/sh; on Windows,
@@ -245,10 +271,11 @@ func (s *sessions) watchForShell(e *entry, exits *os.File, label string) {
 	if e.title == label {
 		e.title = "Shell"
 	}
+	id := e.session.ID()
 	e.mu.Unlock()
-	if s.changed != nil {
-		s.changed()
-	}
+	// The agent is gone: what it said about itself is no longer true.
+	_, _ = e.session.Report(terminal.Report{Status: terminal.Status{State: "clear"}})
+	s.notify(id)
 }
 
 func (s *sessions) get(id string) (*entry, bool) {
@@ -271,8 +298,8 @@ func (s *sessions) list() []Pane {
 
 func (s *sessions) rename(id, title string) (Pane, error) {
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	e, ok := s.byID[id]
+	s.mu.Unlock()
 	if !ok {
 		return Pane{}, errNoSession
 	}
@@ -280,6 +307,7 @@ func (s *sessions) rename(id, title string) (Pane, error) {
 		e.mu.Lock()
 		e.title = t
 		e.mu.Unlock()
+		s.notify(id)
 	}
 	return e.pane(), nil
 }
@@ -304,9 +332,7 @@ func (s *sessions) close(id string, force bool, grace time.Duration) error {
 		s.mu.Lock()
 		delete(s.byID, id)
 		s.mu.Unlock()
-		if s.changed != nil {
-			s.changed()
-		}
+		s.notify(id)
 	}()
 	return nil
 }

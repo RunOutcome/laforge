@@ -55,6 +55,8 @@ type Server struct {
 	layoutMu sync.Mutex
 	cwd      string
 	started  time.Time
+	events   *hub
+	last     map[string]Pane // each pane's last view, for its pane.closed event
 }
 
 const cookieName = "laforge_token"
@@ -81,7 +83,9 @@ func NewServer(opts Options) (*Server, error) {
 		}
 		web = sub
 	}
-	s := &Server{opts: opts, sessions: newSessions(nil), mux: http.NewServeMux(), cwd: opts.Cwd, started: time.Now()}
+	s := &Server{opts: opts, mux: http.NewServeMux(), cwd: opts.Cwd, started: time.Now(), events: newHub(), last: map[string]Pane{}}
+	s.sessions = newSessions(s.changed)
+	s.sessions.home = opts.Home
 	s.routes(web)
 	return s, nil
 }
@@ -122,6 +126,9 @@ func (s *Server) routes(web fs.FS) {
 	s.mux.HandleFunc("PATCH /api/sessions/{id}", s.auth(s.renameSession))
 	s.mux.HandleFunc("DELETE /api/sessions/{id}", s.auth(s.closeSession))
 	s.mux.HandleFunc("GET /api/sessions/{id}/stream", s.auth(s.stream))
+	s.mux.HandleFunc("POST /api/sessions/{id}/status", s.auth(s.reportStatus))
+	s.mux.HandleFunc("POST /api/sessions/{id}/seen", s.auth(s.markSeen))
+	s.mux.HandleFunc("GET /api/events", s.auth(s.streamEvents))
 	s.mux.HandleFunc("GET /api/layout", s.auth(s.getLayout))
 	s.mux.HandleFunc("PUT /api/layout", s.auth(s.putLayout))
 	s.mux.HandleFunc("GET /api/config", s.auth(s.getConfig))

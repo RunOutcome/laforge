@@ -54,6 +54,12 @@ type Session struct {
 	watchers    map[int]chan []byte
 	done        chan struct{}
 	closeOnce   sync.Once
+
+	scanner  statusScanner
+	statuses statusBook
+	// onChange is called, outside the lock, when the session ends or its
+	// status changes.
+	onChange func(*Session)
 }
 
 // SessionView is a snapshot of a session: a reader never holds a reference
@@ -72,6 +78,7 @@ type SessionView struct {
 	Rows         uint16     `json:"rows"`
 	BytesOut     int64      `json:"bytesOut"`
 	PID          int        `json:"pid,omitempty"`
+	StatusView
 }
 
 // ErrSessionClosed is returned when input is written to a finished session.
@@ -79,10 +86,10 @@ var ErrSessionClosed = errors.New("session is no longer running")
 
 // Start runs spec in a new pseudo-terminal as session id, keeping the last
 // scrollbackBytes of output (DefaultScrollback when 0 or less), and pumps
-// its output until the process exits; onExit, when not nil, is called once
-// after the exit is recorded. A command that is not found is refused before
+// its output until the process exits; onChange, when not nil, is called
+// when the program's status changes and once after the exit is recorded. A command that is not found is refused before
 // anything starts.
-func Start(id string, spec LaunchSpec, scrollbackBytes int, onExit func(*Session)) (*Session, error) {
+func Start(id string, spec LaunchSpec, scrollbackBytes int, onChange func(*Session)) (*Session, error) {
 	if _, found := LookupCommand(spec.Command); !found {
 		return nil, fmt.Errorf("start %s: the command is not installed on this machine", spec.Command)
 	}
@@ -90,7 +97,8 @@ func Start(id string, spec LaunchSpec, scrollbackBytes int, onExit func(*Session
 	if err != nil {
 		return nil, err
 	}
-	go session.pump(onExit)
+	session.onChange = onChange
+	go session.pump()
 	return session, nil
 }
 
@@ -124,7 +132,7 @@ func (session *Session) ID() string { return session.id }
 
 // pump reads the pseudo-terminal until the child exits, retaining output for
 // reattachment and fanning it out to live watchers.
-func (session *Session) pump(onChange func(*Session)) {
+func (session *Session) pump() {
 	chunk := make([]byte, 32*1024)
 	for {
 		count, err := session.terminal.Read(chunk)
@@ -144,6 +152,7 @@ func (session *Session) pump(onChange func(*Session)) {
 	ended := time.Now().UTC()
 	session.endedAt = &ended
 	session.exitCode = exitCode
+	session.statuses.reset(ended)
 	switch {
 	case session.stopRequested:
 		// A process asked to stop exits non-zero by design. That is a
@@ -163,8 +172,8 @@ func (session *Session) pump(onChange func(*Session)) {
 
 	session.closeWatchers()
 	session.closeOnce.Do(func() { close(session.done) })
-	if onChange != nil {
-		onChange(session)
+	if session.onChange != nil {
+		session.onChange(session)
 	}
 }
 
@@ -176,8 +185,19 @@ func (session *Session) pump(onChange func(*Session)) {
 // under the same lock, so no send meets a closed channel; the sends never
 // block.
 func (session *Session) output(payload []byte) {
+	if session.record(payload) && session.onChange != nil {
+		session.onChange(session)
+	}
+}
+
+// record is output under the lock; it reports whether the status changed.
+func (session *Session) record(payload []byte) bool {
 	session.mutex.Lock()
 	defer session.mutex.Unlock()
+	changed := false
+	for _, r := range session.scanner.scan(payload) {
+		changed = session.statuses.apply(r, time.Now().UTC()) || changed
+	}
 	session.buffer.Write(payload)
 	session.lastOutputAt = time.Now().UTC()
 	if session.state == StateStarting || session.state == StateIdle {
@@ -196,7 +216,31 @@ func (session *Session) output(payload []byte) {
 			delete(session.watchers, id)
 		}
 	}
+	return changed
 }
+
+// Report records a status report that reached the forge another way than
+// the program's output (a hook calling the API). It means what the same
+// report as OSC 7501 would; a finished session takes none.
+func (session *Session) Report(r Report) (bool, error) {
+	if !r.Validate() {
+		return false, ErrBadReport
+	}
+	session.mutex.Lock()
+	if session.finishedLocked() {
+		session.mutex.Unlock()
+		return false, ErrSessionClosed
+	}
+	changed := session.statuses.apply(r, time.Now().UTC())
+	session.mutex.Unlock()
+	if changed && session.onChange != nil {
+		session.onChange(session)
+	}
+	return changed, nil
+}
+
+// ErrBadReport is a status report with an unknown state or out-of-range fields.
+var ErrBadReport = errors.New("not a status report: state must be idle, working, done, blocked, error or clear")
 
 func (session *Session) closeWatchers() {
 	session.mutex.Lock()
@@ -373,6 +417,7 @@ func (session *Session) View() SessionView {
 		EndedAt:      session.endedAt,
 		Columns:      session.columns,
 		Rows:         session.rows,
+		StatusView:   session.statuses.view(session.lastOutputAt, time.Now().UTC()),
 	}
 	if session.endedAt != nil {
 		code := session.exitCode
