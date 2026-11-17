@@ -72,6 +72,16 @@ func TestSkinCollections(t *testing.T) {
 	if len(res.Installed) != 1 || res.Installed[0].Name != "neon" || len(res.Failed) != 1 || res.Failed[0].Path != "nothere" {
 		t.Fatalf("by name: %+v", res)
 	}
+	// one name installs that skin only, not the ones after it
+	other := t.TempDir()
+	src, _ := ParseSkinSource("you/fans")
+	one, err := InstallSkinsFrom(other, src, []string{"ember"})
+	if err != nil || len(one.Installed) != 1 || one.Installed[0].Name != "ember" || len(one.Failed) != 0 {
+		t.Fatalf("one name: %+v %v", one, err)
+	}
+	if _, err := os.Stat(filepath.Join(other, "skins", "neon")); err == nil {
+		t.Fatal("installed neon when only ember was asked for")
+	}
 	json.NewDecoder(call(t, ts, "GET", "/api/skins/collections/fans/skins", "secret", nil).Body).Decode(&offers)
 	for _, a := range offers {
 		if a.Name == "neon" && !a.Installed {

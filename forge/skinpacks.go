@@ -18,6 +18,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -317,10 +318,11 @@ func InstallSkinsFrom(home string, src SkinSource, only []string) (InstallResult
 	seen := map[string]string{}
 	for _, rel := range found {
 		dir := filepath.Join(root, filepath.FromSlash(rel))
-		if len(want) > 0 && !want[skinNameAt(dir, rel)] {
-			continue
+		name := skinNameAt(dir, rel)
+		if len(only) > 0 && !slices.Contains(only, name) {
+			continue // filter by what was asked, not by what is still missing
 		}
-		delete(want, skinNameAt(dir, rel))
+		delete(want, name)
 		if sk, err := ReadSkin(os.DirFS(dir)); err == nil {
 			if first, dup := seen[sk.Name]; dup {
 				res.Failed = append(res.Failed, SkinFailure{rel, fmt.Sprintf("%s is named %s, as %s is", rel, sk.Name, first)})
