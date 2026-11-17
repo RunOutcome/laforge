@@ -204,6 +204,14 @@ paths:
       responses: { '201': { description: the share } }
   /api/shares/{token}:
     delete: { responses: { '204': { description: revoked } } }
+  /api/skins:
+    get: { responses: { '200': { description: '{default, skins: [{name, label, description, version, author, license, layout, mode, css, terminal, builtin}]} (docs/skins.md)' } } }
+  /api/skins/default:
+    put:
+      requestBody: { content: { application/json: { schema: { type: object, properties: { name: { type: string } } } } } }
+      responses: { '200': { description: the forge's default skin }, '404': { description: no_skin } }
+  /api/skins/{name}:
+    delete: { responses: { '204': { description: removed }, '409': { description: builtin } } }
   /api/restart:
     post: { responses: { '202': { description: the forge detaches from its held panes and exits for its host to start the next one } } }
   /api/layout:

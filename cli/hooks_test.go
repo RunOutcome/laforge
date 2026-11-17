@@ -296,3 +296,22 @@ func TestHooksInstallWithAnswer(t *testing.T) {
 		t.Fatalf("%+v", st)
 	}
 }
+
+// la skin install checks a skin and copies it into the forge's home.
+func TestSkinInstall(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("LAFORGE_HOME", home)
+	src := t.TempDir()
+	os.WriteFile(filepath.Join(src, "skin.json"), []byte(`{"name":"neon","css":["skin.css"]}`), 0o644)
+	os.WriteFile(filepath.Join(src, "skin.css"), []byte(`body{}`), 0o644)
+	if code, out, errs := run(t, "", "skin", "install", src); code != 0 || !strings.Contains(out, "installed neon") {
+		t.Fatalf("%d %q %q", code, out, errs)
+	}
+	if _, err := os.Stat(filepath.Join(home, "skins", "neon", "skin.css")); err != nil {
+		t.Fatal(err)
+	}
+	os.WriteFile(filepath.Join(src, "evil.js"), []byte(`x`), 0o644)
+	if code, _, errs := run(t, "", "skin", "install", src); code == 0 || !strings.Contains(errs, "fonts and images only") {
+		t.Fatalf("installed code: %d %q", code, errs)
+	}
+}

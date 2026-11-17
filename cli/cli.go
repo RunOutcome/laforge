@@ -124,6 +124,8 @@ func Main(cfg Config, args []string) int {
 		err = c.answer(args[1:])
 	case "share":
 		err = c.share(args[1:])
+	case "skin", "skins":
+		err = c.skin(args[1:])
 	case "--skill", "skill":
 		fmt.Fprint(cfg.Stdout, skill(cfg.Prog))
 	case "holder": // started by the forge: one pane's holder process
@@ -181,6 +183,8 @@ Usage:
                      answer the permission a pane's agent waits on
   %[1]s share PANE [--for 2h] | share --list | share --revoke TOKEN
                      a read-only link to watch one pane
+  %[1]s skin [list] | skin install DIR | skin use NAME | skin remove NAME
+                     how the forge looks (docs/skins.md to make one)
   %[1]s --skill      how an agent uses LaForge, in one read
   %[1]s hooks install [claude|codex]
                      let Claude Code and Codex report their status to LaForge
