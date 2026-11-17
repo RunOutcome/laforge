@@ -63,6 +63,7 @@ type Server struct {
 	events   *hub
 	last     map[string]Pane // each pane's last view, for its pane.closed event
 	restart  chan struct{}
+	shares   *shares
 }
 
 const cookieName = "laforge_token"
@@ -90,6 +91,7 @@ func NewServer(opts Options) (*Server, error) {
 		web = sub
 	}
 	s := &Server{opts: opts, mux: http.NewServeMux(), cwd: opts.Cwd, started: time.Now(), events: newHub(), last: map[string]Pane{}, restart: make(chan struct{}, 1)}
+	s.shares = newShares(opts.Home)
 	s.sessions = newSessions(s.changed)
 	s.sessions.home = opts.Home
 	s.sessions.holders = opts.Holders
@@ -155,12 +157,29 @@ func (s *Server) routes(web fs.FS) {
 	s.mux.HandleFunc("POST /api/restart", s.auth(s.requestRestart))
 	s.mux.HandleFunc("POST /api/sessions/{id}/input", s.auth(s.sendInput))
 	s.mux.HandleFunc("GET /api/sessions/{id}/output", s.auth(s.readOutput))
+	s.mux.HandleFunc("GET /api/whoami", s.auth(func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, http.StatusOK, map[string]any{"mode": "full"})
+	}))
+	s.mux.HandleFunc("POST /api/sessions/{id}/ask", s.auth(s.askPermission))
+	s.mux.HandleFunc("POST /api/sessions/{id}/answer", s.auth(s.answerAsk))
+	s.mux.HandleFunc("POST /api/shares", s.auth(s.createShare))
+	s.mux.HandleFunc("GET /api/shares", s.auth(s.listShares))
+	s.mux.HandleFunc("DELETE /api/shares/{token}", s.auth(s.dropShare))
 	s.mux.HandleFunc("GET /api/layout", s.auth(s.getLayout))
 	s.mux.HandleFunc("PUT /api/layout", s.auth(s.putLayout))
 	s.mux.HandleFunc("GET /api/config", s.auth(s.getConfig))
 	s.mux.HandleFunc("PUT /api/config", s.auth(s.putConfig))
 	files := http.FileServerFS(web)
 	s.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if v := r.URL.Query().Get("view"); v != "" {
+			if _, ok := s.shares.pane(v); !ok {
+				http.Error(w, "This share link has expired or was revoked.", http.StatusUnauthorized)
+				return
+			}
+			http.SetCookie(w, &http.Cookie{Name: viewCookie, Value: v, Path: "/", HttpOnly: true, SameSite: http.SameSiteStrictMode})
+			http.Redirect(w, r, "/", http.StatusFound)
+			return
+		}
 		if t := r.URL.Query().Get("token"); t != "" {
 			if !s.tokenOK(t) {
 				http.Error(w, "This link's token is not this forge's. Run la open for a fresh link.", http.StatusUnauthorized)
@@ -176,7 +195,7 @@ func (s *Server) routes(web fs.FS) {
 		}
 		if r.URL.Path == "/" || r.URL.Path == "/index.html" {
 			w.Header().Set("Cache-Control", "no-store")
-			if !s.authorized(r) {
+			if _, viewing := s.viewer(r); !s.authorized(r) && !viewing {
 				w.Header().Set("Content-Type", "text/html; charset=utf-8")
 				w.WriteHeader(http.StatusUnauthorized)
 				io.WriteString(w, lockedPage)
@@ -209,6 +228,10 @@ func (s *Server) authorized(r *http.Request) bool {
 func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if !s.authorized(r) {
+			if pane, ok := s.viewer(r); ok {
+				s.viewOnly(w, r, pane)
+				return
+			}
 			writeError(w, http.StatusUnauthorized, "unauthorized", "Present this forge's token.")
 			return
 		}
@@ -435,6 +458,9 @@ func (s *Server) stream(w http.ResponseWriter, r *http.Request) {
 			var m clientMessage
 			if json.Unmarshal(data, &m) != nil {
 				continue
+			}
+			if isReadOnly(r) {
+				continue // a shared view only watches
 			}
 			switch m.Type {
 			case "input":

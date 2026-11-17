@@ -48,6 +48,9 @@ type Pane struct {
 	Notes   bool   `json:"notes,omitempty"`
 	// Labels are the starter's own names for the pane (an Outcome item, a role).
 	Labels map[string]string `json:"labels,omitempty"`
+	// Asking is the permission the pane's agent waits for a person to answer
+	// (POST .../answer), when its hook asked the forge.
+	Asking *Ask `json:"asking,omitempty"`
 }
 
 // AgentSession names an agent's own conversation (claude --resume <id>).
@@ -82,6 +85,7 @@ type entry struct {
 	labels  map[string]string
 	noted   string // the last change the parent was told of
 
+	ask       *ask       // what the agent waits for a person to answer
 	lastHuman time.Time  // when a viewer last typed
 	sendMu    sync.Mutex // one send at a time
 }
@@ -279,7 +283,7 @@ func (e *entry) pane() Pane {
 	}
 	seen := e.seen && view.Since == nil || e.seenAt != nil && view.Since != nil && !view.Since.After(*e.seenAt)
 	return Pane{SessionView: view, Profile: e.profile, Title: e.title, Cwd: e.cwd, After: e.after, AgentExit: e.agentExit, Seen: seen, AgentSession: e.agentSession, Held: e.held != nil,
-		Parent: e.parent, Outlive: e.outlive, Notes: e.notes, Labels: e.labels}
+		Parent: e.parent, Outlive: e.outlive, Notes: e.notes, Labels: e.labels, Asking: e.asking()}
 }
 
 // markSeen records that a viewer looked at the pane as it is now.

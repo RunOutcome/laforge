@@ -491,3 +491,46 @@ func (c *cmd) events(args []string) error {
 	}
 	return err
 }
+
+// share is `la share PANE [--for D]`, `la share --list`, `la share --revoke TOKEN`.
+func (c *cmd) share(args []string) error {
+	fs := flag.NewFlagSet("share", flag.ContinueOnError)
+	fs.SetOutput(c.cfg.Stderr)
+	life := fs.String("for", "24h", "how long the link works (at most 168h)")
+	list := fs.Bool("list", false, "list the live links")
+	revoke := fs.String("revoke", "", "end a link")
+	positional, err := parseInterspersed(fs, args)
+	if err != nil {
+		return usageError{err}
+	}
+	f, err := c.apiClient()
+	if err != nil {
+		return err
+	}
+	switch {
+	case *revoke != "":
+		return f.do(http.MethodDelete, "/api/shares/"+*revoke, nil, nil)
+	case *list:
+		var shares []forge.Share
+		if err := f.do(http.MethodGet, "/api/shares", nil, &shares); err != nil {
+			return err
+		}
+		for _, sh := range shares {
+			fmt.Fprintf(c.cfg.Stdout, "%s\t%s\tuntil %s\n", sh.Token, sh.Pane, sh.Expires.Local().Format(time.RFC822))
+		}
+		return nil
+	}
+	if len(positional) != 1 {
+		return usageError{errors.New("share PANE")}
+	}
+	p, err := f.resolve(positional[0])
+	if err != nil {
+		return err
+	}
+	var sh forge.Share
+	if err := f.do(http.MethodPost, "/api/shares", map[string]string{"pane": p.ID, "for": *life}, &sh); err != nil {
+		return err
+	}
+	fmt.Fprintf(c.cfg.Stdout, "%s/?view=%s\n  watches %q only, until %s (revoke: %s share --revoke %s)\n", f.state.URL, sh.Token, p.Title, sh.Expires.Local().Format(time.RFC822), c.cfg.Prog, sh.Token)
+	return nil
+}

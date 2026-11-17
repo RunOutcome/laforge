@@ -90,12 +90,13 @@ func (c *cmd) report(args []string) error {
 	app := fs.String("app", "", "the program's name for itself")
 	id := fs.String("id", "", "a child record (\"build\", \"tests/unit\"); empty is the pane itself")
 	progress := fs.Int("progress", -1, "0..100 (working or blocked)")
+	answerWait := fs.Duration("answer-wait", 0, "with --hook: wait this long for a permission to be answered in LaForge")
 	positional, err := parseInterspersed(fs, args)
 	if err != nil {
 		return usageError{err}
 	}
 	if *hook != "" {
-		c.reportHook(*hook, *session, c.cfg.Stdin)
+		c.reportHook(*hook, *session, c.cfg.Stdin, *answerWait)
 		return nil
 	}
 	if len(positional) != 1 {
@@ -187,7 +188,7 @@ func permissionLine(tool string, input json.RawMessage) string {
 	}
 }
 
-func (c *cmd) reportHook(agent, session string, stdin io.Reader) {
+func (c *cmd) reportHook(agent, session string, stdin io.Reader, answerWait time.Duration) {
 	if session == "" {
 		return
 	}
@@ -203,9 +204,53 @@ func (c *cmd) reportHook(agent, session string, stdin io.Reader) {
 	if ev.Event == "SessionStart" && ev.SessionID != "" {
 		_ = f.do(http.MethodPost, "/api/sessions/"+session+"/agent", map[string]string{"agent": agent, "sessionId": ev.SessionID, "source": ev.Source}, nil)
 	}
-	if r, ok := hookReport(agent, ev); ok {
+	r, ok := hookReport(agent, ev)
+	if ev.Event == "PermissionRequest" && answerWait > 0 {
+		c.askForge(f, agent, session, r.Msg, answerWait)
+		return
+	}
+	if ok {
 		_ = f.do(http.MethodPost, "/api/sessions/"+session+"/status", r, nil)
 	}
+}
+
+// askForge waits for a person to answer the permission in LaForge and, if
+// they do, gives the agent the decision on stdout (Claude Code's
+// PermissionRequest output). With no answer it prints nothing: the agent
+// asks in its terminal as usual.
+func (c *cmd) askForge(f *forgeClient, agent, session, msg string, wait time.Duration) {
+	f.http.Timeout = wait + 5*time.Second
+	var out struct {
+		Decision string `json:"decision"`
+	}
+	if f.do(http.MethodPost, "/api/sessions/"+session+"/ask", map[string]any{"msg": msg, "app": agent, "wait": wait.Seconds()}, &out) != nil {
+		return
+	}
+	decision := map[string]any{"behavior": out.Decision}
+	switch out.Decision {
+	case "allow":
+	case "deny":
+		decision["message"] = "Denied in LaForge by the person watching this pane."
+	default:
+		return
+	}
+	_ = json.NewEncoder(c.cfg.Stdout).Encode(map[string]any{"hookSpecificOutput": map[string]any{"hookEventName": "PermissionRequest", "decision": decision}})
+}
+
+// answer is `la answer PANE allow|deny`.
+func (c *cmd) answer(args []string) error {
+	if len(args) != 2 || args[1] != "allow" && args[1] != "deny" {
+		return usageError{fmt.Errorf("answer PANE allow|deny")}
+	}
+	f, err := c.apiClient()
+	if err != nil {
+		return err
+	}
+	p, err := f.resolve(args[0])
+	if err != nil {
+		return err
+	}
+	return f.do(http.MethodPost, "/api/sessions/"+p.ID+"/answer", map[string]string{"decision": args[1]}, nil)
 }
 
 // parseInterspersed parses flags wherever they are among the arguments

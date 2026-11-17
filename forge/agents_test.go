@@ -123,3 +123,47 @@ func TestAProfileTakesExtraArguments(t *testing.T) {
 	_, read, _ := streamOf(t, ts, p.ID)
 	read("got:[review x.go]")
 }
+
+// A hook's permission question waits for a person: an answer reaches the
+// hook, the pane shows it is asking until then, a share cannot answer, and
+// with no answer in time the hook gets none (the agent asks in its terminal).
+func TestAPermissionIsAnsweredFromTheForge(t *testing.T) {
+	_, ts := newTestServer(t)
+	p := startReq(t, ts, StartRequest{Argv: []string{"/bin/sh", "-c", "sleep 30"}})
+	got := make(chan string, 1)
+	go func() {
+		r := call(t, ts, "POST", "/api/sessions/"+p.ID+"/ask", "secret", map[string]any{"msg": "Bash: git push", "app": "claude", "wait": 5})
+		var out struct{ Decision string }
+		_ = json.NewDecoder(r.Body).Decode(&out)
+		got <- out.Decision
+	}()
+	asking := waitFor(t, ts, func(x Pane) bool { return x.Asking != nil })
+	if asking.Asking.Msg != "Bash: git push" || asking.Status.State != "blocked" || asking.Status.Kind != "permission" {
+		t.Fatalf("%+v %+v", asking.Asking, asking.Status)
+	}
+	r := call(t, ts, "POST", "/api/shares", "secret", map[string]string{"pane": p.ID})
+	var sh Share
+	_ = json.NewDecoder(r.Body).Decode(&sh)
+	if r := viewCall(t, ts.URL, "POST", "/api/sessions/"+p.ID+"/answer", sh.Token, `{"decision":"allow"}`); r.StatusCode != 403 {
+		t.Fatalf("a share answered: %d", r.StatusCode)
+	}
+	if r := call(t, ts, "POST", "/api/sessions/"+p.ID+"/answer", "secret", map[string]string{"decision": "maybe"}); r.StatusCode != 400 {
+		t.Fatalf("bad decision: %d", r.StatusCode)
+	}
+	call(t, ts, "POST", "/api/sessions/"+p.ID+"/answer", "secret", map[string]string{"decision": "deny"})
+	if d := <-got; d != "deny" {
+		t.Fatalf("decision %q", d)
+	}
+	after := waitFor(t, ts, func(x Pane) bool { return x.Asking == nil && x.Status != nil && x.Status.State == "working" })
+	_ = after
+	if r := call(t, ts, "POST", "/api/sessions/"+p.ID+"/answer", "secret", map[string]string{"decision": "allow"}); r.StatusCode != 409 {
+		t.Fatalf("answer with no question: %d", r.StatusCode)
+	}
+	start := time.Now()
+	r = call(t, ts, "POST", "/api/sessions/"+p.ID+"/ask", "secret", map[string]any{"msg": "x", "wait": 0.3})
+	var out struct{ Decision string }
+	_ = json.NewDecoder(r.Body).Decode(&out)
+	if out.Decision != "" || time.Since(start) < 250*time.Millisecond {
+		t.Fatalf("unanswered: %+v after %v", out, time.Since(start))
+	}
+}

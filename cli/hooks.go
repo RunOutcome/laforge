@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 )
 
 // Hooks: Claude Code and Codex do not send OSC 7501 themselves, but both run
@@ -60,9 +61,14 @@ var hookTargets = []hookTarget{
 // hookMark is in every command LaForge installs, so it can find its own.
 const hookMark = "report --hook "
 
-// hookCommand is the shell command an agent runs on each event.
-func (c *cmd) hookCommand(agent string) string {
-	return `[ -z "$LAFORGE_SESSION" ] || ` + c.selfCommand() + " " + hookMark + agent + " 2>/dev/null || true"
+// hookCommand is the shell command an agent runs on each event; with
+// answer > 0 a permission request waits that long for an answer in LaForge.
+func (c *cmd) hookCommand(agent string, answer time.Duration) string {
+	extra := ""
+	if answer > 0 {
+		extra = " --answer-wait " + answer.String()
+	}
+	return `[ -z "$LAFORGE_SESSION" ] || ` + c.selfCommand() + " " + hookMark + agent + extra + " 2>/dev/null || true"
 }
 
 // selfCommand is how a hook reaches this command tree: "la" when la on PATH
@@ -112,8 +118,12 @@ func (c *cmd) hooks(args []string) error {
 	fs := flag.NewFlagSet("hooks "+action, flag.ContinueOnError)
 	fs.SetOutput(c.cfg.Stderr)
 	dryRun := fs.Bool("dry-run", false, "show what would change, change nothing")
+	answer := fs.Duration("answer", 0, "Claude Code: hold a permission request this long for Allow or Deny in LaForge (e.g. 90s; it then asks in its terminal)")
 	if err := fs.Parse(args[1:]); err != nil {
 		return usageError{err}
+	}
+	if *answer > 9*time.Minute {
+		return usageError{fmt.Errorf("--answer: at most 9m")}
 	}
 	targets, err := pickTargets(fs.Args())
 	if err != nil {
@@ -123,7 +133,7 @@ func (c *cmd) hooks(args []string) error {
 	case "install", "uninstall":
 		var errs []error
 		for _, t := range targets {
-			if err := c.changeHooks(t, action == "install", *dryRun); err != nil {
+			if err := c.changeHooks(t, action == "install", *dryRun, *answer); err != nil {
 				errs = append(errs, fmt.Errorf("%s: %w", t.label, err))
 			}
 		}
@@ -182,7 +192,7 @@ func (c *cmd) hookStatus(t hookTarget) string {
 	}
 }
 
-func (c *cmd) changeHooks(t hookTarget, install, dryRun bool) error {
+func (c *cmd) changeHooks(t hookTarget, install, dryRun bool, answer time.Duration) error {
 	dir := t.dir()
 	if info, err := os.Stat(dir); err != nil || !info.IsDir() {
 		if !install {
@@ -213,7 +223,11 @@ func (c *cmd) changeHooks(t hookTarget, install, dryRun bool) error {
 			if t.toolEvents[ev] {
 				entry.set("matcher", "*")
 			}
-			entry.set("hooks", []any{map[string]any{"type": "command", "command": c.hookCommand(t.agent), "timeout": 5}})
+			wait := time.Duration(0)
+			if ev == "PermissionRequest" && t.agent == "claude" {
+				wait = answer
+			}
+			entry.set("hooks", []any{map[string]any{"type": "command", "command": c.hookCommand(t.agent, wait), "timeout": 5 + int(wait.Seconds()) + 10*min(1, int(wait.Seconds()))}})
 			list, _ := hooks.get(ev).([]any)
 			hooks.set(ev, append(list, entry))
 		}

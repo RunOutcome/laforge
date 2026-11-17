@@ -231,3 +231,68 @@ func TestAHookReportsToItsForge(t *testing.T) {
 		t.Fatalf("got\n%s\nwant\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
 	}
 }
+
+// With --answer-wait, a permission request asks the forge and an answer
+// becomes Claude Code's PermissionRequest decision on stdout; no answer
+// prints nothing.
+func TestAPermissionHookGivesTheAgentTheAnswer(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("LAFORGE_HOME", home)
+	t.Setenv("LAFORGE_SESSION", "s-1")
+	decision := "allow"
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/sessions/s-1/ask" {
+			t.Errorf("path %s", r.URL.Path)
+		}
+		var body map[string]any
+		json.NewDecoder(r.Body).Decode(&body)
+		if body["msg"] != "Bash: git push" || body["wait"].(float64) != 30 {
+			t.Errorf("body %v", body)
+		}
+		json.NewEncoder(w).Encode(map[string]string{"decision": decision})
+	}))
+	defer ts.Close()
+	raw, _ := json.Marshal(State{URL: ts.URL, Token: "tok"})
+	os.WriteFile(filepath.Join(home, "forge.json"), raw, 0o600)
+	ev := `{"hook_event_name":"PermissionRequest","tool_name":"Bash","tool_input":{"command":"git push"}}`
+	_, out, _ := run(t, ev, "report", "--hook", "claude", "--answer-wait", "30s")
+	if strings.TrimSpace(out) != `{"hookSpecificOutput":{"decision":{"behavior":"allow"},"hookEventName":"PermissionRequest"}}` {
+		t.Fatalf("allow: %q", out)
+	}
+	decision = "deny"
+	_, out, _ = run(t, ev, "report", "--hook", "claude", "--answer-wait", "30s")
+	if !strings.Contains(out, `"behavior":"deny"`) || !strings.Contains(out, `"message":"Denied in LaForge`) {
+		t.Fatalf("deny: %q", out)
+	}
+	decision = ""
+	if _, out, _ = run(t, ev, "report", "--hook", "claude", "--answer-wait", "30s"); out != "" {
+		t.Fatalf("no answer: %q", out)
+	}
+}
+
+// --answer writes the wait into the PermissionRequest hook only, with a
+// timeout long enough for it.
+func TestHooksInstallWithAnswer(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("CLAUDE_CONFIG_DIR", dir)
+	if code, _, errs := run(t, "", "hooks", "install", "--answer", "90s", "claude"); code != 0 {
+		t.Fatal(errs)
+	}
+	var doc struct {
+		Hooks map[string][]struct {
+			Hooks []struct {
+				Command string
+				Timeout int
+			}
+		}
+	}
+	raw, _ := os.ReadFile(filepath.Join(dir, "settings.json"))
+	json.Unmarshal(raw, &doc)
+	pr := doc.Hooks["PermissionRequest"][0].Hooks[0]
+	if !strings.Contains(pr.Command, "--answer-wait 1m30s") || pr.Timeout != 105 {
+		t.Fatalf("%+v", pr)
+	}
+	if st := doc.Hooks["Stop"][0].Hooks[0]; strings.Contains(st.Command, "answer") || st.Timeout != 5 {
+		t.Fatalf("%+v", st)
+	}
+}

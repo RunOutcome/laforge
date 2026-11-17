@@ -120,6 +120,10 @@ func Main(cfg Config, args []string) int {
 		err = c.events(args[1:])
 	case "close":
 		err = c.closePane(args[1:])
+	case "answer":
+		err = c.answer(args[1:])
+	case "share":
+		err = c.share(args[1:])
 	case "--skill", "skill":
 		fmt.Fprint(cfg.Stdout, skill(cfg.Prog))
 	case "holder": // started by the forge: one pane's holder process
@@ -173,6 +177,10 @@ Usage:
                      run a pane (from a pane: a child that ends with it)
   %[1]s ls | send PANE TEXT | read PANE | wait PANE… | close PANE
                      list, type into, read, wait for and close panes
+  %[1]s answer PANE allow|deny
+                     answer the permission a pane's agent waits on
+  %[1]s share PANE [--for 2h] | share --list | share --revoke TOKEN
+                     a read-only link to watch one pane
   %[1]s --skill      how an agent uses LaForge, in one read
   %[1]s hooks install [claude|codex]
                      let Claude Code and Codex report their status to LaForge

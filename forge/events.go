@@ -86,6 +86,7 @@ func (s *Server) changed(id string) {
 	delete(s.last, id)
 	s.mu.Unlock()
 	if had {
+		s.shares.dropPane(id)
 		s.events.publish("pane.closed", p)
 		s.family(id, p, true)
 	}
