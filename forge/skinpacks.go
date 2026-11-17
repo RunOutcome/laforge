@@ -294,6 +294,12 @@ type InstallResult struct {
 // is for a source that cannot be fetched or holds no skin; a skin that does
 // not install is in the result's Failed.
 func InstallSource(home string, src SkinSource) (InstallResult, error) {
+	return InstallSkinsFrom(home, src, nil)
+}
+
+// InstallSkinsFrom installs the skins in a source named in only (all when
+// only is empty); a name not in the source is reported as failed.
+func InstallSkinsFrom(home string, src SkinSource, only []string) (InstallResult, error) {
 	root, cleanup, err := fetchSource(src)
 	if err != nil {
 		return InstallResult{}, err
@@ -304,9 +310,17 @@ func InstallSource(home string, src SkinSource) (InstallResult, error) {
 		return InstallResult{}, fmt.Errorf("%s holds no skin: no skin.json at its root, in a subfolder or under skins/", src)
 	}
 	res := InstallResult{Installed: []Skin{}, Failed: []SkinFailure{}}
+	want := map[string]bool{}
+	for _, n := range only {
+		want[n] = true
+	}
 	seen := map[string]string{}
 	for _, rel := range found {
 		dir := filepath.Join(root, filepath.FromSlash(rel))
+		if len(want) > 0 && !want[skinNameAt(dir, rel)] {
+			continue
+		}
+		delete(want, skinNameAt(dir, rel))
 		if sk, err := ReadSkin(os.DirFS(dir)); err == nil {
 			if first, dup := seen[sk.Name]; dup {
 				res.Failed = append(res.Failed, SkinFailure{rel, fmt.Sprintf("%s is named %s, as %s is", rel, sk.Name, first)})
@@ -322,7 +336,21 @@ func InstallSource(home string, src SkinSource) (InstallResult, error) {
 		}
 		res.Installed = append(res.Installed, sk)
 	}
+	for n := range want {
+		res.Failed = append(res.Failed, SkinFailure{n, src.String() + " has no skin " + n})
+	}
 	return res, nil
+}
+
+// skinNameAt is the name a found skin's manifest gives, else its folder's.
+func skinNameAt(dir, rel string) string {
+	var m struct {
+		Name string `json:"name"`
+	}
+	if raw, err := os.ReadFile(filepath.Join(dir, "skin.json")); err == nil && json.Unmarshal(raw, &m) == nil && m.Name != "" {
+		return m.Name
+	}
+	return path.Base(rel)
 }
 
 func recordedRef(s SkinSource) string {
@@ -546,10 +574,21 @@ func extractTarGz(r io.Reader, dest string) (string, error) {
 // installSkins is POST /api/skins/install {source}: {installed, failed}.
 func (s *Server) installSkins(w http.ResponseWriter, r *http.Request) {
 	var body struct {
-		Source string `json:"source"`
+		Source     string   `json:"source"`
+		Collection string   `json:"collection"`
+		Names      []string `json:"names"`
 	}
-	if err := json.NewDecoder(io.LimitReader(r.Body, 4<<10)).Decode(&body); err != nil {
+	if err := json.NewDecoder(io.LimitReader(r.Body, 16<<10)).Decode(&body); err != nil {
 		writeError(w, http.StatusBadRequest, "input", "The body is not JSON.")
+		return
+	}
+	if body.Collection != "" {
+		res, err := s.installFromCollection(body.Collection, body.Names)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "source", err.Error())
+			return
+		}
+		writeJSON(w, http.StatusOK, res)
 		return
 	}
 	src, err := ParseSkinSource(body.Source)

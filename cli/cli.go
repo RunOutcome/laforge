@@ -188,6 +188,10 @@ Usage:
                      how the forge looks; SOURCE is a folder, owner/repo[@ref]
                      or a github.com link, holding one skin or many
                      (docs/skins.md to make one)
+  %[1]s skin browse [COLLECTION] | skin install official[/NAME]…
+  %[1]s skin collections [add LINK | remove ID]
+                     get skins from collections: official (released with
+                     LaForge), library (more), or any you add by link
   %[1]s --skill      how an agent uses LaForge, in one read
   %[1]s hooks install [claude|codex]
                      let Claude Code and Codex report their status to LaForge

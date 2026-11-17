@@ -17,7 +17,7 @@ import (
 	"github.com/RunOutcome/laforge/forge"
 )
 
-const skinUsage = "skin list | install SOURCE | update [NAME] | remove NAME | use NAME"
+const skinUsage = "skin list | browse [COLLECTION] | install SOURCE|COLLECTION[/NAME]… | collections [add LINK | remove ID] | update [NAME] | remove NAME | use NAME"
 
 // skin is `la skin list|install SOURCE|update [NAME]|remove NAME|use NAME`.
 func (c *cmd) skin(args []string) error {
@@ -26,10 +26,27 @@ func (c *cmd) skin(args []string) error {
 	}
 	switch args[0] {
 	case "install":
+		if len(args) < 2 {
+			return usageError{errors.New("skin install SOURCE (a folder, owner/repo[@ref][//folder] or a github.com link) | COLLECTION[/NAME]…")}
+		}
+		if done, err := c.collectionInstall(args[1:]); done {
+			return err
+		}
 		if len(args) != 2 {
-			return usageError{errors.New("skin install SOURCE (a folder, owner/repo[@ref][//folder] or a github.com link)")}
+			return usageError{errors.New("skin install takes one source (or collection skins: official/NAME …)")}
 		}
 		return c.skinInstall(args[1])
+	case "browse":
+		if len(args) > 2 {
+			return usageError{errors.New("skin browse [COLLECTION]")}
+		}
+		id := "official"
+		if len(args) == 2 {
+			id = args[1]
+		}
+		return c.skinBrowse(id)
+	case "collections", "collection":
+		return c.skinCollections(args[1:])
 	case "update":
 		if len(args) > 2 {
 			return usageError{errors.New("skin update [NAME]")}
@@ -176,4 +193,113 @@ func (c *cmd) skinUpdate(names []string) error {
 		fmt.Fprintf(c.cfg.Stdout, "updated %s from %s\n", sk.Name, sk.Source)
 	}
 	return skinFailures(failed)
+}
+
+// collections is the forge's skin collections, or nil without a forge.
+func (c *cmd) collections(f *forgeClient) []forge.Collection {
+	var cs []forge.Collection
+	if f == nil || f.do(http.MethodGet, "/api/skins/collections", nil, &cs) != nil {
+		return nil
+	}
+	return cs
+}
+
+// collectionInstall installs from a collection when every argument names
+// one (official, official/paper, fans/neon …); done is false when they are
+// a source instead.
+func (c *cmd) collectionInstall(args []string) (done bool, err error) {
+	f := c.slowClient()
+	ids := map[string]bool{}
+	for _, col := range c.collections(f) {
+		ids[col.ID] = true
+	}
+	byCollection := map[string][]string{}
+	var order []string
+	for _, a := range args {
+		id, name, _ := strings.Cut(a, "/")
+		if !ids[id] || strings.Contains(name, "/") {
+			if len(args) > 1 && f != nil {
+				return true, fmt.Errorf("%s is not COLLECTION or COLLECTION/NAME (collections: %s skin collections)", a, c.cfg.Prog)
+			}
+			return false, nil
+		}
+		if _, seen := byCollection[id]; !seen {
+			order = append(order, id)
+			byCollection[id] = []string{}
+		}
+		if name != "" {
+			byCollection[id] = append(byCollection[id], name)
+		}
+	}
+	var failed []forge.SkinFailure
+	for _, id := range order {
+		var res forge.InstallResult
+		if err := f.do(http.MethodPost, "/api/skins/install", map[string]any{"collection": id, "names": byCollection[id]}, &res); err != nil {
+			return true, err
+		}
+		for _, sk := range res.Installed {
+			fmt.Fprintf(c.cfg.Stdout, "installed %s (%s) from %s\n", sk.Name, sk.Label, id)
+		}
+		failed = append(failed, res.Failed...)
+	}
+	return true, skinFailures(failed)
+}
+
+// skinBrowse lists what a collection offers.
+func (c *cmd) skinBrowse(id string) error {
+	f := c.slowClient()
+	if f == nil {
+		return errors.New("browsing a collection needs the forge running: " + c.cfg.Prog + " up")
+	}
+	var offers []forge.Available
+	if err := f.do(http.MethodGet, "/api/skins/collections/"+id+"/skins", nil, &offers); err != nil {
+		return err
+	}
+	tw := tabwriter.NewWriter(c.cfg.Stdout, 0, 4, 2, ' ', 0)
+	fmt.Fprintln(tw, "\tNAME\tLABEL\tLAYOUT\tNOTE")
+	for _, a := range offers {
+		mark, note := "", a.Description
+		if a.Installed {
+			mark = "✓"
+		}
+		if a.Problem != "" {
+			note = "will not install: " + a.Problem
+		}
+		if len(note) > 70 {
+			note = note[:67] + "..."
+		}
+		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\n", mark, a.Name, a.Label, a.Layout, note)
+	}
+	if err := tw.Flush(); err != nil {
+		return err
+	}
+	fmt.Fprintf(c.cfg.Stdout, "install: %s skin install %s/NAME  (or %s for all)\n", c.cfg.Prog, id, id)
+	return nil
+}
+
+// skinCollections is `la skin collections [add LINK | remove ID]`.
+func (c *cmd) skinCollections(args []string) error {
+	f := c.slowClient()
+	if f == nil {
+		return errors.New("collections need the forge running: " + c.cfg.Prog + " up")
+	}
+	switch {
+	case len(args) == 0 || args[0] == "list":
+		tw := tabwriter.NewWriter(c.cfg.Stdout, 0, 4, 2, ' ', 0)
+		fmt.Fprintln(tw, "ID\tNAME\tSOURCE")
+		for _, col := range c.collections(f) {
+			fmt.Fprintf(tw, "%s\t%s\t%s\n", col.ID, col.Name, col.Source)
+		}
+		return tw.Flush()
+	case args[0] == "add" && len(args) == 2:
+		var col forge.Collection
+		if err := f.do(http.MethodPost, "/api/skins/collections", map[string]string{"source": args[1]}, &col); err != nil {
+			return err
+		}
+		fmt.Fprintf(c.cfg.Stdout, "added %s (%s); browse it: %s skin browse %s\n", col.ID, col.Name, c.cfg.Prog, col.ID)
+		return nil
+	case (args[0] == "remove" || args[0] == "rm") && len(args) == 2:
+		return f.do(http.MethodDelete, "/api/skins/collections/"+args[1], nil, nil)
+	}
+	return usageError{errors.New("skin collections [add LINK | remove ID]")}
 }

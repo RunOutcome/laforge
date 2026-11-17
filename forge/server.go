@@ -64,8 +64,10 @@ type Server struct {
 	last     map[string]Pane // each pane's last view, for its pane.closed event
 	restart  chan struct{}
 	shares   *shares
-	stop     chan struct{}
-	stopOnce sync.Once
+	// collCache keeps what skin collections offer for a while.
+	collCache collectionCache
+	stop      chan struct{}
+	stopOnce  sync.Once
 }
 
 const cookieName = "laforge_token"
@@ -173,6 +175,10 @@ func (s *Server) routes(web fs.FS) {
 	s.mux.HandleFunc("POST /api/sessions/{id}/ask", s.auth(s.askPermission))
 	s.mux.HandleFunc("POST /api/sessions/{id}/answer", s.auth(s.answerAsk))
 	s.mux.HandleFunc("GET /api/skins", s.auth(s.listSkins))
+	s.mux.HandleFunc("GET /api/skins/collections", s.auth(s.listCollections))
+	s.mux.HandleFunc("POST /api/skins/collections", s.auth(s.addCollection))
+	s.mux.HandleFunc("DELETE /api/skins/collections/{id}", s.auth(s.removeCollection))
+	s.mux.HandleFunc("GET /api/skins/collections/{id}/skins", s.auth(s.collectionSkins))
 	s.mux.HandleFunc("PUT /api/skins/default", s.auth(s.setDefaultSkin))
 	s.mux.HandleFunc("DELETE /api/skins/{name}", s.auth(s.removeSkin))
 	s.mux.HandleFunc("POST /api/skins/install", s.auth(s.installSkins))

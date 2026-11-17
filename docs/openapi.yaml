@@ -208,10 +208,22 @@ paths:
     get: { responses: { '200': { description: '{default, skins: [{name, label, description, version, author, license, layout, css, terminal: {dark, light}, builtin, source}]}; source is omitted for a built-in (docs/skins.md)' } } }
   /api/skins/install:
     post:
-      requestBody: { content: { application/json: { schema: { type: object, properties: { source: { type: string, description: 'a folder on the forge''s machine, owner/repo, github:owner/repo, owner/repo@ref (each with an optional //subdir), https://github.com/owner/repo or https://github.com/owner/repo/tree/<ref>/<subdir>' } } } } } }
+      requestBody: { content: { application/json: { schema: { type: object, properties: { collection: { type: string, description: 'install from this collection instead of a source' }, names: { type: array, items: { type: string }, description: 'with collection: these skins (all when empty)' }, source: { type: string, description: 'a folder on the forge''s machine, owner/repo, github:owner/repo, owner/repo@ref (each with an optional //subdir), https://github.com/owner/repo or https://github.com/owner/repo/tree/<ref>/<subdir>' } } } } } }
       responses: { '200': { description: '{installed: [Skin], failed: [{path, reason}]}: every skin in the source, each installed or not on its own' }, '400': { description: 'source: it cannot be read, fetched or holds no skin' } }
   /api/skins/{name}/update:
     post: { responses: { '200': { description: the skin, reinstalled from its recorded source }, '400': { description: source }, '404': { description: no_skin }, '409': { description: builtin or no_source } } }
+  /api/skins/collections:
+    get: { responses: { '200': { description: '[{id, name, source, description, builtin, addedAt}]: official and library first, then the ones added' } } }
+    post:
+      description: Add a collection by link (a GitHub repo or a folder) after checking it holds skins.
+      requestBody: { content: { application/json: { schema: { type: object, properties: { source: { type: string } } } } } }
+      responses: { '201': { description: the collection }, '400': { description: source }, '409': { description: exists } }
+  /api/skins/collections/{id}:
+    delete: { responses: { '204': { description: removed (its installed skins stay) }, '404': { description: no_collection }, '409': { description: builtin } } }
+  /api/skins/collections/{id}/skins:
+    get:
+      parameters: [{ name: refresh, in: query, schema: { enum: ['1'] } }]
+      responses: { '200': { description: '[{name, label, description, author, layout, path, installed, problem}]; cached for 10 minutes' }, '502': { description: 'source: it cannot be fetched' } }
   /api/skins/default:
     put:
       requestBody: { content: { application/json: { schema: { type: object, properties: { name: { type: string } } } } } }

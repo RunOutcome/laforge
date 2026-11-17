@@ -378,6 +378,31 @@ Each installed skin remembers where it came from in
 `la skin list`. `la skin update NAME` reinstalls it from there, at the same
 ref; `la skin update` does so for every skin with a source.
 
+## Collections
+
+A collection is a place to get skins: a GitHub repository (or a folder)
+holding skins as a theme pack does. Two come with LaForge: **official**
+(the skins released with LaForge, in its `skins/` folder) and **library**
+(more skins, RunOutcome/laforge-skins). Add any other by link:
+
+```sh
+la skin collections add https://github.com/you/your-skins
+la skin browse your-skins          # what it offers, installed ones marked
+la skin install your-skins/NAME    # one; or your-skins for all
+la skin collections remove your-skins   # its installed skins stay
+```
+
+The theme panel's **Get more** does the same. A collection may name itself
+and its skins in a `collection.json` at its root:
+
+```json
+{ "id": "your-skins", "name": "Your skins", "description": "…",
+  "skins": [{ "name": "neon", "label": "Neon Nights", "description": "…", "path": "neon" }] }
+```
+
+Without one, the skins are found as a theme pack's are, and the collection
+is named after its repository.
+
 ## Rules
 
 - No code: stylesheets, fonts and images only.
