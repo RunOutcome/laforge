@@ -21,6 +21,9 @@ type Profile struct {
 	Args        []string `json:"args,omitempty"`
 	Env         []string `json:"env,omitempty"`
 	Agent       bool     `json:"agent"`
+	// Resume are the arguments, after Args, that continue one of the agent's
+	// own sessions; {session} is its id.
+	Resume []string `json:"resume,omitempty"`
 	// Available and Reason are filled in when profiles are listed.
 	Available bool   `json:"available"`
 	Reason    string `json:"reason,omitempty"`
@@ -33,8 +36,8 @@ func BuiltinProfiles() []Profile {
 	shell := LoginShell()
 	return []Profile{
 		{Name: "shell", Label: "Shell", Description: "Your login shell", Command: shell, Args: loginArgs()},
-		{Name: "claude", Label: "Claude Code", Description: "Anthropic Claude Code", Command: "claude", Agent: true},
-		{Name: "codex", Label: "Codex", Description: "OpenAI Codex CLI", Command: "codex", Agent: true},
+		{Name: "claude", Label: "Claude Code", Description: "Anthropic Claude Code", Command: "claude", Agent: true, Resume: []string{"--resume", "{session}"}},
+		{Name: "codex", Label: "Codex", Description: "OpenAI Codex CLI", Command: "codex", Agent: true, Resume: []string{"resume", "{session}"}},
 		{Name: "antigravity", Label: "Antigravity", Description: "Google Antigravity CLI", Command: "agy", Agent: true},
 		{Name: "qwen", Label: "Qwen Code", Description: "Alibaba Qwen Code", Command: "qwen", Agent: true},
 		{Name: "copilot", Label: "Copilot", Description: "GitHub Copilot CLI", Command: "copilot", Agent: true},

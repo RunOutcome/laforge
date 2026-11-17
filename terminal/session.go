@@ -102,12 +102,34 @@ func Start(id string, spec LaunchSpec, scrollbackBytes int, onChange func(*Sessi
 	return session, nil
 }
 
+// Attach makes a session of a pseudo-terminal that is already running
+// elsewhere (a holder process): the same ring, readers and status as a
+// session Start runs, reading p until it reports the end.
+func Attach(id string, p PTY, spec LaunchSpec, scrollbackBytes int, onChange func(*Session)) *Session {
+	session := makeSession(id, p, spec, scrollbackBytes)
+	session.onChange = onChange
+	go session.pump()
+	return session
+}
+
+// SetStartedAt corrects when the session's process started (an attached
+// session began before this process knew it).
+func (session *Session) SetStartedAt(at time.Time) {
+	session.mutex.Lock()
+	session.startedAt = at
+	session.mutex.Unlock()
+}
+
 func newSession(id string, spec LaunchSpec, scrollbackBytes int) (*Session, error) {
-	columns, rows := spec.size()
 	terminal, err := StartPTY(spec)
 	if err != nil {
 		return nil, err
 	}
+	return makeSession(id, terminal, spec, scrollbackBytes), nil
+}
+
+func makeSession(id string, terminal PTY, spec LaunchSpec, scrollbackBytes int) *Session {
+	columns, rows := spec.size()
 	now := time.Now().UTC()
 	session := &Session{
 		id:           id,
@@ -124,7 +146,7 @@ func newSession(id string, spec LaunchSpec, scrollbackBytes int) (*Session, erro
 		watchers:     map[int]chan []byte{},
 		done:         make(chan struct{}),
 	}
-	return session, nil
+	return session
 }
 
 // ID is the session's id.
@@ -237,6 +259,14 @@ func (session *Session) Report(r Report) (bool, error) {
 		session.onChange(session)
 	}
 	return changed, nil
+}
+
+// StatusReplay is the session's status records as OSC 7501, for a reader
+// that joins after reports have left the ring (a forge adopting a holder).
+func (session *Session) StatusReplay() []byte {
+	session.mutex.Lock()
+	defer session.mutex.Unlock()
+	return []byte(session.statuses.encodeAll())
 }
 
 // ErrBadReport is a status report with an unknown state or out-of-range fields.

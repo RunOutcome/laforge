@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/RunOutcome/laforge/forge"
+	"github.com/RunOutcome/laforge/holder"
 )
 
 // Version is set at build time (-ldflags "-X .../cli.Version=v0.1.0").
@@ -103,6 +104,10 @@ func Main(cfg Config, args []string) int {
 		err = c.serve(args[1:])
 	case "report":
 		err = c.report(args[1:])
+	case "restart":
+		err = c.restart(args[1:])
+	case "holder": // started by the forge: one pane's holder process
+		err = holder.RunFromStdin(c.holdersDir(), cfg.Stdin)
 	case "hooks":
 		err = c.hooks(args[1:])
 	case "notices", "licenses", "licences":
@@ -140,8 +145,10 @@ Usage:
                      this folder (or --cwd) mounted at /workspace
   %[1]s open         open the running forge in the browser
   %[1]s status       show the running forge and its panes
+  %[1]s restart      restart the forge (after an update); panes keep running
   %[1]s down [--container]
-                     stop the forge and every pane in it
+                     stop the forge and every pane in it (they can be
+                     resumed after the next up)
   %[1]s hooks install [claude|codex]
                      let Claude Code and Codex report their status to LaForge
                      (also: hooks status, hooks uninstall)
@@ -230,51 +237,123 @@ func (c *cmd) up(args []string) error {
 		}
 		return nil
 	}
-	serveArgs := []string{"serve", "--port", strconv.Itoa(*port), "--cwd", dir}
 	if *foreground {
+		serveArgs := []string{"--port", strconv.Itoa(*port), "--cwd", dir}
 		if !*noOpen {
 			serveArgs = append(serveArgs, "--open")
 		}
-		return c.serve(serveArgs[1:])
+		return c.serve(serveArgs)
 	}
-	if err := os.MkdirAll(c.home, 0o700); err != nil {
+	s, err := c.startDetached(*port, dir, "")
+	if err != nil {
 		return err
+	}
+	fmt.Fprintf(c.cfg.Stdout, "LaForge is up (pid %d)\n  %s\n", s.PID, s.link())
+	if !*noOpen {
+		openBrowser(s.link())
+	}
+	return nil
+}
+
+// startDetached starts `serve` in the background and waits for it to answer.
+// token, when given, is the forge's token (a restart keeps the old one).
+func (c *cmd) startDetached(port int, dir, token string) (*State, error) {
+	serveArgs := []string{"serve", "--port", strconv.Itoa(port), "--cwd", dir}
+	if err := os.MkdirAll(c.home, 0o700); err != nil {
+		return nil, err
 	}
 	exe, err := os.Executable()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	logPath := filepath.Join(c.home, "forge.log")
 	logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer logFile.Close()
-	if old, err := c.readState(); err == nil && processAlive(old.PID) {
-		return fmt.Errorf("a forge (pid %d) holds %s but does not answer on port %d; stop it (kill %d) or check %s", old.PID, c.statePath(), old.Port, old.PID, logPath)
+	old, err := c.readState()
+	if err == nil && processAlive(old.PID) {
+		return nil, fmt.Errorf("a forge (pid %d) holds %s but does not answer on port %d; stop it (kill %d) or check %s", old.PID, c.statePath(), old.Port, old.PID, logPath)
 	}
-	_ = os.Remove(c.statePath())
+	if token == "" && err == nil {
+		token = old.Token // a forge that died: its browser tabs keep working
+	}
 	child := exec.Command(exe, append(append([]string{}, c.cfg.Reexec...), serveArgs...)...)
 	child.Stdout, child.Stderr, child.Stdin = logFile, logFile, nil
 	child.Dir = dir
+	if token != "" {
+		child.Env = append(os.Environ(), "LAFORGE_TOKEN="+token)
+	}
 	detach(child)
 	if err := child.Start(); err != nil {
-		return err
+		return nil, err
 	}
 	pid := child.Process.Pid
 	_ = child.Process.Release()
 	deadline := time.Now().Add(10 * time.Second)
 	for time.Now().Before(deadline) {
 		if s := c.running(); s != nil && s.PID == pid {
-			fmt.Fprintf(c.cfg.Stdout, "LaForge is up (pid %d)\n  %s\n", s.PID, s.link())
-			if !*noOpen {
-				openBrowser(s.link())
-			}
-			return nil
+			return s, nil
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
-	return fmt.Errorf("the forge did not start; see %s", logPath)
+	return nil, fmt.Errorf("the forge did not start; see %s", logPath)
+}
+
+// restart replaces the running forge with a new one (this binary, after an
+// update) on the same port and token. Held panes keep running and the new
+// forge adopts them; an open browser reconnects by itself.
+func (c *cmd) restart(args []string) error {
+	s := c.running()
+	if s == nil {
+		return fmt.Errorf("LaForge is not running; start it with %s up", c.cfg.Prog)
+	}
+	f := &forgeClient{state: s, http: &http.Client{Timeout: 3 * time.Second}}
+	var conf struct {
+		Cwd string `json:"cwd"`
+	}
+	_ = f.do(http.MethodGet, "/api/config", nil, &conf)
+	if err := f.do(http.MethodPost, "/api/restart", nil, nil); err != nil {
+		var api *apiError
+		if errors.As(err, &api) && api.status == http.StatusNotFound {
+			return fmt.Errorf("the running forge (%s) cannot restart with its panes kept; stop it with %s down and start it again", s.Version, c.cfg.Prog)
+		}
+		return err
+	}
+	deadline := time.Now().Add(8 * time.Second)
+	for processAlive(s.PID) && time.Now().Before(deadline) {
+		time.Sleep(50 * time.Millisecond)
+	}
+	if processAlive(s.PID) {
+		return fmt.Errorf("pid %d did not stop", s.PID)
+	}
+	dir := conf.Cwd
+	if dir == "" {
+		dir, _ = os.Getwd()
+	}
+	next, err := c.startDetached(s.Port, dir, s.Token)
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(c.cfg.Stdout, "LaForge restarted (pid %d → %d, %s), panes kept\n  %s\n", s.PID, next.PID, next.Version, next.link())
+	return nil
+}
+
+func (c *cmd) holdersDir() string { return filepath.Join(c.home, "holders") }
+
+// holders is the launcher the forge starts panes with: nil (panes in the
+// forge's own process) where holders are not supported or LAFORGE_HOLDERS=0.
+func (c *cmd) holders() *holder.Launcher {
+	if !holder.Supported() || os.Getenv("LAFORGE_HOLDERS") == "0" {
+		return nil
+	}
+	exe, err := os.Executable()
+	if err != nil {
+		return nil
+	}
+	command := append(append([]string{exe}, c.cfg.Reexec...), "holder")
+	return &holder.Launcher{Dir: c.holdersDir(), Command: command}
 }
 
 func (c *cmd) setCwd(s *State, dir string) {
@@ -339,9 +418,9 @@ func (c *cmd) status(args []string) error {
 		return nil
 	}
 	tw := tabwriter.NewWriter(c.cfg.Stdout, 0, 4, 2, ' ', 0)
-	fmt.Fprintln(tw, "ID\tTITLE\tPROFILE\tSTATE\tFOLDER")
+	fmt.Fprintln(tw, "ID\tTITLE\tPROFILE\tSTATE\tAGENT\tFOLDER")
 	for _, p := range panes {
-		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\n", p.ID, p.Title, p.Profile, p.State, p.Cwd)
+		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\n", p.ID, p.Title, p.Profile, p.State, agentLine(p), p.Cwd)
 	}
 	return tw.Flush()
 }
@@ -404,7 +483,7 @@ func (c *cmd) serve(args []string) error {
 		}
 	}
 	actual := ln.Addr().(*net.TCPAddr).Port
-	srv, err := forge.NewServer(forge.Options{Home: c.home, Cwd: *cwd, Version: Version, Token: os.Getenv("LAFORGE_TOKEN")})
+	srv, err := forge.NewServer(forge.Options{Home: c.home, Cwd: *cwd, Version: Version, Token: os.Getenv("LAFORGE_TOKEN"), Holders: c.holders()})
 	if err != nil {
 		return err
 	}
@@ -431,6 +510,13 @@ func (c *cmd) serve(args []string) error {
 	}
 	select {
 	case <-ctx.Done():
+	case <-srv.Restarts():
+		fmt.Fprintln(c.cfg.Stdout, "LaForge restarting: held panes keep running")
+		srv.Detach()
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		_ = httpServer.Shutdown(shutdownCtx)
+		return nil
 	case err := <-errc:
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			return err
@@ -465,4 +551,23 @@ func openBrowser(url string) {
 		cmd = exec.Command("xdg-open", url)
 	}
 	_ = cmd.Start()
+}
+
+// agentLine is what a pane's program says it is doing, for la status.
+func agentLine(p forge.Pane) string {
+	if p.Status == nil {
+		return "-"
+	}
+	word := p.Status.State
+	if word == "done" && p.Seen {
+		word = "idle"
+	}
+	if p.Status.Msg != "" {
+		msg := p.Status.Msg
+		if len(msg) > 48 {
+			msg = msg[:47] + "…"
+		}
+		word += ": " + msg
+	}
+	return word
 }

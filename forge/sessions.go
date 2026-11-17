@@ -18,6 +18,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/RunOutcome/laforge/holder"
 	"github.com/RunOutcome/laforge/terminal"
 )
 
@@ -34,6 +35,17 @@ type Pane struct {
 	// Seen is set when a viewer has looked at the pane since its status last
 	// changed: a done agent that was seen is shown as idle (Herdr's rule).
 	Seen bool `json:"seen"`
+	// AgentSession is the agent's own session, as its hook reported it: what
+	// resuming the pane continues.
+	AgentSession *AgentSession `json:"agentSession,omitempty"`
+	// Held is set when the pane runs in a holder process and outlives the forge.
+	Held bool `json:"held"`
+}
+
+// AgentSession names an agent's own conversation (claude --resume <id>).
+type AgentSession struct {
+	Agent     string `json:"agent"`
+	SessionID string `json:"sessionId"`
 }
 
 type entry struct {
@@ -49,6 +61,12 @@ type entry struct {
 	// seenAt is the status time a viewer acknowledged (StatusSince then).
 	seenAt *time.Time
 	seen   bool // a viewer looked before any status
+	// agentSession is the agent's own session, for resume.
+	agentSession *AgentSession
+	// held is the pane's holder, when it has one.
+	held *holder.Client
+	// wrapped: the pane runs an agent in the wrapper that leaves a shell.
+	wrapped bool
 }
 
 // sessions holds every session the forge has started.
@@ -59,10 +77,15 @@ type sessions struct {
 	// home is the forge's folder, given to every pane as LAFORGE_HOME so a
 	// program in it (la report, la run) finds this forge.
 	home string
+	// holders starts panes in holder processes; nil runs them in this one.
+	holders *holder.Launcher
+	// lost are panes whose program is gone (the forge was stopped, or the
+	// machine restarted), kept so they can be resumed.
+	lost map[string]record
 }
 
 func newSessions(changed func(id string)) *sessions {
-	return &sessions{byID: map[string]*entry{}, changed: changed}
+	return &sessions{byID: map[string]*entry{}, changed: changed, lost: map[string]record{}}
 }
 
 // StartRequest is the body of POST /api/sessions.
@@ -72,6 +95,9 @@ type StartRequest struct {
 	Title   string `json:"title"`
 	Cols    uint16 `json:"cols"`
 	Rows    uint16 `json:"rows"`
+	// Resume names a lost pane to start again in its folder, continuing its
+	// agent's own session when the profile can.
+	Resume string `json:"resume,omitempty"`
 }
 
 // strippedEnv are variables of the process that started the forge that would
@@ -113,18 +139,12 @@ func (s *sessions) start(p Profile, req StartRequest, defaultCwd string, scrollb
 	}
 	command, args := p.Command, p.Args
 	display := strings.TrimSpace(p.Command + " " + strings.Join(p.Args, " "))
-	var exits *os.File
-	var extra []*os.File
-	if wrapsAgents && p.Agent {
+	wrapped := wrapsAgents && p.Agent
+	if wrapped {
 		// The agent runs inside a small wrapper that becomes the user's shell
 		// when the agent exits. The wrapper reports the exit on a private pipe
 		// (descriptor 3), which the agent itself never holds, so nothing the
 		// agent prints can fake it. The profile's Env reaches the agent only.
-		r, w, err := os.Pipe()
-		if err != nil {
-			return Pane{}, err
-		}
-		exits, extra = r, []*os.File{w}
 		command, args = thenShell(p)
 	} else {
 		env = append(append([]string{}, p.Env...), env...)
@@ -138,31 +158,77 @@ func (s *sessions) start(p Profile, req StartRequest, defaultCwd string, scrollb
 		Rows:       req.Rows,
 		InheritAll: true,
 		Unset:      strippedEnv,
-		ExtraFiles: extra,
-	}
-	session, err := terminal.Start(id, spec, scrollback, func(*terminal.Session) { s.notify(id) })
-	for _, f := range extra {
-		f.Close() // the child holds its own copy
-	}
-	if err != nil {
-		if exits != nil {
-			exits.Close()
-		}
-		return Pane{}, err
 	}
 	title := strings.TrimSpace(req.Title)
 	if title == "" {
 		title = p.Label
 	}
-	e := &entry{session: session, profile: p.Name, title: title, cwd: cwd, command: display}
-	if exits != nil {
-		go s.watchForShell(e, exits, p.Label)
+	e := &entry{profile: p.Name, title: title, cwd: cwd, command: display, wrapped: wrapped}
+	onChange := func(*terminal.Session) { s.notify(id) }
+	var agentExits <-chan int
+	if s.holders.Usable(id) {
+		hs := holder.Spec{ID: id, Command: command, Args: args, Workdir: cwd, Env: env, Columns: req.Cols, Rows: req.Rows,
+			Scrollback: scrollback, InheritAll: true, Unset: strippedEnv, ExitPipe: wrapped}
+		if err := s.holders.Start(hs, e.record(id, time.Now().UTC()).json()); err != nil {
+			return Pane{}, err
+		}
+		client, err := holder.Dial(s.holders.Dir, id, nil)
+		if err != nil {
+			return Pane{}, err
+		}
+		e.held = client
+		e.session = terminal.Attach(id, client, spec, scrollback, onChange)
+		e.session.SetStartedAt(client.First().Session.StartedAt)
+		agentExits = client.AgentExit()
+	} else {
+		var exits *os.File
+		if wrapped {
+			r, w, err := os.Pipe()
+			if err != nil {
+				return Pane{}, err
+			}
+			exits, spec.ExtraFiles = r, []*os.File{w}
+		}
+		session, err := terminal.Start(id, spec, scrollback, onChange)
+		for _, f := range spec.ExtraFiles {
+			f.Close() // the child holds its own copy
+		}
+		if err != nil {
+			if exits != nil {
+				exits.Close()
+			}
+			return Pane{}, err
+		}
+		e.session = session
+		if exits != nil {
+			agentExits = pipeExits(exits)
+		}
+	}
+	if agentExits != nil {
+		go s.watchForShell(e, agentExits, p.Label)
 	}
 	s.mu.Lock()
 	s.byID[id] = e
 	s.mu.Unlock()
+	s.save(e)
 	s.notify(id)
 	return e.pane(), nil
+}
+
+// pipeExits reads the wrapper's exit report from its pipe.
+func pipeExits(r *os.File) <-chan int {
+	ch := make(chan int, 1)
+	go func() {
+		defer r.Close()
+		line, err := bufio.NewReader(r).ReadString('\n')
+		if err != nil {
+			close(ch) // the pane ended without the agent finishing (stopped, killed)
+			return
+		}
+		code, _ := strconv.Atoi(strings.TrimSpace(line))
+		ch <- code
+	}()
+	return ch
 }
 
 func (s *sessions) notify(id string) {
@@ -183,7 +249,7 @@ func (e *entry) pane() Pane {
 		view.Command = e.command
 	}
 	seen := e.seen && view.Since == nil || e.seenAt != nil && view.Since != nil && !view.Since.After(*e.seenAt)
-	return Pane{SessionView: view, Profile: e.profile, Title: e.title, Cwd: e.cwd, After: e.after, AgentExit: e.agentExit, Seen: seen}
+	return Pane{SessionView: view, Profile: e.profile, Title: e.title, Cwd: e.cwd, After: e.after, AgentExit: e.agentExit, Seen: seen, AgentSession: e.agentSession, Held: e.held != nil}
 }
 
 // markSeen records that a viewer looked at the pane as it is now.
@@ -259,23 +325,51 @@ exec "$sh" -l`
 // watchForShell waits for the wrapper's report that the agent exited, then
 // relabels the pane as the shell it now is. The pane keeps a name the user
 // gave it; only the profile's own label is replaced.
-func (s *sessions) watchForShell(e *entry, exits *os.File, label string) {
-	defer exits.Close()
-	line, err := bufio.NewReader(exits).ReadString('\n')
-	if err != nil {
-		return // the pane ended without the agent finishing (stopped, killed)
+func (s *sessions) watchForShell(e *entry, exits <-chan int, label string) {
+	var code int
+	select {
+	case c, ok := <-exits:
+		if !ok {
+			return
+		}
+		code = c
+	case <-e.session.Done():
+		select { // the report and the end can arrive together
+		case c, ok := <-exits:
+			if !ok {
+				return
+			}
+			code = c
+		case <-time.After(200 * time.Millisecond):
+			return
+		}
 	}
-	code, _ := strconv.Atoi(strings.TrimSpace(line))
 	e.mu.Lock()
+	if e.after != "" { // already a shell (a forge before this one saw the exit)
+		e.mu.Unlock()
+		return
+	}
 	e.after, e.agentExit, e.profile, e.command = e.profile, &code, "shell", LoginShell()+" -l"
+	e.agentSession = nil
 	if e.title == label {
 		e.title = "Shell"
 	}
 	id := e.session.ID()
 	e.mu.Unlock()
 	// The agent is gone: what it said about itself is no longer true.
-	_, _ = e.session.Report(terminal.Report{Status: terminal.Status{State: "clear"}})
+	s.report(e, terminal.Report{Status: terminal.Status{State: "clear"}})
+	s.save(e)
 	s.notify(id)
+}
+
+// report applies a status report to the pane, and to its holder so the
+// report outlives this forge.
+func (s *sessions) report(e *entry, r terminal.Report) (bool, error) {
+	changed, err := e.session.Report(r)
+	if err == nil && e.held != nil {
+		_ = e.held.Report(r)
+	}
+	return changed, err
 }
 
 func (s *sessions) get(id string) (*entry, bool) {
@@ -307,6 +401,7 @@ func (s *sessions) rename(id, title string) (Pane, error) {
 		e.mu.Lock()
 		e.title = t
 		e.mu.Unlock()
+		s.save(e)
 		s.notify(id)
 	}
 	return e.pane(), nil
@@ -332,6 +427,10 @@ func (s *sessions) close(id string, force bool, grace time.Duration) error {
 		s.mu.Lock()
 		delete(s.byID, id)
 		s.mu.Unlock()
+		if e.held != nil {
+			e.held.Forget()
+		}
+		s.forgetRecord(id)
 		s.notify(id)
 	}()
 	return nil
@@ -352,6 +451,22 @@ func (s *sessions) stopAll(grace time.Duration) {
 	for _, e := range all {
 		if !e.session.Wait(time.Until(deadline)) {
 			_ = e.session.Stop(true)
+		}
+		if e.held != nil {
+			e.held.Forget()
+		}
+	}
+	// Their records stay: the next forge offers them to resume.
+}
+
+// detachAll lets go of every held pane without ending it (the forge is
+// restarting); panes this process runs itself end with it.
+func (s *sessions) detachAll() {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	for _, e := range s.byID {
+		if e.held != nil {
+			e.held.Detach()
 		}
 	}
 }

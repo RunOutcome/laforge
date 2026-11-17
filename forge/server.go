@@ -26,6 +26,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/RunOutcome/laforge/holder"
 	"github.com/coder/websocket"
 )
 
@@ -44,6 +45,10 @@ type Options struct {
 	Scrollback int
 	// Web replaces the embedded client (tests, development).
 	Web fs.FS
+	// Holders runs each pane in a holder process of its own, so panes outlive
+	// the forge; nil runs them in this process. At start the forge adopts
+	// the panes a forge before it left running.
+	Holders *holder.Launcher
 }
 
 // Server is the forge's HTTP surface.
@@ -57,6 +62,7 @@ type Server struct {
 	started  time.Time
 	events   *hub
 	last     map[string]Pane // each pane's last view, for its pane.closed event
+	restart  chan struct{}
 }
 
 const cookieName = "laforge_token"
@@ -83,9 +89,14 @@ func NewServer(opts Options) (*Server, error) {
 		}
 		web = sub
 	}
-	s := &Server{opts: opts, mux: http.NewServeMux(), cwd: opts.Cwd, started: time.Now(), events: newHub(), last: map[string]Pane{}}
+	s := &Server{opts: opts, mux: http.NewServeMux(), cwd: opts.Cwd, started: time.Now(), events: newHub(), last: map[string]Pane{}, restart: make(chan struct{}, 1)}
 	s.sessions = newSessions(s.changed)
 	s.sessions.home = opts.Home
+	s.sessions.holders = opts.Holders
+	s.sessions.adopt(opts.Scrollback)
+	for _, p := range s.sessions.list() {
+		s.last[p.ID] = p
+	}
 	s.routes(web)
 	return s, nil
 }
@@ -116,6 +127,15 @@ func (s *Server) defaultCwd() string {
 // Shutdown stops every session, waiting up to grace for them to exit.
 func (s *Server) Shutdown(grace time.Duration) { s.sessions.stopAll(grace) }
 
+// Detach lets go of every held pane and leaves it running for the next
+// forge to adopt (a restart, an update). Panes this process runs itself
+// (no holders) end with it.
+func (s *Server) Detach() { s.sessions.detachAll() }
+
+// Restarts delivers a request (POST /api/restart) for the forge to be
+// restarted with its panes kept; the host does the restart.
+func (s *Server) Restarts() <-chan struct{} { return s.restart }
+
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) { s.mux.ServeHTTP(w, r) }
 
 func (s *Server) routes(web fs.FS) {
@@ -129,6 +149,10 @@ func (s *Server) routes(web fs.FS) {
 	s.mux.HandleFunc("POST /api/sessions/{id}/status", s.auth(s.reportStatus))
 	s.mux.HandleFunc("POST /api/sessions/{id}/seen", s.auth(s.markSeen))
 	s.mux.HandleFunc("GET /api/events", s.auth(s.streamEvents))
+	s.mux.HandleFunc("POST /api/sessions/{id}/agent", s.auth(s.setAgentSession))
+	s.mux.HandleFunc("GET /api/lost", s.auth(s.listLost))
+	s.mux.HandleFunc("DELETE /api/lost/{id}", s.auth(s.dropLost))
+	s.mux.HandleFunc("POST /api/restart", s.auth(s.requestRestart))
 	s.mux.HandleFunc("GET /api/layout", s.auth(s.getLayout))
 	s.mux.HandleFunc("PUT /api/layout", s.auth(s.putLayout))
 	s.mux.HandleFunc("GET /api/config", s.auth(s.getConfig))
@@ -275,12 +299,38 @@ func (s *Server) startSession(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "profile_unavailable", chosen.Reason)
 		return
 	}
+	if req.Resume != "" {
+		lost, ok := s.sessions.takeLost(req.Resume)
+		if !ok {
+			writeError(w, http.StatusNotFound, "no_session", "There is no such lost pane.")
+			return
+		}
+		if req.Cwd == "" {
+			req.Cwd = lost.Cwd
+		}
+		if req.Title == "" && lost.Title != chosen.Label {
+			req.Title = lost.Title
+		}
+		if lost.AgentSession != nil && len(chosen.Resume) > 0 && lost.Profile == chosen.Name {
+			c := *chosen
+			c.Args = resumeArgs(c, lost.AgentSession.SessionID)
+			chosen = &c
+		}
+	}
 	pane, err := s.sessions.start(*chosen, req, s.defaultCwd(), s.opts.Scrollback)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "start", err.Error())
 		return
 	}
 	writeJSON(w, http.StatusCreated, pane)
+}
+
+func (s *Server) requestRestart(w http.ResponseWriter, r *http.Request) {
+	select {
+	case s.restart <- struct{}{}:
+	default:
+	}
+	w.WriteHeader(http.StatusAccepted)
 }
 
 func (s *Server) renameSession(w http.ResponseWriter, r *http.Request) {

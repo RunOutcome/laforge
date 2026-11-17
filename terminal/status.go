@@ -118,6 +118,8 @@ func parseReport(payload []byte) (Report, bool) {
 			r.Title = decode64(value)
 		case "msg":
 			r.Msg = decode64(value)
+		case "src":
+			r.Source = value
 		}
 	}
 	return r, r.Validate()
@@ -148,6 +150,7 @@ func (r Report) Encode() string {
 	add("app", r.App)
 	add("title", base64.StdEncoding.EncodeToString([]byte(r.Title)))
 	add("msg", base64.StdEncoding.EncodeToString([]byte(r.Msg)))
+	add("src", r.Source) // LaForge's own key; other readers ignore it
 	return "\x1b]7501;" + strings.Join(fields, ":") + "\x1b\\"
 }
 
@@ -326,4 +329,17 @@ func (b *statusBook) view(lastOutput, now time.Time) StatusView {
 		}
 	}
 	return v
+}
+
+// encodeAll is every record as OSC 7501, the root last, so a reader that
+// replays it ends with the records as they are now.
+func (b *statusBook) encodeAll() string {
+	var out strings.Builder
+	for id, s := range b.records {
+		out.WriteString(Report{ID: id, Status: s}.Encode())
+	}
+	if b.root != nil {
+		out.WriteString(Report{Status: *b.root}.Encode())
+	}
+	return out.String()
 }

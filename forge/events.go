@@ -149,7 +149,7 @@ func (s *Server) reportStatus(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "input", "The body is not JSON.")
 		return
 	}
-	if _, err := e.session.Report(rep); err != nil {
+	if _, err := s.sessions.report(e, rep); err != nil {
 		switch {
 		case errors.Is(err, terminal.ErrBadReport):
 			writeError(w, http.StatusBadRequest, "bad_report", err.Error())
