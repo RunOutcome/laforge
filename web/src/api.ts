@@ -3,6 +3,7 @@
 
 // The forge's HTTP API. base is '' for the standalone client; a host that
 // embeds the forge (the Outcome Arena) passes the forge's own origin.
+import type { Collection, Offer } from './collections';
 import type { InstallResult, SkinList } from './skins';
 
 export interface Profile {
@@ -152,6 +153,12 @@ export class ForgeApi {
   setDefaultSkin = (name: string) => this.call<{ default: string }>('PUT', '/api/skins/default', { name });
   installSkins = (source: string) => this.call<InstallResult>('POST', '/api/skins/install', { source });
   removeSkin = (name: string) => this.call<void>('DELETE', `/api/skins/${encodeURIComponent(name)}`);
+  collections = () => this.call<Collection[]>('GET', '/api/skins/collections');
+  addCollection = (source: string) => this.call<Collection>('POST', '/api/skins/collections', { source });
+  removeCollection = (id: string) => this.call<void>('DELETE', `/api/skins/collections/${encodeURIComponent(id)}`);
+  collectionSkins = (id: string, refresh = false) => this.call<Offer[]>('GET', `/api/skins/collections/${encodeURIComponent(id)}/skins${refresh ? '?refresh=1' : ''}`);
+  /** installFrom installs skins from a collection by name; no names installs all. */
+  installFrom = (collection: string, names: string[]) => this.call<InstallResult>('POST', '/api/skins/install', { collection, names });
   layout = () => this.call<unknown>('GET', '/api/layout');
   saveLayout = (layout: unknown) => this.call<void>('PUT', '/api/layout', layout);
 

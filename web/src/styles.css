@@ -951,10 +951,15 @@ kbd {
   margin: 0 0 6px;
 }
 
-.themes-list {
+.themes-body {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.themes-list {
   padding: 4px;
 }
 
@@ -1125,7 +1130,6 @@ kbd {
 }
 
 .themes-install {
-  flex: none;
   padding: 4px 8px 10px;
   border-top: 1px solid var(--line-2);
 }
@@ -1218,6 +1222,173 @@ kbd {
   border-top-color: var(--acc);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
+}
+
+/* Get more: collections and the skins they offer */
+.themes-more {
+  padding: 4px 8px 10px;
+  border-top: 1px solid var(--line-2);
+}
+
+.themes-sub {
+  display: block;
+  margin: 0;
+  padding-left: 0;
+}
+
+.more-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.more-tab {
+  max-width: 100%;
+  height: 24px;
+  padding: 0 9px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--tx-2);
+  font: 500 11.5px/1 var(--font-ui);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.more-tab:hover {
+  background: var(--hover);
+}
+
+.more-tab.is-selected {
+  border-color: var(--acc);
+  background: color-mix(in oklab, var(--acc) 14%, transparent);
+  color: var(--tx);
+}
+
+.more-desc {
+  margin: 0 0 6px;
+  overflow-wrap: anywhere;
+}
+
+.more-bar,
+.more-confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.more-btn {
+  height: 22px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-button-sm);
+  background: var(--card);
+  color: var(--tx);
+  font: 500 11.5px/1 var(--font-ui);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.more-btn:hover:not(:disabled) {
+  border-color: var(--acc);
+}
+
+.more-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.more-btn.is-primary {
+  background: var(--acc-fill);
+  border-color: var(--acc-fill);
+  color: var(--on-acc, #fff);
+}
+
+.more-btn.theme-danger {
+  border-color: var(--red);
+  background: var(--red);
+  color: var(--on-red);
+}
+
+.more-btn .spinner {
+  width: 10px;
+  height: 10px;
+}
+
+.more-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 4px;
+}
+
+.more-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 4px;
+  border-radius: var(--radius-control);
+}
+
+.more-row:hover {
+  background: var(--hover);
+}
+
+.more-row.is-problem .more-text > :not(.more-error) {
+  opacity: 0.55;
+}
+
+.more-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.more-about {
+  font-size: 11.5px;
+  color: var(--tx-2);
+}
+
+.more-error {
+  padding-left: 0;
+  font-size: 11.5px;
+}
+
+.more-actions {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.more-installed {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11.5px;
+  color: var(--green);
+}
+
+.install-status.is-ok {
+  color: var(--green);
+}
+
+.install-status .more-btn {
+  margin-left: 4px;
+}
+
+.more-add {
+  margin-top: 10px;
 }
 
 @keyframes spin {
@@ -2263,6 +2434,22 @@ body.dragging-col * {
   }
   .themes-form input {
     font-size: 16px;
+    height: 36px;
+  }
+  .themes-install-btn,
+  .more-btn,
+  .theme-actions button {
+    height: 34px;
+    padding: 0 12px;
+    font-size: 13px;
+  }
+  .more-tab {
+    height: 32px;
+    padding: 0 12px;
+    font-size: 13px;
+  }
+  .more-row {
+    flex-wrap: wrap;
   }
   .agents {
     position: absolute;

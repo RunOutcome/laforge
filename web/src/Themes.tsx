@@ -3,8 +3,11 @@
 
 // The themes panel: every skin the forge has, with its light and dark
 // colours; pick one for this browser, make one the forge's default, remove
-// an installed one, or install more from a folder or a GitHub repo.
+// an installed one, get more from the forge's collections, or install from
+// a folder or a GitHub repo.
 import { useState } from 'react';
+import type { CollectionsApi } from './collections';
+import { GetMore } from './GetMore';
 import * as K from './skins';
 import * as I from './icons';
 
@@ -16,9 +19,15 @@ interface Props {
   onRemove: (name: string) => Promise<unknown>;
   onInstall: (source: string) => Promise<K.InstallResult>;
   onClose: () => void;
+  /** collections: the forge's collection routes, for "Get more"; left out, the section is not drawn. */
+  collections?: CollectionsApi;
+  /** onInstalled refreshes the installed list after "Get more" installs. */
+  onInstalled?: () => Promise<unknown> | unknown;
+  /** moreInitial: a starting state for "Get more", for tests and screenshots. */
+  moreInitial?: Parameters<typeof GetMore>[0]['initial'];
 }
 
-export function Themes({ list, active, onPick, onDefault, onRemove, onInstall, onClose }: Props) {
+export function Themes({ list, active, onPick, onDefault, onRemove, onInstall, onClose, collections, onInstalled, moreInitial }: Props) {
   const [confirming, setConfirming] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [rowError, setRowError] = useState<{ name: string; reason: string } | null>(null);
@@ -67,93 +76,90 @@ export function Themes({ list, active, onPick, onDefault, onRemove, onInstall, o
           <I.SmallClose />
         </button>
       </header>
-      <div className="themes-list" role="list">
-        {skins.map((k) => {
-          const sw = K.swatches(k);
-          const isActive = k.name === active;
-          const isDefault = k.name === (list?.default ?? 'classic');
-          return (
-            <div key={k.name} role="listitem" className={`theme-row ${isActive ? 'is-active' : ''}`} data-skin-name={k.name}>
-              <button className="theme-pick" title={`Use ${k.label} in this browser`} aria-pressed={isActive} onClick={() => onPick(k.name)}>
-                <span className="theme-strips" aria-hidden>
-                  <Strip s={sw.light} />
-                  <Strip s={sw.dark} />
-                </span>
-                <span className="theme-text">
-                  <span className="theme-top">
-                    <span className="theme-label">{k.label}</span>
-                    <span className={`theme-tag ${k.builtin ? 'is-builtin' : 'is-installed'}`}>{k.builtin ? 'built in' : 'installed'}</span>
-                    {isDefault && <span className="theme-tag is-default">forge default</span>}
+      <div className="themes-body">
+        <div className="themes-list" role="list">
+          {skins.map((k) => {
+            const sw = K.swatches(k);
+            const isActive = k.name === active;
+            const isDefault = k.name === (list?.default ?? 'classic');
+            return (
+              <div key={k.name} role="listitem" className={`theme-row ${isActive ? 'is-active' : ''}`} data-skin-name={k.name}>
+                <button className="theme-pick" title={`Use ${k.label} in this browser`} aria-pressed={isActive} onClick={() => onPick(k.name)}>
+                  <span className="theme-strips" aria-hidden>
+                    <Strip s={sw.light} />
+                    <Strip s={sw.dark} />
                   </span>
-                  <span className="theme-meta">
-                    {[k.author, K.layoutOf(k)].filter(Boolean).join(' · ')}
-                    {k.source ? <span className="theme-source" title={k.source}>{` · ${k.source}`}</span> : null}
+                  <span className="theme-text">
+                    <span className="theme-top">
+                      <span className="theme-label">{k.label}</span>
+                      <span className={`theme-tag ${k.builtin ? 'is-builtin' : 'is-installed'}`}>{k.builtin ? 'built in' : 'installed'}</span>
+                      {isDefault && <span className="theme-tag is-default">forge default</span>}
+                    </span>
+                    <span className="theme-meta">
+                      {[k.author, K.layoutOf(k)].filter(Boolean).join(' · ')}
+                      {k.source ? <span className="theme-source" title={k.source}>{` · ${k.source}`}</span> : null}
+                    </span>
                   </span>
-                </span>
-                <span className="theme-check">{isActive && <I.Check />}</span>
-              </button>
-              {confirming === k.name ? (
-                <span className="theme-actions theme-confirm">
-                  <span className="theme-confirm-text">Remove {k.label} from the forge?</span>
-                  <button
-                    className="theme-danger"
-                    disabled={busy === k.name}
-                    onClick={() =>
-                      run(k.name, async () => {
-                        await onRemove(k.name);
-                        setConfirming(null);
-                      })
-                    }
-                  >
-                    Remove
-                  </button>
-                  <button onClick={() => setConfirming(null)}>Cancel</button>
-                </span>
-              ) : (
-                <span className="theme-actions">
-                  {!isDefault && (
-                    <button disabled={busy === k.name} onClick={() => run(k.name, () => onDefault(k.name))}>
-                      Make forge default
-                    </button>
-                  )}
-                  {!k.builtin && (
-                    <button className="theme-remove" disabled={busy === k.name} onClick={() => setConfirming(k.name)}>
+                  <span className="theme-check">{isActive && <I.Check />}</span>
+                </button>
+                {confirming === k.name ? (
+                  <span className="theme-actions theme-confirm">
+                    <span className="theme-confirm-text">Remove {k.label} from the forge?</span>
+                    <button
+                      className="theme-danger"
+                      disabled={busy === k.name}
+                      onClick={() =>
+                        run(k.name, async () => {
+                          await onRemove(k.name);
+                          setConfirming(null);
+                        })
+                      }
+                    >
                       Remove
                     </button>
-                  )}
-                </span>
-              )}
-              {rowError?.name === k.name && <span className="theme-error">{rowError.reason}</span>}
-            </div>
-          );
-        })}
+                    <button onClick={() => setConfirming(null)}>Cancel</button>
+                  </span>
+                ) : (
+                  <span className="theme-actions">
+                    {!isDefault && (
+                      <button disabled={busy === k.name} onClick={() => run(k.name, () => onDefault(k.name))}>
+                        Make forge default
+                      </button>
+                    )}
+                    {!k.builtin && (
+                      <button className="theme-remove" disabled={busy === k.name} onClick={() => setConfirming(k.name)}>
+                        Remove
+                      </button>
+                    )}
+                  </span>
+                )}
+                {rowError?.name === k.name && <span className="theme-error">{rowError.reason}</span>}
+              </div>
+            );
+          })}
+        </div>
+        {collections && <GetMore api={collections} installedNames={skins.map((k) => k.name)} active={active} onPick={onPick} onInstalled={onInstalled ?? (() => undefined)} initial={moreInitial} />}
+        <section className="themes-install">
+          <label className="agents-sub" htmlFor="themes-source">
+            Install from a link
+          </label>
+          <p className="themes-help themes-lead">From a folder path or GitHub repo (owner/repo, a github.com URL).</p>
+          <form
+            className="themes-form"
+            onSubmit={(e) => {
+              e.preventDefault();
+              doInstall();
+            }}
+          >
+            <input value={source} spellCheck={false} id="themes-source" placeholder="~/my-skin or owner/repo" onChange={(e) => setSource(e.target.value)} />
+            <button type="submit" className="themes-install-btn" disabled={!source.trim() || install.kind === 'busy'}>
+              Install
+            </button>
+          </form>
+          <p className="themes-help">A repo or folder may hold one skin (a skin.json at its top), or many in subfolders or under skins/.</p>
+          <InstallStatus state={install} />
+        </section>
       </div>
-      <section className="themes-install">
-        <label className="agents-sub" htmlFor="themes-source">
-          Install
-        </label>
-        <p className="themes-help themes-lead">From a folder path or GitHub repo (owner/repo, a github.com URL).</p>
-        <form
-          className="themes-form"
-          onSubmit={(e) => {
-            e.preventDefault();
-            doInstall();
-          }}
-        >
-          <input
-            value={source}
-            spellCheck={false}
-            id="themes-source"
-            placeholder="~/my-skin or owner/repo"
-            onChange={(e) => setSource(e.target.value)}
-          />
-          <button type="submit" className="themes-install-btn" disabled={!source.trim() || install.kind === 'busy'}>
-            Install
-          </button>
-        </form>
-        <p className="themes-help">A repo or folder may hold one skin (a skin.json at its top), or many in subfolders or under skins/.</p>
-        <InstallStatus state={install} />
-      </section>
     </aside>
   );
 }

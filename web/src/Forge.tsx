@@ -1293,6 +1293,8 @@ export function Forge({ api: given, embedded = false }: Props) {
           onDefault={makeDefaultSkin}
           onRemove={removeSkin}
           onInstall={installSkins}
+          collections={api}
+          onInstalled={loadSkins}
           onClose={() => setThemesOpen(false)}
         />
       )}
