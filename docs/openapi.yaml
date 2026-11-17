@@ -1,0 +1,214 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2026 COR Holdings, LLC
+openapi: 3.1.0
+info:
+  title: LaForge forge API
+  version: 0.2.0
+  description: |
+    The forge's HTTP API: what the web client, `la`, Outcome (`out la`), the
+    Arena and any other client use. Every route but /api/health needs the
+    forge's token: the `laforge_token` cookie the link sets, or
+    `Authorization: Bearer <token>`. Changes from a browser are accepted only
+    from the forge's own origin. A share token (`laforge_view` cookie, or
+    `Authorization: View <token>`) opens one pane read-only; see /api/shares.
+    Refusals are `{"error": code, "reason": text}`.
+servers:
+  - url: http://127.0.0.1:4646
+security:
+  - bearer: []
+  - cookie: []
+components:
+  securitySchemes:
+    bearer: { type: http, scheme: bearer }
+    cookie: { type: apiKey, in: cookie, name: laforge_token }
+  schemas:
+    Error:
+      type: object
+      required: [error, reason]
+      properties: { error: { type: string }, reason: { type: string } }
+    Status:
+      description: A program's status record, in its own words (OSC 7501 or a hook).
+      type: object
+      required: [state]
+      properties:
+        state: { enum: [idle, working, done, blocked, error] }
+        kind: { enum: [permission, question, auth], description: blocked only }
+        progress: { type: integer, minimum: 0, maximum: 100 }
+        app: { type: string }
+        title: { type: string }
+        msg: { type: string }
+        source: { enum: [hook], description: absent for the program's own report }
+    Report:
+      description: A status report. state "clear" removes the record (and its children).
+      allOf:
+        - $ref: '#/components/schemas/Status'
+        - type: object
+          properties:
+            state: { enum: [idle, working, done, blocked, error, clear] }
+            id: { type: string, description: 'a child record ("build", "tests/unit"); empty is the pane' }
+    Pane:
+      type: object
+      required: [id, command, state, stopped, startedAt, lastOutputAt, columns, rows, bytesOut, profile, title, cwd, turn, reported, seen, held]
+      properties:
+        id: { type: string, example: s-1a2b3c4d5e6f }
+        command: { type: string }
+        state: { enum: [starting, running, idle, complete, failed], description: the process, from its output and exit }
+        exitCode: { type: integer }
+        lastError: { type: string }
+        stopped: { type: boolean }
+        startedAt: { type: string, format: date-time }
+        lastOutputAt: { type: string, format: date-time }
+        endedAt: { type: string, format: date-time }
+        columns: { type: integer }
+        rows: { type: integer }
+        bytesOut: { type: integer }
+        pid: { type: integer }
+        profile: { type: string }
+        title: { type: string }
+        cwd: { type: string }
+        after: { type: string, description: the agent profile the pane ran before it became a shell }
+        agentExit: { type: integer }
+        status: { $ref: '#/components/schemas/Status' }
+        records: { type: object, additionalProperties: { $ref: '#/components/schemas/Status' } }
+        statusSince: { type: string, format: date-time }
+        turn: { type: integer, description: times the status left working }
+        reported: { type: boolean, description: the program ever reported a status }
+        seen: { type: boolean, description: 'a viewer looked since the status changed; a seen "done" shows as idle' }
+        agentSession: { type: object, properties: { agent: { type: string }, sessionId: { type: string } } }
+        held: { type: boolean, description: runs in a holder process and outlives the forge }
+        parent: { type: string }
+        outlive: { type: boolean }
+        notes: { type: boolean }
+        labels: { type: object, additionalProperties: { type: string } }
+        asking:
+          type: object
+          description: a permission the agent waits for a person to answer
+          properties: { msg: { type: string }, since: { type: string, format: date-time } }
+    StartRequest:
+      type: object
+      properties:
+        profile: { type: string, default: shell }
+        cwd: { type: string }
+        title: { type: string }
+        cols: { type: integer }
+        rows: { type: integer }
+        args: { type: array, items: { type: string }, description: added after the profile's own }
+        argv: { type: array, items: { type: string }, description: run this command instead of a profile }
+        resume: { type: string, description: a lost pane to start again, continuing its agent session }
+        parent: { type: string }
+        outliveParent: { type: boolean }
+        notes: { type: boolean }
+        labels: { type: object, additionalProperties: { type: string } }
+    LostPane:
+      type: object
+      properties:
+        id: { type: string }
+        profile: { type: string }
+        title: { type: string }
+        cwd: { type: string }
+        agentSession: { type: object }
+        startedAt: { type: string, format: date-time }
+        lostAt: { type: string, format: date-time }
+        resumable: { type: boolean }
+    Share:
+      type: object
+      properties:
+        token: { type: string }
+        pane: { type: string }
+        created: { type: string, format: date-time }
+        expires: { type: string, format: date-time }
+paths:
+  /api/health:
+    get:
+      security: []
+      responses: { '200': { description: '{ok, product: "laforge", version, pid, startedAt}' } }
+  /api/whoami:
+    get: { responses: { '200': { description: '{mode: "full"} or, with a share token, {mode: "view", pane}' } } }
+  /api/profiles:
+    get: { responses: { '200': { description: profiles, each with available and reason } } }
+  /api/sessions:
+    get:
+      responses:
+        '200': { description: every pane, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Pane' } } } } }
+    post:
+      requestBody: { content: { application/json: { schema: { $ref: '#/components/schemas/StartRequest' } } } }
+      responses:
+        '201': { description: the new pane, content: { application/json: { schema: { $ref: '#/components/schemas/Pane' } } } }
+        '400': { description: 'no_profile, profile_unavailable, no_parent, start' }
+        '404': { description: 'resume names no lost pane' }
+  /api/sessions/{id}:
+    parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+    patch:
+      requestBody: { content: { application/json: { schema: { type: object, properties: { title: { type: string } } } } } }
+      responses: { '200': { description: the pane } }
+    delete:
+      parameters: [{ name: force, in: query, schema: { enum: ['1'] } }]
+      responses: { '204': { description: stopping; forgotten once it has ended } }
+  /api/sessions/{id}/stream:
+    get:
+      description: |
+        WebSocket. Binary frames: the retained output, then live output.
+        Text frames from the client: {"type":"input","data":…} or
+        {"type":"resize","cols":…,"rows":…} (ignored on a share). Closes with
+        "ended" (1000) when the pane ends, 4408 when the viewer fell behind.
+      responses: { '101': { description: switching protocols } }
+  /api/sessions/{id}/status:
+    post:
+      description: A status report for the pane, meaning what the same OSC 7501 would.
+      requestBody: { content: { application/json: { schema: { $ref: '#/components/schemas/Report' } } } }
+      responses: { '200': { description: the pane }, '400': { description: bad_report }, '409': { description: ended } }
+  /api/sessions/{id}/seen:
+    post: { responses: { '200': { description: the pane, now seen } } }
+  /api/sessions/{id}/agent:
+    post:
+      description: The agent's hook names its own session, for resume.
+      requestBody: { content: { application/json: { schema: { type: object, properties: { agent: { type: string }, sessionId: { type: string } } } } } }
+      responses: { '200': { description: the pane } }
+  /api/sessions/{id}/input:
+    post:
+      description: Typed as if by the pane's viewer, after 3 s with no typing from them (at most a minute).
+      requestBody: { content: { application/json: { schema: { type: object, properties: { text: { type: string }, enter: { type: boolean } } } } } }
+      responses: { '200': { description: the pane }, '409': { description: ended } }
+  /api/sessions/{id}/output:
+    get:
+      parameters:
+        - { name: lines, in: query, schema: { type: integer, default: 100 } }
+        - { name: raw, in: query, schema: { enum: ['1'] } }
+      responses: { '200': { description: the last lines as text/plain, or the retained bytes with raw=1 } }
+  /api/sessions/{id}/ask:
+    post:
+      description: A hook waits (up to wait seconds, at most 600) for a person to allow or deny.
+      requestBody: { content: { application/json: { schema: { type: object, required: [wait], properties: { msg: { type: string }, app: { type: string }, wait: { type: number } } } } } }
+      responses: { '200': { description: '{decision: "allow" | "deny" | ""} ("" when no one answered)' } }
+  /api/sessions/{id}/answer:
+    post:
+      requestBody: { content: { application/json: { schema: { type: object, properties: { decision: { enum: [allow, deny] } } } } } }
+      responses: { '200': { description: delivered }, '409': { description: not_asking } }
+  /api/events:
+    get:
+      description: |
+        Server-sent events: "panes" (every pane) first, then "pane.changed"
+        and "pane.closed", each {seq, type, at, pane}. A follower that falls
+        behind is dropped and reconnects for a fresh "panes".
+      responses: { '200': { description: text/event-stream } }
+  /api/lost:
+    get:
+      responses: { '200': { description: panes whose program is gone, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/LostPane' } } } } } }
+  /api/lost/{id}:
+    delete: { responses: { '204': { description: dropped } } }
+  /api/shares:
+    get: { responses: { '200': { description: live shares, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Share' } } } } } } }
+    post:
+      description: A read-only link (/?view=TOKEN) to one pane, for at most 168h.
+      requestBody: { content: { application/json: { schema: { type: object, properties: { pane: { type: string }, for: { type: string, example: 2h } } } } } }
+      responses: { '201': { description: the share } }
+  /api/shares/{token}:
+    delete: { responses: { '204': { description: revoked } } }
+  /api/restart:
+    post: { responses: { '202': { description: the forge detaches from its held panes and exits for its host to start the next one } } }
+  /api/layout:
+    get: { responses: { '200': { description: the client's layout, or null } } }
+    put: { responses: { '204': { description: saved } } }
+  /api/config:
+    get: { responses: { '200': { description: '{cwd, host, user, version}' } } }
+    put: { responses: { '200': { description: 'new panes start in cwd' } } }

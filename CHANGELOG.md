@@ -5,6 +5,41 @@ All notable changes to LaForge. The format follows
 [Semantic Versioning](https://semver.org/). A release's notes are its section
 here, so each tag needs one.
 
+## [Unreleased]
+
+Agents you can see, keep and hand work to.
+
+### Added
+
+- **Agent status.** A program reports what it is doing with OSC 7501, the
+  Program Status Protocol herdr-core reads (docs/status-protocol.md), or
+  with `la report`. `la hooks install` makes Claude Code and Codex report
+  through their own hooks; the hook does nothing outside a LaForge pane, and
+  your settings file keeps its order (uninstall gives it back byte for byte).
+- **In the browser:** status badges on panes and tabs, an agents panel
+  (Ctrl-b a) with the most urgent first, browser notifications and an
+  optional chime when an agent is blocked, errs or is done, and the blocked
+  count in the page title. "Done" turns to idle once you have looked.
+- **Panes outlive the forge.** Each pane runs in a holder process of its
+  own; `la restart` (after an update) keeps every pane running on the same
+  port and token, and open browsers reconnect. A forge that dies gives its
+  token to the next one. Not yet on Windows.
+- **Resume.** Panes whose program is gone (`la down`, a reboot) are offered
+  to resume; Claude Code and Codex panes continue their own session
+  (`claude --resume`, `codex resume`).
+- **Agents run agents.** `la run [--bg]`, `la ls`, `la send`, `la read`,
+  `la wait`, `la events`, `la close`, and `la --skill` (how an agent uses
+  them, in one read). A pane started from a pane is its child: it ends with
+  its parent unless `--outlive-parent`, and the parent is told when it is
+  blocked, errs, is done or ends. A send waits while a person is typing.
+- **Answer from the browser.** With `la hooks install claude --answer 90s`,
+  Claude Code's permission requests show Allow and Deny on the pane (and
+  `la answer`); with no answer in time Claude asks in its terminal as usual.
+- **Share a pane read-only:** `la share PANE` gives a link that watches one
+  pane, ignores its input, expires and can be revoked.
+- `GET /api/events` (server-sent pane changes) and the API as a contract,
+  docs/openapi.yaml, checked against the routes by a test.
+
 ## [0.1.0] - 2026-11-14
 
 The first release of the new, standalone LaForge: many shells and AI agents,

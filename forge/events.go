@@ -180,3 +180,32 @@ func (s *Server) markSeen(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, e.pane())
 }
+
+// settle publishes status changes no report announced (a hook's silent
+// "working" settling to idle), so followers such as la wait hear of them.
+func (s *Server) settle(every time.Duration, stop <-chan struct{}) {
+	t := time.NewTicker(every)
+	defer t.Stop()
+	for {
+		select {
+		case <-stop:
+			return
+		case <-t.C:
+		}
+		for _, p := range s.sessions.list() {
+			s.mu.Lock()
+			last, ok := s.last[p.ID]
+			s.mu.Unlock()
+			if ok && statusWord(last) != statusWord(p) {
+				s.changed(p.ID)
+			}
+		}
+	}
+}
+
+func statusWord(p Pane) string {
+	if p.Status == nil {
+		return ""
+	}
+	return p.Status.State
+}

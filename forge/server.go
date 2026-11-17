@@ -64,6 +64,8 @@ type Server struct {
 	last     map[string]Pane // each pane's last view, for its pane.closed event
 	restart  chan struct{}
 	shares   *shares
+	stop     chan struct{}
+	stopOnce sync.Once
 }
 
 const cookieName = "laforge_token"
@@ -99,6 +101,8 @@ func NewServer(opts Options) (*Server, error) {
 	for _, p := range s.sessions.list() {
 		s.last[p.ID] = p
 	}
+	s.stop = make(chan struct{})
+	go s.settle(5*time.Second, s.stop)
 	s.routes(web)
 	return s, nil
 }
@@ -127,12 +131,18 @@ func (s *Server) defaultCwd() string {
 }
 
 // Shutdown stops every session, waiting up to grace for them to exit.
-func (s *Server) Shutdown(grace time.Duration) { s.sessions.stopAll(grace) }
+func (s *Server) Shutdown(grace time.Duration) {
+	s.stopOnce.Do(func() { close(s.stop) })
+	s.sessions.stopAll(grace)
+}
 
 // Detach lets go of every held pane and leaves it running for the next
 // forge to adopt (a restart, an update). Panes this process runs itself
 // (no holders) end with it.
-func (s *Server) Detach() { s.sessions.detachAll() }
+func (s *Server) Detach() {
+	s.stopOnce.Do(func() { close(s.stop) })
+	s.sessions.detachAll()
+}
 
 // Restarts delivers a request (POST /api/restart) for the forge to be
 // restarted with its panes kept; the host does the restart.
