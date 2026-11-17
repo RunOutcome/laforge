@@ -24,6 +24,21 @@ what other browsers see until they pick their own.
 client sets `data-mode="light"` or `data-mode="dark"` on the root and the
 skin styles both.
 
+## Start one
+
+```sh
+la skin new my-theme        # skin.json, skin.css (light and dark), README.md
+la skin check my-theme      # what install would refuse, then warnings
+la skin install my-theme
+```
+
+`la skin check` warns about what install allows but people notice: a mode
+the stylesheets never style, a mode with no terminal palette, terminal text
+under 4.5:1, no licence or description. An agent can build a theme for you
+with the `laforge-theme` skill in this repository
+(`.claude/skills/laforge-theme/`; Claude Code picks it up when run here, or
+copy the folder to `~/.claude/skills/`).
+
 ## Install and choose
 
 ```

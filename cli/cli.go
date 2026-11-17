@@ -188,6 +188,8 @@ Usage:
                      how the forge looks; SOURCE is a folder, owner/repo[@ref]
                      or a github.com link, holding one skin or many
                      (docs/skins.md to make one)
+  %[1]s skin new NAME [DIR] | skin check DIR
+                     start a skin (light and dark) / check one before installing
   %[1]s skin browse [COLLECTION] | skin install official[/NAME]…
   %[1]s skin collections [add LINK | remove ID]
                      get skins from collections: official (released with

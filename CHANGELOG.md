@@ -37,6 +37,11 @@ Agents you can see, keep and hand work to.
   `la answer`); with no answer in time Claude asks in its terminal as usual.
 - **Share a pane read-only:** `la share PANE` gives a link that watches one
   pane, ignores its input, expires and can be revoked.
+- **Themes:** installable skins, each in light and dark: Classic, Console
+  and seven official ones; install from collections (official, library, or
+  any repo added by link) in the Themes panel or with `la skin`.
+  `la skin new` starts one and `la skin check` checks it; the
+  `laforge-theme` agent skill builds one (docs/skins.md).
 - `GET /api/events` (server-sent pane changes) and the API as a contract,
   docs/openapi.yaml, checked against the routes by a test.
 

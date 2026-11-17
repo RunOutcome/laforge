@@ -17,7 +17,7 @@ import (
 	"github.com/RunOutcome/laforge/forge"
 )
 
-const skinUsage = "skin list | browse [COLLECTION] | install SOURCE|COLLECTION[/NAME]… | collections [add LINK | remove ID] | update [NAME] | remove NAME | use NAME"
+const skinUsage = "skin list | new NAME [DIR] | check DIR | browse [COLLECTION] | install SOURCE|COLLECTION[/NAME]… | collections [add LINK | remove ID] | update [NAME] | remove NAME | use NAME"
 
 // skin is `la skin list|install SOURCE|update [NAME]|remove NAME|use NAME`.
 func (c *cmd) skin(args []string) error {
@@ -36,6 +36,32 @@ func (c *cmd) skin(args []string) error {
 			return usageError{errors.New("skin install takes one source (or collection skins: official/NAME …)")}
 		}
 		return c.skinInstall(args[1])
+	case "new":
+		if len(args) < 2 || len(args) > 3 {
+			return usageError{errors.New("skin new NAME [DIR]")}
+		}
+		dir := args[1]
+		if len(args) == 3 {
+			dir = args[2]
+		}
+		if err := forge.NewSkin(dir, args[1], ""); err != nil {
+			return err
+		}
+		fmt.Fprintf(c.cfg.Stdout, "made %s in %s (skin.json, skin.css, README.md)\nnext: edit skin.css, then %s skin check %s && %s skin install %s\n", args[1], dir, c.cfg.Prog, dir, c.cfg.Prog, dir)
+		return nil
+	case "check":
+		if len(args) != 2 {
+			return usageError{errors.New("skin check DIR")}
+		}
+		res, err := forge.CheckSkin(args[1])
+		if err != nil {
+			return fmt.Errorf("%s would not install: %v", args[1], err)
+		}
+		fmt.Fprintf(c.cfg.Stdout, "%s (%s, %s layout) installs\n", res.Skin.Name, res.Skin.Label, res.Skin.Layout)
+		for _, w := range res.Warnings {
+			fmt.Fprintf(c.cfg.Stdout, "  warning: %s\n", w)
+		}
+		return nil
 	case "browse":
 		if len(args) > 2 {
 			return usageError{errors.New("skin browse [COLLECTION]")}
