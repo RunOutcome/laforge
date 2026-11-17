@@ -1,0 +1,799 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+/* SPDX-FileCopyrightText: 2026 COR Holdings, LLC */
+
+/* Dungeon Party: the forge as a candlelit tavern table. The rail is a
+   parchment roster: the tavern sign, a quest log of spaces with wax seals,
+   and the party, each marked by what they are doing (swords while working, a
+   d20 when only you can roll, a star when the quest is done, a moon while
+   resting). Panes are iron-bound slates; lost panes wait to be revived at
+   the inn. Layout: rail. Mode: dark. System faces only. */
+
+:root[data-skin='dungeon-party'] {
+  /* the skin's own colours */
+  --d-wood: #2a1c12;
+  --d-wood-2: #22170f;
+  --d-parch: #e9d9b4;
+  --d-parch-2: #d9c393;
+  --d-parch-edge: #a9824a;
+  --d-ink: #2b1d10;
+  --d-ink-2: #5a4127;
+  --d-gold: #e3b24f;
+  --d-gold-2: #f5d27e;
+  --d-iron: #4a443d;
+  --d-iron-2: #6d665c;
+  --d-seal: #9e2b25;
+  --d-slate: #15110d;
+  --d-candle: rgba(255, 186, 92, 0.16);
+
+  /* the forge's tokens */
+  --canvas: #1f150e;
+  --side: #22170f;
+  --sunken: #1a120c;
+  --card: #261b13;
+  --term: #15110d;
+  --hover: rgba(227, 178, 79, 0.1);
+  --press: rgba(227, 178, 79, 0.18);
+  --line: #4a3a28;
+  --line-2: #33271b;
+  --tx: #f0e4c8;
+  --tx-2: #cbb88f;
+  --tx-3: #8f7b5c;
+  --acc: #e3b24f;
+  --acc-500: #f5d27e;
+  --acc-100: rgba(227, 178, 79, 0.18);
+  --acc-fill: #c8902e;
+  --on-acc: #1f150e;
+  --ai: #b783c4;
+  --ai-600: #cfa3da;
+  --ai-100: rgba(183, 131, 196, 0.28);
+  --ai-50: rgba(183, 131, 196, 0.14);
+  --red: #d4553f;
+  --red-50: rgba(212, 85, 63, 0.16);
+  --amber: #e3b24f;
+  --amber-50: rgba(227, 178, 79, 0.15);
+  --green: #8fb35a;
+  --todo: #8f7b5c;
+  --on-red: #1f150e;
+  --scrim: rgba(12, 8, 4, 0.74);
+  --e2: 0 3px 8px rgba(0, 0, 0, 0.5);
+  --e3: 0 18px 50px rgba(0, 0, 0, 0.65);
+  --shadow-tab: none;
+  --font-ui: 'Palatino', 'Palatino Linotype', 'Book Antiqua', 'Georgia', serif;
+  --font-display: 'Herculanum', 'Copperplate', 'Trajan Pro', 'Palatino', serif;
+  --d-font-label: 'Copperplate', 'Copperplate Gothic Light', 'Palatino', serif;
+  --radius-pane: 6px;
+  --radius-dialog: 8px;
+  --radius-card: 6px;
+  --radius-control: 4px;
+  --radius-button: 4px;
+  --radius-button-sm: 3px;
+  --radius-chip: 3px;
+  --rail-width: 256px;
+  --topbar-height: 42px;
+  --statusbar-height: 30px;
+  --pane-head-height: 34px;
+  --work-gap: 10px;
+  --pane-gap: 6px;
+}
+
+/* the table: dark wood, a candle's pool of light */
+[data-skin='dungeon-party'] body,
+[data-skin='dungeon-party'] .forge {
+  background:
+    radial-gradient(ellipse 60% 55% at 62% 18%, var(--d-candle), transparent 70%),
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0) 0 180px, rgba(0, 0, 0, 0.35) 180px 182px),
+    repeating-linear-gradient(90deg, rgba(255, 220, 160, 0.025) 0 3px, rgba(0, 0, 0, 0.04) 3px 9px, rgba(255, 220, 160, 0.02) 9px 17px),
+    linear-gradient(180deg, #2a1c12, #1d140d);
+  font-family: var(--font-ui);
+}
+
+/* the rail: a parchment roster pinned to the table */
+[data-skin='dungeon-party'] .rail {
+  margin: 8px 0 8px 8px;
+  border-right: 0;
+  border-radius: 4px 10px 6px 12px;
+  background:
+    radial-gradient(ellipse at 30% 20%, rgba(255, 255, 255, 0.25), transparent 55%),
+    radial-gradient(ellipse at 80% 90%, rgba(120, 80, 30, 0.22), transparent 60%),
+    linear-gradient(180deg, var(--d-parch), var(--d-parch-2));
+  box-shadow:
+    inset 0 0 24px rgba(120, 75, 25, 0.55),
+    inset 0 0 3px rgba(80, 50, 15, 0.8),
+    0 8px 24px rgba(0, 0, 0, 0.55);
+  color: var(--d-ink);
+}
+
+[data-skin='dungeon-party'] .rail-machine {
+  position: relative;
+  margin: 12px 14px 4px;
+  padding: 12px 14px 10px;
+  border-radius: 4px;
+  background:
+    repeating-linear-gradient(180deg, rgba(0, 0, 0, 0) 0 9px, rgba(0, 0, 0, 0.12) 9px 10px),
+    linear-gradient(180deg, #6b4526, #4a2e17);
+  box-shadow: inset 0 1px 0 rgba(255, 220, 160, 0.25), 0 3px 0 #2e1c0d, 0 6px 10px rgba(0, 0, 0, 0.4);
+  text-align: center;
+  align-items: center;
+}
+
+[data-skin='dungeon-party'] .rail-machine::before,
+[data-skin='dungeon-party'] .rail-machine::after {
+  /* the iron nails holding the sign */
+  content: '';
+  position: absolute;
+  top: 8px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #c9c1b2, #4a443d 70%);
+}
+[data-skin='dungeon-party'] .rail-machine::before {
+  left: 8px;
+}
+[data-skin='dungeon-party'] .rail-machine::after {
+  right: 8px;
+}
+
+[data-skin='dungeon-party'] .rail-label {
+  font: 400 10px/1 var(--d-font-label);
+  letter-spacing: 0.3em;
+  color: var(--d-gold-2);
+  opacity: 0.8;
+}
+
+[data-skin='dungeon-party'] .rail-label {
+  font-size: 0;
+}
+
+[data-skin='dungeon-party'] .rail-label::before {
+  content: 'The tavern';
+  font-size: 10px;
+}
+
+[data-skin='dungeon-party'] .rail-host {
+  font: 400 22px/1.1 var(--font-display);
+  letter-spacing: 0.06em;
+  color: var(--d-gold-2);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.5);
+}
+
+[data-skin='dungeon-party'] .rail-title {
+  padding: 12px 18px 6px;
+  border-bottom: 1px solid rgba(90, 65, 39, 0.35);
+  margin: 0 14px 4px;
+  font: 400 13px/1 var(--d-font-label);
+  letter-spacing: 0.22em;
+  color: var(--d-ink-2);
+  justify-content: flex-start;
+  gap: 6px;
+  white-space: nowrap;
+  font-size: 0;
+}
+
+[data-skin='dungeon-party'] .rail-title::before {
+  font: 400 13px/1 var(--d-font-label);
+  letter-spacing: 0.16em;
+}
+
+[data-skin='dungeon-party'] .rail-spaces .rail-title::before {
+  content: '✒ Quest log';
+}
+
+[data-skin='dungeon-party'] .rail-crew .rail-title::before {
+  content: '⚑ The party';
+}
+
+[data-skin='dungeon-party'] .rail-title .rail-count {
+  margin-left: auto;
+  font: 400 13px/1 var(--d-font-label);
+  color: var(--d-seal);
+}
+
+/* quests: each with a wax seal */
+[data-skin='dungeon-party'] .rail-space {
+  position: relative;
+  min-height: 32px;
+  margin: 1px 12px;
+  padding: 0 12px 0 34px;
+  border-radius: 3px;
+  background: transparent;
+  font: italic 500 16px/1 var(--font-ui);
+  color: var(--d-ink);
+}
+
+[data-skin='dungeon-party'] .rail-space::before {
+  content: '';
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  margin-top: -7px;
+  border-radius: 50% 46% 52% 48%;
+  background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.35), transparent 40%), var(--seal, var(--d-seal));
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.35);
+}
+
+[data-skin='dungeon-party'] .rail-space[data-space='']::before {
+  --seal: #3a2a1a;
+}
+[data-skin='dungeon-party'] .rail-space[data-index='1']::before {
+  --seal: #2f5b8a;
+}
+[data-skin='dungeon-party'] .rail-space[data-index='2']::before {
+  --seal: #3f6b2e;
+}
+[data-skin='dungeon-party'] .rail-space[data-index='3']::before {
+  --seal: #7a3f8a;
+}
+[data-skin='dungeon-party'] .rail-space[data-index='4']::before {
+  --seal: #b5791f;
+}
+[data-skin='dungeon-party'] .rail-space[data-index='5']::before {
+  --seal: #26706a;
+}
+[data-skin='dungeon-party'] .rail-space[data-index='6']::before {
+  --seal: #5a3a22;
+}
+[data-skin='dungeon-party'] .rail-space[data-index='7']::before {
+  --seal: #8a2b4a;
+}
+
+[data-skin='dungeon-party'] .rail-space .rail-count {
+  font: 400 12px/1 var(--d-font-label);
+  color: var(--d-ink-2);
+}
+
+[data-skin='dungeon-party'] .rail-space:hover {
+  background: rgba(90, 65, 39, 0.1);
+  color: var(--d-ink);
+}
+
+[data-skin='dungeon-party'] .rail-space.is-active {
+  background: rgba(90, 65, 39, 0.16);
+  color: var(--d-ink);
+  font-weight: 700;
+  box-shadow: inset 3px 0 0 var(--d-seal);
+}
+
+[data-skin='dungeon-party'] .rail-add {
+  margin: 4px 12px;
+  border-radius: 3px;
+  border: 1px dashed rgba(90, 65, 39, 0.5);
+  color: var(--d-ink-2);
+  font: 400 12px/1 var(--d-font-label);
+  letter-spacing: 0.12em;
+}
+
+[data-skin='dungeon-party'] .rail-new-space input {
+  background: rgba(255, 250, 235, 0.6);
+  border-color: var(--d-parch-edge);
+  color: var(--d-ink);
+}
+
+/* the party: a mark for each adventurer's state */
+[data-skin='dungeon-party'] .crew-row {
+  gap: 10px;
+  margin: 1px 10px;
+  padding: 7px 10px 7px 8px;
+  border-radius: 4px;
+  color: var(--d-ink);
+}
+
+[data-skin='dungeon-party'] .crew-row:hover {
+  background: rgba(90, 65, 39, 0.1);
+}
+
+[data-skin='dungeon-party'] .crew-row.is-current {
+  background: rgba(90, 65, 39, 0.18);
+}
+
+[data-skin='dungeon-party'] .crew-row .crew-bar,
+[data-skin='dungeon-party'] .crew-row[data-status] .crew-bar {
+  position: relative;
+  flex: none;
+  align-self: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #f6ead0, #cdb282 70%);
+  box-shadow: inset 0 0 0 1.5px var(--d-ink-2), 0 1px 2px rgba(0, 0, 0, 0.3);
+  display: grid;
+  place-items: center;
+}
+
+[data-skin='dungeon-party'] .crew-bar::before {
+  content: '☾';
+  font: 400 15px/1 var(--font-ui);
+  color: var(--d-ink-2);
+}
+
+[data-skin='dungeon-party'] .crew-row[data-status='working'] .crew-bar {
+  background: radial-gradient(circle at 35% 30%, #fbe3a6, #d79b37 70%);
+  animation: dungeon-party-candle 1.8s ease-in-out infinite;
+}
+[data-skin='dungeon-party'] .crew-row[data-status='working'] .crew-bar::before {
+  content: '⚔';
+  font-size: 16px;
+  color: #3a240c;
+}
+
+[data-skin='dungeon-party'] .crew-row[data-status='done'] .crew-bar {
+  background: radial-gradient(circle at 35% 30%, #dfeec4, #86a94f 70%);
+}
+[data-skin='dungeon-party'] .crew-row[data-status='done'] .crew-bar::before {
+  content: '✦';
+  font-size: 15px;
+  color: #23380f;
+}
+
+/* blocked: a d20 that only you can roll */
+[data-skin='dungeon-party'] .crew-row[data-status='blocked'] .crew-bar,
+[data-skin='dungeon-party'] .crew-row[data-status='error'] .crew-bar {
+  border-radius: 0;
+  width: 28px;
+  height: 30px;
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+  background:
+    linear-gradient(150deg, transparent 49%, rgba(0, 0, 0, 0.25) 50%, transparent 52%),
+    linear-gradient(30deg, transparent 49%, rgba(0, 0, 0, 0.25) 50%, transparent 52%),
+    linear-gradient(180deg, #e0644c, #9e2b25);
+  box-shadow: none;
+  animation: dungeon-party-roll 2.4s ease-in-out infinite;
+}
+[data-skin='dungeon-party'] .crew-row[data-status='blocked'] .crew-bar::before,
+[data-skin='dungeon-party'] .crew-row[data-status='error'] .crew-bar::before {
+  content: '20';
+  font: 700 11px/1 var(--font-ui);
+  color: #fff3db;
+}
+
+[data-skin='dungeon-party'] .crew-name {
+  font: 700 14px/1.15 var(--font-ui);
+  color: var(--d-ink);
+}
+
+[data-skin='dungeon-party'] .crew-sub {
+  font: 400 10.5px/1.25 var(--d-font-label);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--d-ink-2);
+}
+
+[data-skin='dungeon-party'] .crew-row[data-status='blocked'] .crew-sub,
+[data-skin='dungeon-party'] .crew-row[data-status='error'] .crew-sub {
+  color: var(--d-seal);
+}
+[data-skin='dungeon-party'] .crew-row[data-status='blocked'] .crew-sub::before {
+  content: 'your roll · ';
+}
+[data-skin='dungeon-party'] .crew-row[data-status='working'] .crew-sub {
+  color: #8a5a10;
+}
+[data-skin='dungeon-party'] .crew-row[data-status='done'] .crew-sub {
+  color: #3f6b2e;
+}
+
+[data-skin='dungeon-party'] .crew-msg {
+  font: italic 12.5px/1.3 var(--font-ui);
+  color: var(--d-ink-2);
+}
+
+[data-skin='dungeon-party'] .rail-empty {
+  font-style: italic;
+  color: var(--d-ink-2);
+}
+
+[data-skin='dungeon-party'] .crew-row .ask-allow {
+  background: #3f6b2e;
+  border-color: #3f6b2e;
+  color: #fff3db;
+}
+[data-skin='dungeon-party'] .crew-row .ask-deny {
+  background: transparent;
+  border-color: var(--d-seal);
+  color: var(--d-seal);
+}
+
+/* the header: the current quest, lettered in gold */
+[data-skin='dungeon-party'] .rail-header {
+  height: 72px;
+  padding: 10px 18px 0 22px;
+  border-bottom: 0;
+  background: transparent;
+}
+
+[data-skin='dungeon-party'] .rail-when {
+  font: 400 11px/1.3 var(--d-font-label);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--tx-3);
+}
+
+[data-skin='dungeon-party'] .rail-time {
+  font: 400 17px/1.1 var(--d-font-label);
+  color: var(--tx-2);
+}
+
+[data-skin='dungeon-party'] .rail-space-title {
+  font: 400 34px/1 var(--font-display);
+  letter-spacing: 0.05em;
+  color: var(--d-gold);
+  text-shadow: 0 0 18px rgba(227, 178, 79, 0.35), 0 2px 0 rgba(0, 0, 0, 0.6);
+}
+
+[data-skin='dungeon-party'] .rail-space-title::before {
+  content: 'Quest · ';
+  font: italic 400 16px/1 var(--font-ui);
+  letter-spacing: 0.04em;
+  color: var(--tx-3);
+  text-shadow: none;
+  vertical-align: middle;
+}
+
+/* tabs: hanging banners, notched at the foot */
+[data-skin='dungeon-party'] .topbar {
+  background: transparent;
+  border-bottom: 1px solid rgba(227, 178, 79, 0.18);
+}
+
+[data-skin='dungeon-party'] .tab {
+  height: 32px;
+  padding: 0 16px 4px;
+  border: 0;
+  border-radius: 0;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 82%, 0 100%);
+  background: linear-gradient(180deg, #5a3a22, #3c2615);
+  color: var(--tx-2);
+  font: 400 13px/1 var(--d-font-label);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  box-shadow: none;
+}
+
+[data-skin='dungeon-party'] .tab:hover {
+  background: linear-gradient(180deg, #6b4729, #48301b);
+  color: var(--tx);
+}
+
+[data-skin='dungeon-party'] .tab.is-active {
+  background: linear-gradient(180deg, #8a2b25, #5e1b17);
+  color: var(--d-gold-2);
+}
+
+[data-skin='dungeon-party'] .tab[data-status='working'] .dot {
+  background: var(--d-gold);
+  box-shadow: 0 0 6px var(--d-gold);
+}
+[data-skin='dungeon-party'] .tab[data-status='blocked'] .dot,
+[data-skin='dungeon-party'] .tab[data-status='error'] .dot {
+  background: #ff7a5c;
+  box-shadow: 0 0 6px #ff7a5c;
+}
+[data-skin='dungeon-party'] .tab[data-status='done'] .dot {
+  background: var(--green);
+}
+
+[data-skin='dungeon-party'] .tab-count {
+  background: rgba(0, 0, 0, 0.3);
+  color: var(--d-gold-2);
+}
+
+[data-skin='dungeon-party'] .new-pane-btn,
+[data-skin='dungeon-party'] .cmd-btn {
+  height: 30px;
+  border: 1px solid #8a6a3a;
+  background: linear-gradient(180deg, #3a2a1a, #261b11);
+  color: var(--d-gold-2);
+  font: 400 12px/1 var(--d-font-label);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  box-shadow: inset 0 1px 0 rgba(255, 220, 160, 0.15);
+}
+
+[data-skin='dungeon-party'] .new-pane-btn:hover,
+[data-skin='dungeon-party'] .cmd-btn:hover {
+  border-color: var(--d-gold);
+  color: #fff3db;
+}
+
+[data-skin='dungeon-party'] .cmd-btn kbd {
+  border-color: #8a6a3a;
+  background: rgba(0, 0, 0, 0.3);
+  color: var(--d-gold-2);
+}
+
+[data-skin='dungeon-party'] .icon-btn {
+  color: var(--tx-2);
+}
+
+[data-skin='dungeon-party'] .icon-btn:hover {
+  color: var(--d-gold-2);
+  background: rgba(227, 178, 79, 0.1);
+}
+
+/* panes: slates bound in iron, rivets at the corners */
+[data-skin='dungeon-party'] .pane {
+  position: relative;
+  border: 3px solid var(--d-iron);
+  background: var(--d-slate);
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.6),
+    0 0 0 1px #1a1410,
+    0 10px 24px rgba(0, 0, 0, 0.5);
+}
+
+[data-skin='dungeon-party'] .pane[data-active='true'] {
+  border-color: #9a7a3e;
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.6),
+    0 0 0 1px #1a1410,
+    0 0 26px rgba(227, 178, 79, 0.22),
+    0 10px 24px rgba(0, 0, 0, 0.5);
+}
+
+[data-skin='dungeon-party'] .pane[data-status='blocked'],
+[data-skin='dungeon-party'] .pane[data-status='error'] {
+  border-color: #8a2b25;
+  animation: dungeon-party-alarm 2.4s ease-in-out infinite;
+}
+
+[data-skin='dungeon-party'] .pane[data-status='done'] {
+  border-color: #56703a;
+}
+
+[data-skin='dungeon-party'] .pane-head {
+  padding: 0 14px;
+  background:
+    radial-gradient(circle 3px at 7px 50%, #b8ad98 0, #4a443d 80%, transparent 100%),
+    radial-gradient(circle 3px at calc(100% - 7px) 50%, #b8ad98 0, #4a443d 80%, transparent 100%),
+    linear-gradient(180deg, #2c2420, #1f1915);
+  border-bottom: 2px solid #120e0b;
+}
+
+[data-skin='dungeon-party'] .pane-title {
+  font: 400 15px/1 var(--d-font-label);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--d-gold-2);
+}
+
+[data-skin='dungeon-party'] .pane-msg {
+  font: italic 13px/1.2 var(--font-ui);
+  color: var(--tx-2);
+}
+
+[data-skin='dungeon-party'] .pane-cwd {
+  color: var(--tx-3);
+}
+
+[data-skin='dungeon-party'] .chip {
+  background: rgba(227, 178, 79, 0.15);
+  color: var(--d-gold-2);
+  font-family: var(--d-font-label);
+}
+
+[data-skin='dungeon-party'] .badge {
+  padding: 4px 8px;
+  font: 400 10.5px/1 var(--d-font-label);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #1f150e;
+}
+
+[data-skin='dungeon-party'] .badge::before {
+  background: #1f150e;
+}
+
+[data-skin='dungeon-party'] .badge-working {
+  background: var(--d-gold);
+}
+[data-skin='dungeon-party'] .badge-blocked,
+[data-skin='dungeon-party'] .badge-error {
+  background: #c94a36;
+  color: #fff3db;
+}
+[data-skin='dungeon-party'] .badge-blocked::before,
+[data-skin='dungeon-party'] .badge-error::before {
+  background: #fff3db;
+}
+[data-skin='dungeon-party'] .badge-done {
+  background: var(--green);
+}
+[data-skin='dungeon-party'] .badge-idle {
+  background: var(--todo);
+}
+
+/* the d20 on a pane that waits for you */
+[data-skin='dungeon-party'] .pane[data-status='blocked']::after,
+[data-skin='dungeon-party'] .pane[data-status='error']::after {
+  content: '20';
+  position: absolute;
+  right: 20px;
+  bottom: 20px;
+  z-index: 2;
+  width: 54px;
+  height: 60px;
+  display: grid;
+  place-items: center;
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+  background:
+    linear-gradient(150deg, transparent 49%, rgba(0, 0, 0, 0.28) 50%, transparent 52%),
+    linear-gradient(30deg, transparent 49%, rgba(0, 0, 0, 0.28) 50%, transparent 52%),
+    linear-gradient(90deg, transparent 49.3%, rgba(0, 0, 0, 0.2) 50%, transparent 50.7%),
+    linear-gradient(180deg, #e0644c, #8a2b25);
+  font: 700 20px/1 var(--font-ui);
+  color: #fff3db;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+  animation: dungeon-party-roll 2.4s ease-in-out infinite;
+}
+
+[data-skin='dungeon-party'] .pane[data-status='done']::after {
+  content: '✦ quest complete';
+  position: absolute;
+  right: 18px;
+  bottom: 16px;
+  z-index: 2;
+  font: italic 400 14px/1 var(--font-ui);
+  letter-spacing: 0.04em;
+  color: rgba(174, 208, 123, 0.75);
+  pointer-events: none;
+}
+
+/* lost panes: revive at the inn */
+[data-skin='dungeon-party'] .lost-pane {
+  background: radial-gradient(ellipse at 50% 40%, rgba(227, 178, 79, 0.08), transparent 60%);
+}
+
+[data-skin='dungeon-party'] .lost-pane::before {
+  content: '☩ Revive at the inn';
+  display: block;
+  margin-bottom: 10px;
+  font: 400 18px/1 var(--font-display);
+  letter-spacing: 0.06em;
+  color: var(--d-gold);
+  text-align: center;
+}
+
+[data-skin='dungeon-party'] .lost-actions button {
+  border-color: #8a6a3a;
+  color: var(--d-gold-2);
+}
+
+[data-skin='dungeon-party'] .ended {
+  background: repeating-linear-gradient(135deg, rgba(227, 178, 79, 0.04) 0 12px, transparent 12px 24px);
+}
+
+[data-skin='dungeon-party'] .gutter::after {
+  background: var(--d-gold);
+}
+
+/* the footer */
+[data-skin='dungeon-party'] .rail-footer {
+  border-top: 1px solid rgba(227, 178, 79, 0.18);
+  background: transparent;
+  font: 400 12px/1 var(--d-font-label);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--tx-2);
+}
+
+[data-skin='dungeon-party'] .rf-count[data-status='working'] {
+  color: var(--d-gold);
+}
+[data-skin='dungeon-party'] .rf-count[data-status='blocked'] {
+  color: #ec7a62;
+}
+[data-skin='dungeon-party'] .rf-count[data-status='done'] {
+  color: var(--green);
+}
+
+[data-skin='dungeon-party'] .rail-footer .sb-help,
+[data-skin='dungeon-party'] .rail-footer .sb-clock {
+  color: var(--tx-3);
+}
+
+/* panels and dialogs: parchment again */
+[data-skin='dungeon-party'] .agents,
+[data-skin='dungeon-party'] .palette,
+[data-skin='dungeon-party'] .help,
+[data-skin='dungeon-party'] .menu {
+  background: linear-gradient(180deg, #2c2016, #1f160f);
+  border: 2px solid #8a6a3a;
+  box-shadow: var(--e3), inset 0 0 0 1px rgba(0, 0, 0, 0.6);
+}
+
+[data-skin='dungeon-party'] .agents-head,
+[data-skin='dungeon-party'] .help h2,
+[data-skin='dungeon-party'] .pal-group {
+  font-family: var(--d-font-label);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--d-gold);
+}
+
+[data-skin='dungeon-party'] .palette li.is-active {
+  background: #8a2b25;
+  color: var(--d-gold-2);
+}
+
+[data-skin='dungeon-party'] .palette li.is-active .pal-group {
+  color: var(--d-gold-2);
+}
+
+[data-skin='dungeon-party'] .agent-row[data-status='blocked'] {
+  box-shadow: inset 3px 0 0 #c94a36;
+}
+[data-skin='dungeon-party'] .agent-row[data-status='working'] {
+  box-shadow: inset 3px 0 0 var(--d-gold);
+}
+
+[data-skin='dungeon-party'] .ask .ask-allow {
+  background: #56703a;
+  border-color: #56703a;
+  color: #fff3db;
+}
+
+[data-skin='dungeon-party'] .ask .ask-deny {
+  background: transparent;
+  border-color: #c94a36;
+  color: #ec7a62;
+}
+
+[data-skin='dungeon-party'] .view-banner {
+  background: #5e1b17;
+  color: var(--d-gold-2);
+  font-family: var(--d-font-label);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+@keyframes dungeon-party-candle {
+  0%, 100% { box-shadow: inset 0 0 0 1.5px #8a5a10, 0 0 6px rgba(255, 186, 92, 0.5); }
+  50% { box-shadow: inset 0 0 0 1.5px #8a5a10, 0 0 12px rgba(255, 186, 92, 0.85); }
+}
+
+@keyframes dungeon-party-roll {
+  0%, 82%, 100% { transform: rotate(0deg); }
+  86% { transform: rotate(-14deg); }
+  90% { transform: rotate(10deg); }
+  94% { transform: rotate(-5deg); }
+}
+
+@keyframes dungeon-party-alarm {
+  0%, 100% { box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.6), 0 0 0 1px #1a1410, 0 0 8px rgba(212, 85, 63, 0.2); }
+  50% { box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.6), 0 0 0 1px #1a1410, 0 0 26px rgba(212, 85, 63, 0.5); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-skin='dungeon-party'] .crew-bar,
+  [data-skin='dungeon-party'] .pane,
+  [data-skin='dungeon-party'] .pane::after {
+    animation: none !important;
+  }
+}
+
+@media (max-width: 640px) {
+  [data-skin='dungeon-party'] .rail {
+    margin: 0;
+    border-radius: 0;
+  }
+  [data-skin='dungeon-party'] .rail-header {
+    height: 58px;
+    padding-left: 14px;
+  }
+  [data-skin='dungeon-party'] .rail-space-title {
+    font-size: 24px;
+  }
+  [data-skin='dungeon-party'] .rail-space-title::before,
+  [data-skin='dungeon-party'] .rail-when {
+    display: none;
+  }
+  [data-skin='dungeon-party'] .pane[data-status='blocked']::after,
+  [data-skin='dungeon-party'] .pane[data-status='error']::after {
+    width: 40px;
+    height: 44px;
+    font-size: 15px;
+  }
+}

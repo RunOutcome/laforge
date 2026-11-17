@@ -1,0 +1,631 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+/* SPDX-FileCopyrightText: 2026 COR Holdings, LLC */
+
+/* Mission Control 1969: a flight control room. Beige and olive console
+   bezels, green phosphor screens with scanlines and a soft bloom, round
+   go/no-go lamps for each station, toggle-switch buttons, and the footer
+   as a strip of teleprinter paper. Layout: rail. System faces only. */
+
+:root[data-skin='mission-control-1969'] {
+  --m-beige: #cfc3a4;
+  --m-beige-2: #b8ab8a;
+  --m-beige-3: #9d9070;
+  --m-olive: #5d6142;
+  --m-olive-2: #464a31;
+  --m-olive-3: #33361f;
+  --m-phos: #7dff9b;
+  --m-phos-dim: rgba(125, 255, 155, 0.55);
+  --m-phos-glow: rgba(125, 255, 155, 0.35);
+  --m-glass: #031a0c;
+  --m-go: #6cff5c;
+  --m-nogo: #ff5a36;
+  --m-hold: #ffc23d;
+  --m-paper: #f2ecd8;
+  --m-ink: #2b2a26;
+
+  --canvas: var(--m-olive-3);
+  --side: var(--m-olive-2);
+  --sunken: #2a2c19;
+  --card: var(--m-olive);
+  --term: var(--m-glass);
+  --hover: rgba(207, 195, 164, 0.12);
+  --press: rgba(207, 195, 164, 0.2);
+  --line: #1f2112;
+  --line-2: #3a3d26;
+  --tx: #efe7d0;
+  --tx-2: #cfc3a4;
+  --tx-3: #9d9070;
+  --acc: var(--m-phos);
+  --acc-500: #b6ffc6;
+  --acc-100: rgba(125, 255, 155, 0.15);
+  --acc-fill: #3fbf5f;
+  --on-acc: #02140a;
+  --ai: var(--m-hold);
+  --ai-600: #ffd36e;
+  --ai-100: rgba(255, 194, 61, 0.24);
+  --ai-50: rgba(255, 194, 61, 0.12);
+  --red: var(--m-nogo);
+  --red-50: rgba(255, 90, 54, 0.16);
+  --amber: var(--m-hold);
+  --amber-50: rgba(255, 194, 61, 0.14);
+  --green: var(--m-go);
+  --todo: #8c8566;
+  --on-red: #1a0600;
+  --scrim: rgba(15, 16, 8, 0.7);
+  --e2: 0 3px 0 rgba(0, 0, 0, 0.35);
+  --e3: 0 12px 30px rgba(0, 0, 0, 0.5);
+  --shadow-tab: none;
+  --font-ui: 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;
+  --font-display: 'Futura', 'Century Gothic', 'Helvetica Neue', sans-serif;
+  --font-mono: 'Courier New', 'Courier', ui-monospace, monospace;
+  --radius-pane: 14px;
+  --radius-dialog: 8px;
+  --radius-card: 6px;
+  --radius-control: 4px;
+  --radius-button: 4px;
+  --radius-button-sm: 3px;
+  --radius-chip: 3px;
+  --rail-width: 252px;
+  --topbar-height: 44px;
+  --statusbar-height: 32px;
+  --work-gap: 12px;
+  --pane-gap: 10px;
+}
+
+[data-skin='mission-control-1969'] body,
+[data-skin='mission-control-1969'] .forge {
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(207, 195, 164, 0.08), transparent 60%),
+    var(--m-olive-3);
+}
+
+/* ---------- the rail: the flight director's console ---------- */
+[data-skin='mission-control-1969'] .rail {
+  background:
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.04) 0 2px, transparent 2px 6px),
+    linear-gradient(180deg, var(--m-beige), var(--m-beige-2));
+  border-right: 6px solid var(--m-olive-2);
+  color: var(--m-ink);
+  box-shadow: inset -2px 0 0 rgba(255, 255, 255, 0.35);
+}
+
+[data-skin='mission-control-1969'] .rail-machine {
+  margin: 12px;
+  padding: 12px 14px;
+  border-radius: 6px;
+  background: var(--m-glass);
+  box-shadow: inset 0 0 0 3px var(--m-olive-2), inset 0 0 18px rgba(125, 255, 155, 0.18);
+}
+
+[data-skin='mission-control-1969'] .rail-label {
+  font: 700 10px/1 var(--font-mono);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--m-phos-dim);
+}
+
+[data-skin='mission-control-1969'] .rail-label::before {
+  content: 'FLIGHT · ';
+}
+
+[data-skin='mission-control-1969'] .rail-host {
+  font: 700 22px/1.1 var(--font-mono);
+  text-transform: uppercase;
+  color: var(--m-phos);
+  text-shadow: 0 0 6px var(--m-phos-glow);
+}
+
+[data-skin='mission-control-1969'] .rail-title {
+  margin: 6px 12px 4px;
+  padding: 4px 8px;
+  border-radius: 2px;
+  background: var(--m-olive-2);
+  font: 700 10.5px/1.2 var(--font-display);
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--m-beige);
+}
+
+[data-skin='mission-control-1969'] .rail-title .rail-count {
+  color: var(--m-beige);
+}
+
+[data-skin='mission-control-1969'] .rail-space {
+  margin: 0 12px;
+  min-height: 32px;
+  border-radius: 3px;
+  font: 700 13px/1 var(--font-display);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--m-ink);
+}
+
+[data-skin='mission-control-1969'] .rail-space::before {
+  /* an indicator lamp */
+  content: '';
+  flex: none;
+  width: 10px;
+  height: 10px;
+  margin-right: 10px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #8a8a78, #3c3c30);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.5);
+}
+
+[data-skin='mission-control-1969'] .rail-space:hover {
+  background: rgba(0, 0, 0, 0.07);
+  color: #000;
+}
+
+[data-skin='mission-control-1969'] .rail-space.is-active {
+  background: var(--m-olive-2);
+  color: var(--m-beige);
+}
+
+[data-skin='mission-control-1969'] .rail-space.is-active::before {
+  background: radial-gradient(circle at 35% 35%, #d7ffcf, var(--m-go) 55%, #2a8a1f);
+  box-shadow: 0 0 8px var(--m-go);
+}
+
+[data-skin='mission-control-1969'] .rail-space .rail-count {
+  font: 700 12px/1 var(--font-mono);
+  color: inherit;
+  opacity: 0.7;
+}
+
+[data-skin='mission-control-1969'] .rail-add {
+  margin: 4px 12px 0;
+  border: 1px solid var(--m-beige-3);
+  border-radius: 3px;
+  background: linear-gradient(180deg, #ddd2b5, var(--m-beige-2));
+  color: var(--m-ink);
+  font: 700 11px/1 var(--font-display);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  box-shadow: 0 2px 0 var(--m-beige-3);
+}
+
+[data-skin='mission-control-1969'] .rail-empty {
+  color: var(--m-olive);
+}
+
+/* crew: one station per row, with a go/no-go lamp */
+[data-skin='mission-control-1969'] .crew-row {
+  margin: 2px 12px;
+  padding: 7px 10px 7px 0;
+  border-radius: 4px;
+  color: var(--m-ink);
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+}
+
+[data-skin='mission-control-1969'] .crew-row.is-current {
+  background: rgba(0, 0, 0, 0.1);
+  box-shadow: inset 0 0 0 2px var(--m-olive-2);
+}
+
+[data-skin='mission-control-1969'] .crew-bar {
+  width: 14px;
+  height: 14px;
+  align-self: center;
+  margin-left: 8px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #8a8a78, #3c3c30);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.5);
+}
+
+[data-skin='mission-control-1969'] .crew-row[data-status='done'] .crew-bar {
+  background: radial-gradient(circle at 35% 35%, #d7ffcf, var(--m-go) 55%, #2a8a1f);
+  box-shadow: 0 0 8px var(--m-go);
+}
+
+[data-skin='mission-control-1969'] .crew-row[data-status='working'] .crew-bar {
+  background: radial-gradient(circle at 35% 35%, #fff1c9, var(--m-hold) 55%, #9c6a00);
+  box-shadow: 0 0 8px var(--m-hold);
+  animation: mc-blink 1.2s steps(2, jump-none) infinite;
+}
+
+[data-skin='mission-control-1969'] .crew-row[data-status='blocked'] .crew-bar,
+[data-skin='mission-control-1969'] .crew-row[data-status='error'] .crew-bar {
+  background: radial-gradient(circle at 35% 35%, #ffd2c4, var(--m-nogo) 55%, #8a1d06);
+  box-shadow: 0 0 10px var(--m-nogo);
+  animation: mc-blink 0.7s steps(2, jump-none) infinite;
+}
+
+[data-skin='mission-control-1969'] .crew-name {
+  font: 700 13px/1.15 var(--font-display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--m-ink);
+}
+
+[data-skin='mission-control-1969'] .crew-sub {
+  font: 700 10.5px/1.2 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--m-olive);
+}
+
+[data-skin='mission-control-1969'] .crew-row[data-status='done'] .crew-sub::before { content: 'GO · '; color: #1f7a12; }
+[data-skin='mission-control-1969'] .crew-row[data-status='working'] .crew-sub::before { content: 'HOLD · '; color: #8a5a00; }
+[data-skin='mission-control-1969'] .crew-row[data-status='blocked'] .crew-sub::before,
+[data-skin='mission-control-1969'] .crew-row[data-status='error'] .crew-sub::before { content: 'NO-GO · '; color: #b02a0a; }
+
+[data-skin='mission-control-1969'] .crew-msg {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: #4a4632;
+}
+
+/* ---------- header: a wall display ---------- */
+[data-skin='mission-control-1969'] .rail-header {
+  position: relative;
+  background: var(--m-glass);
+  border-bottom: 6px solid var(--m-olive-2);
+  box-shadow: inset 0 0 40px rgba(125, 255, 155, 0.1);
+  overflow: hidden;
+}
+
+[data-skin='mission-control-1969'] .rail-header::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.28) 0 1px, transparent 1px 3px);
+}
+
+[data-skin='mission-control-1969'] .rail-when {
+  font: 700 12px/1.25 var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--m-phos-dim);
+}
+
+[data-skin='mission-control-1969'] .rail-date::before {
+  content: 'GET ';
+}
+
+[data-skin='mission-control-1969'] .rail-time {
+  font: 700 20px/1.1 var(--font-mono);
+  color: var(--m-phos);
+  text-shadow: 0 0 8px var(--m-phos-glow);
+}
+
+[data-skin='mission-control-1969'] .rail-space-title {
+  font: 700 32px/1 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--m-phos);
+  text-shadow: 0 0 10px var(--m-phos-glow);
+}
+
+[data-skin='mission-control-1969'] .rail-toggle,
+[data-skin='mission-control-1969'] .icon-btn {
+  color: var(--m-phos);
+}
+
+[data-skin='mission-control-1969'] .icon-btn:hover {
+  background: rgba(125, 255, 155, 0.12);
+}
+
+[data-skin='mission-control-1969'] .cmd-btn,
+[data-skin='mission-control-1969'] .new-pane-btn {
+  border: 1px solid #1a1c0e;
+  border-radius: 4px;
+  background: linear-gradient(180deg, #e2d8bc, var(--m-beige-2));
+  color: var(--m-ink);
+  font: 700 11.5px/1 var(--font-display);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  box-shadow: 0 3px 0 var(--m-beige-3), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+[data-skin='mission-control-1969'] .cmd-btn:active,
+[data-skin='mission-control-1969'] .new-pane-btn:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 var(--m-beige-3);
+}
+
+[data-skin='mission-control-1969'] .cmd-btn kbd {
+  border-color: var(--m-beige-3);
+  background: rgba(0, 0, 0, 0.08);
+  color: var(--m-ink);
+}
+
+/* ---------- tabs: push-button keys ---------- */
+[data-skin='mission-control-1969'] .topbar {
+  background: var(--m-olive-2);
+  border-bottom: 2px solid #1f2112;
+}
+
+[data-skin='mission-control-1969'] .tab {
+  height: 30px;
+  padding: 0 14px;
+  border: 1px solid #1a1c0e;
+  border-radius: 4px;
+  background: linear-gradient(180deg, #6e7350, var(--m-olive));
+  color: var(--m-beige);
+  font: 700 12px/1 var(--font-display);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  box-shadow: 0 3px 0 #23250f, inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+[data-skin='mission-control-1969'] .tab:hover {
+  background: linear-gradient(180deg, #7b805b, #686c4a);
+}
+
+[data-skin='mission-control-1969'] .tab.is-active {
+  transform: translateY(2px);
+  background: linear-gradient(180deg, #e8dec2, var(--m-beige));
+  color: var(--m-ink);
+  box-shadow: 0 1px 0 #23250f;
+}
+
+[data-skin='mission-control-1969'] .tab.is-active .tab-name,
+[data-skin='mission-control-1969'] .tab.is-active .tab-actions button {
+  color: var(--m-ink);
+}
+
+[data-skin='mission-control-1969'] .tab .dot {
+  width: 9px;
+  height: 9px;
+  border: 0;
+  background: radial-gradient(circle at 35% 35%, #8a8a78, #3c3c30);
+}
+
+[data-skin='mission-control-1969'] .tab[data-status='done'] .dot {
+  background: var(--m-go);
+  box-shadow: 0 0 6px var(--m-go);
+}
+[data-skin='mission-control-1969'] .tab[data-status='working'] .dot {
+  background: var(--m-hold);
+  box-shadow: 0 0 6px var(--m-hold);
+}
+[data-skin='mission-control-1969'] .tab[data-status='blocked'] .dot,
+[data-skin='mission-control-1969'] .tab[data-status='error'] .dot,
+[data-skin='mission-control-1969'] .tab[data-status='failed'] .dot {
+  background: var(--m-nogo);
+  box-shadow: 0 0 8px var(--m-nogo);
+  animation: mc-blink 0.7s steps(2, jump-none) infinite;
+}
+
+[data-skin='mission-control-1969'] .tab-count {
+  background: rgba(0, 0, 0, 0.25);
+  color: inherit;
+  font-family: var(--font-mono);
+}
+
+/* ---------- panes: CRTs in console bezels ---------- */
+[data-skin='mission-control-1969'] .pane {
+  position: relative;
+  border: 10px solid var(--m-beige-2);
+  border-radius: 16px;
+  background: var(--m-glass);
+  box-shadow:
+    inset 0 0 0 2px #0a0b05,
+    inset 0 0 50px rgba(125, 255, 155, 0.12),
+    0 0 0 1px #1a1c0e,
+    0 4px 0 rgba(0, 0, 0, 0.35);
+}
+
+[data-skin='mission-control-1969'] .pane::after {
+  /* scanlines over the glass */
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  border-radius: 6px;
+  background:
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.22) 0 1px, transparent 1px 3px),
+    radial-gradient(ellipse at 50% 50%, transparent 60%, rgba(0, 0, 0, 0.45));
+}
+
+[data-skin='mission-control-1969'] .pane[data-active='true'] {
+  border-color: var(--m-beige);
+  box-shadow:
+    inset 0 0 0 2px #0a0b05,
+    inset 0 0 60px rgba(125, 255, 155, 0.18),
+    0 0 0 1px #1a1c0e,
+    0 0 22px rgba(125, 255, 155, 0.18),
+    0 4px 0 rgba(0, 0, 0, 0.35);
+}
+
+[data-skin='mission-control-1969'] .pane[data-status='blocked'],
+[data-skin='mission-control-1969'] .pane[data-status='error'] {
+  border-color: #c9a08a;
+}
+
+[data-skin='mission-control-1969'] .pane-head {
+  background: var(--m-beige-2);
+  border-bottom: 2px solid #0a0b05;
+  color: var(--m-ink);
+}
+
+[data-skin='mission-control-1969'] .pane[data-active='true'] .pane-head {
+  background: var(--m-beige);
+}
+
+[data-skin='mission-control-1969'] .pane-title {
+  font: 700 12.5px/1 var(--font-display);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--m-ink);
+}
+
+[data-skin='mission-control-1969'] .pane-cwd,
+[data-skin='mission-control-1969'] .pane-msg {
+  font-family: var(--font-mono);
+  color: #4a4632;
+}
+
+[data-skin='mission-control-1969'] .pane-tools,
+[data-skin='mission-control-1969'] .pane-tools button {
+  color: var(--m-ink);
+}
+
+[data-skin='mission-control-1969'] .chip {
+  background: var(--m-olive-2);
+  color: var(--m-beige);
+  font-family: var(--font-mono);
+}
+
+[data-skin='mission-control-1969'] .term-host {
+  text-shadow: 0 0 4px rgba(125, 255, 155, 0.4);
+}
+
+[data-skin='mission-control-1969'] .badge {
+  font: 700 10.5px/1 var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border: 1px solid #1a1c0e;
+  color: #1a1c0e;
+}
+
+[data-skin='mission-control-1969'] .badge::before {
+  background: #1a1c0e;
+}
+
+[data-skin='mission-control-1969'] .badge-working { background: var(--m-hold); }
+[data-skin='mission-control-1969'] .badge-working::after { content: ' · HOLD'; }
+[data-skin='mission-control-1969'] .badge-done { background: var(--m-go); }
+[data-skin='mission-control-1969'] .badge-done::after { content: ' · GO'; }
+[data-skin='mission-control-1969'] .badge-idle { background: #a9a084; }
+[data-skin='mission-control-1969'] .badge-blocked,
+[data-skin='mission-control-1969'] .badge-error {
+  background: var(--m-nogo);
+  animation: mc-blink 1s steps(2, jump-none) infinite;
+}
+[data-skin='mission-control-1969'] .badge-blocked::after { content: ' · NO-GO'; }
+
+[data-skin='mission-control-1969'] .ask .ask-allow {
+  background: var(--m-go);
+  border-color: #1a1c0e;
+  color: #0a1a05;
+}
+
+[data-skin='mission-control-1969'] .ask .ask-allow::after { content: ' · GO'; }
+
+[data-skin='mission-control-1969'] .ask .ask-deny {
+  background: var(--m-nogo);
+  border-color: #1a1c0e;
+  color: #1a0600;
+}
+
+[data-skin='mission-control-1969'] .ask .ask-deny::after { content: ' · NO-GO'; }
+
+[data-skin='mission-control-1969'] .gutter::after {
+  background: var(--m-beige-3);
+}
+
+[data-skin='mission-control-1969'] .profile {
+  background: rgba(125, 255, 155, 0.05);
+  border: 1px solid rgba(125, 255, 155, 0.25);
+}
+
+/* ---------- footer: teleprinter paper ---------- */
+[data-skin='mission-control-1969'] .rail-footer {
+  position: relative;
+  background:
+    repeating-linear-gradient(0deg, transparent 0 15px, rgba(80, 120, 80, 0.12) 15px 16px),
+    var(--m-paper);
+  border-top: 0;
+  font: 700 12px/1 var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--m-ink);
+  box-shadow: inset 0 3px 4px rgba(0, 0, 0, 0.25);
+}
+
+[data-skin='mission-control-1969'] .rail-footer::before {
+  /* tractor-feed holes along the edge */
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 3px;
+  height: 5px;
+  pointer-events: none;
+  background: radial-gradient(circle, var(--m-olive-3) 2px, transparent 2.5px) 0 0 / 16px 5px repeat-x;
+  opacity: 0.6;
+}
+
+[data-skin='mission-control-1969'] .rf-counts::before {
+  content: '>> LOG  ';
+  color: #6b6450;
+}
+
+[data-skin='mission-control-1969'] .rf-count[data-status='working'] { color: #8a5a00; }
+[data-skin='mission-control-1969'] .rf-count[data-status='blocked'] { color: #b02a0a; }
+[data-skin='mission-control-1969'] .rf-count[data-status='done'] { color: #1f7a12; }
+
+[data-skin='mission-control-1969'] .rail-footer .sb-help,
+[data-skin='mission-control-1969'] .rail-footer .sb-clock {
+  color: var(--m-ink);
+}
+
+/* ---------- panels, palette, dialogs ---------- */
+[data-skin='mission-control-1969'] .agents,
+[data-skin='mission-control-1969'] .palette,
+[data-skin='mission-control-1969'] .help,
+[data-skin='mission-control-1969'] .menu {
+  background: var(--m-glass);
+  border: 6px solid var(--m-beige-2);
+  color: var(--m-phos);
+  box-shadow: 0 0 0 1px #1a1c0e, 0 20px 50px rgba(0, 0, 0, 0.6);
+}
+
+[data-skin='mission-control-1969'] .agents-head,
+[data-skin='mission-control-1969'] .help h2,
+[data-skin='mission-control-1969'] .pal-group {
+  font-family: var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--m-phos-dim);
+}
+
+[data-skin='mission-control-1969'] .palette li.is-active {
+  background: var(--m-phos);
+  color: var(--on-acc);
+}
+
+[data-skin='mission-control-1969'] .palette li.is-active .pal-group {
+  color: var(--on-acc);
+}
+
+[data-skin='mission-control-1969'] .agent-row[data-status='blocked'] {
+  box-shadow: inset 3px 0 0 var(--m-nogo);
+}
+
+[data-skin='mission-control-1969'] .view-banner {
+  background: var(--m-paper);
+  color: var(--m-ink);
+  font-family: var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+@keyframes mc-blink {
+  0% { opacity: 1; }
+  100% { opacity: 0.35; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-skin='mission-control-1969'] * {
+    animation: none !important;
+  }
+}
+
+@media (max-width: 640px) {
+  [data-skin='mission-control-1969'] .rail-space-title {
+    font-size: 22px;
+  }
+  [data-skin='mission-control-1969'] .rail-when,
+  [data-skin='mission-control-1969'] .rf-counts::before {
+    display: none;
+  }
+  [data-skin='mission-control-1969'] .pane {
+    border-width: 6px;
+  }
+}

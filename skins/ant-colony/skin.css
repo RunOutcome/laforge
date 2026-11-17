@@ -1,0 +1,662 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+/* SPDX-FileCopyrightText: 2026 COR Holdings, LLC */
+
+/* Ant Colony: the forge as a cross-section of a nest. Grass at the surface,
+   soil strata below, panes dug out as chambers, the crew as ants in the rail,
+   and an amber scent trail on whatever is busy. The footer is the colony's
+   stores. Layout: rail. System faces only. */
+
+:root[data-skin='ant-colony'] {
+  /* the skin's own colours */
+  --a-grass: #6f9a3a;
+  --a-grass-dark: #4b6e22;
+  --a-topsoil: #3b2817;
+  --a-loam: #2e1f12;
+  --a-clay: #8a5a33;
+  --a-sand: #c79a5e;
+  --a-stone: #5b4a3a;
+  --a-amber: #f2a93b;
+  --a-honey: #ffcf6e;
+  --a-chamber: #1a120b;
+  --a-ant: #140c06;
+
+  /* the forge's tokens */
+  --canvas: #24180e;
+  --side: #2b1d11;
+  --sunken: #1d140c;
+  --card: #302112;
+  --term: #1a120b;
+  --hover: rgba(242, 169, 59, 0.1);
+  --press: rgba(242, 169, 59, 0.18);
+  --line: #4d3622;
+  --line-2: #3a2819;
+  --tx: #f1e3cc;
+  --tx-2: #cdb593;
+  --tx-3: #977d5e;
+  --acc: #f2a93b;
+  --acc-500: #ffc76a;
+  --acc-100: rgba(242, 169, 59, 0.18);
+  --acc-fill: #e0952a;
+  --on-acc: #1a0f05;
+  --ai: #9dbb5a;
+  --ai-600: #b6d07a;
+  --ai-100: rgba(157, 187, 90, 0.28);
+  --ai-50: rgba(157, 187, 90, 0.14);
+  --red: #e0604a;
+  --red-50: rgba(224, 96, 74, 0.16);
+  --amber: #f2a93b;
+  --amber-50: rgba(242, 169, 59, 0.15);
+  --green: #9dbb5a;
+  --todo: #8a7259;
+  --on-red: #1a0f05;
+  --scrim: rgba(15, 9, 4, 0.72);
+  --e2: 0 2px 6px rgba(0, 0, 0, 0.45);
+  --e3: 0 14px 40px rgba(0, 0, 0, 0.6);
+  --shadow-tab: none;
+  --font-ui: 'Avenir Next', 'Avenir', 'Segoe UI', 'Helvetica Neue', sans-serif;
+  --font-display: 'Avenir Next Condensed', 'Futura', 'Arial Narrow', sans-serif-condensed, sans-serif;
+  --radius-pane: 26px;
+  --radius-dialog: 22px;
+  --radius-card: 16px;
+  --radius-control: 999px;
+  --radius-button: 999px;
+  --radius-button-sm: 999px;
+  --radius-chip: 999px;
+  --rail-width: 244px;
+  --topbar-height: 42px;
+  --statusbar-height: 30px;
+  --pane-head-height: 32px;
+  --work-gap: 10px;
+  --pane-gap: 8px;
+}
+
+/* the ground: soil strata, darker with depth */
+[data-skin='ant-colony'] body,
+[data-skin='ant-colony'] .forge {
+  background:
+    radial-gradient(ellipse 3px 2px at 12% 30%, rgba(199, 154, 94, 0.35) 98%, transparent),
+    radial-gradient(ellipse 2px 2px at 64% 58%, rgba(199, 154, 94, 0.3) 98%, transparent),
+    radial-gradient(ellipse 4px 3px at 82% 84%, rgba(91, 74, 58, 0.6) 98%, transparent),
+    linear-gradient(180deg, #3b2817 0%, #33230f 22%, #2c1e10 22.4%, #2a1c0f 48%, #24180d 48.4%, #20150b 74%, #1b1209 74.4%, #160f07 100%);
+  background-size: 140px 90px, 110px 70px, 170px 120px, 100% 100%;
+  font-family: var(--font-ui);
+}
+
+/* the rail: a shaft dug down from the surface */
+[data-skin='ant-colony'] .rail {
+  border-right: 0;
+  background:
+    linear-gradient(90deg, transparent calc(100% - 6px), rgba(0, 0, 0, 0.35) 100%),
+    repeating-linear-gradient(180deg, #2f2012 0 38px, #2b1d10 38px 76px);
+}
+
+[data-skin='ant-colony'] .rail-machine {
+  position: relative;
+  min-height: 76px;
+  padding: 22px 16px 10px;
+  background:
+    linear-gradient(180deg, #8fbf55 0, var(--a-grass) 10px, var(--a-grass-dark) 16px, var(--a-topsoil) 17px, var(--a-topsoil) 100%);
+  border-bottom: 2px dashed rgba(199, 154, 94, 0.35);
+}
+
+[data-skin='ant-colony'] .rail-machine::before {
+  /* the mound: a little hill of soil with an entrance */
+  content: '';
+  position: absolute;
+  right: 16px;
+  top: 2px;
+  width: 44px;
+  height: 18px;
+  border-radius: 54px 54px 0 0;
+  background:
+    radial-gradient(ellipse 5px 6px at 50% 100%, #0d0804 96%, transparent),
+    radial-gradient(ellipse at 50% 100%, var(--a-sand) 0 60%, var(--a-clay) 61% 100%);
+}
+
+[data-skin='ant-colony'] .rail-label {
+  color: var(--a-sand);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+[data-skin='ant-colony'] .rail-host {
+  font: 700 24px/1 var(--font-display);
+  color: var(--tx);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.4);
+}
+
+[data-skin='ant-colony'] .rail-title {
+  padding: 12px 16px 6px;
+  font: 600 12px/1 var(--font-display);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--a-sand);
+}
+
+[data-skin='ant-colony'] .rail-title .rail-count {
+  color: var(--a-amber);
+}
+
+/* spaces are chambers dug off the shaft */
+[data-skin='ant-colony'] .rail-space {
+  position: relative;
+  min-height: 34px;
+  margin: 3px 12px 3px 22px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: var(--a-chamber);
+  box-shadow:
+    inset 0 3px 6px rgba(0, 0, 0, 0.7),
+    inset 0 -1px 0 rgba(199, 154, 94, 0.18);
+  font: 600 15px/1 var(--font-display);
+  letter-spacing: 0.04em;
+  color: var(--tx-2);
+}
+
+[data-skin='ant-colony'] .rail-space::before {
+  /* the tunnel that joins the chamber to the shaft */
+  content: '';
+  position: absolute;
+  left: -16px;
+  top: 50%;
+  width: 18px;
+  height: 8px;
+  margin-top: -4px;
+  border-radius: 4px 0 0 4px;
+  background: var(--a-chamber);
+  box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.6);
+}
+
+[data-skin='ant-colony'] .rail-space .rail-count {
+  color: var(--a-sand);
+}
+
+[data-skin='ant-colony'] .rail-space[data-index='1'] .rail-count,
+[data-skin='ant-colony'] .rail-space[data-index='4'] .rail-count {
+  color: var(--green);
+}
+[data-skin='ant-colony'] .rail-space[data-index='2'] .rail-count,
+[data-skin='ant-colony'] .rail-space[data-index='5'] .rail-count {
+  color: var(--a-honey);
+}
+
+[data-skin='ant-colony'] .rail-space:hover {
+  color: var(--tx);
+  background: #22170e;
+}
+
+[data-skin='ant-colony'] .rail-space.is-active {
+  color: var(--on-acc);
+  background: radial-gradient(ellipse at 50% 40%, var(--a-honey), var(--a-amber) 70%);
+  box-shadow:
+    inset 0 2px 4px rgba(255, 255, 255, 0.25),
+    0 0 14px rgba(242, 169, 59, 0.35);
+}
+
+[data-skin='ant-colony'] .rail-space.is-active .rail-count {
+  color: rgba(26, 15, 5, 0.65);
+}
+
+[data-skin='ant-colony'] .rail-add {
+  margin: 4px 12px 4px 22px;
+  border-radius: 999px;
+  border: 1px dashed rgba(199, 154, 94, 0.4);
+  color: var(--a-sand);
+  font: 600 13px/1 var(--font-display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* the crew: each row is an ant */
+[data-skin='ant-colony'] .crew-row {
+  position: relative;
+  gap: 12px;
+  padding: 8px 12px 8px 14px;
+  margin: 0 8px;
+  border-radius: 14px;
+}
+
+[data-skin='ant-colony'] .crew-row.is-current {
+  background: rgba(242, 169, 59, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(242, 169, 59, 0.22);
+}
+
+[data-skin='ant-colony'] .crew-row .crew-bar,
+[data-skin='ant-colony'] .crew-row[data-status] .crew-bar {
+  /* head, thorax, abdomen; legs and antennae from the shadows */
+  flex: none;
+  align-self: center;
+  width: 30px;
+  height: 14px;
+  border-radius: 0;
+  background:
+    radial-gradient(circle 4px at 26px 7px, var(--ant-col, var(--a-ant)) 96%, transparent),
+    radial-gradient(circle 3.5px at 18px 7px, var(--ant-col, var(--a-ant)) 96%, transparent),
+    radial-gradient(ellipse 7px 5.5px at 8px 7px, var(--ant-col, var(--a-ant)) 96%, transparent),
+    linear-gradient(60deg, transparent 46%, var(--ant-leg, #6b4f33) 46% 54%, transparent 54%) 13px 0 / 10px 14px no-repeat,
+    linear-gradient(-60deg, transparent 46%, var(--ant-leg, #6b4f33) 46% 54%, transparent 54%) 13px 0 / 10px 14px no-repeat,
+    linear-gradient(25deg, transparent 44%, var(--ant-leg, #6b4f33) 44% 56%, transparent 56%) 27px -1px / 5px 8px no-repeat;
+  filter: drop-shadow(0 0 0 transparent);
+  --ant-col: #a07a52;
+}
+
+[data-skin='ant-colony'] .crew-row[data-status='working'] .crew-bar {
+  --ant-col: var(--a-amber);
+  --ant-leg: #b07a2a;
+  filter: drop-shadow(0 0 4px rgba(242, 169, 59, 0.7));
+  animation: ant-colony-scurry 0.9s ease-in-out infinite;
+}
+
+[data-skin='ant-colony'] .crew-row[data-status='blocked'] .crew-bar,
+[data-skin='ant-colony'] .crew-row[data-status='error'] .crew-bar {
+  --ant-col: var(--red);
+  --ant-leg: #8e3a2c;
+  animation: ant-colony-wave 0.6s ease-in-out infinite;
+}
+
+[data-skin='ant-colony'] .crew-row[data-status='done'] .crew-bar {
+  --ant-col: var(--green);
+  --ant-leg: #5d7334;
+}
+
+[data-skin='ant-colony'] .crew-row[data-status='working']::after {
+  /* the scent trail it leaves behind */
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 18px;
+  bottom: 3px;
+  height: 3px;
+  border-radius: 3px;
+  background: radial-gradient(circle 1.5px, rgba(255, 207, 110, 0.85) 96%, transparent) 0 0 / 10px 3px repeat-x;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 35%, #000);
+  mask-image: linear-gradient(90deg, transparent, #000 35%, #000);
+  animation: ant-colony-trail 1.4s linear infinite;
+}
+
+[data-skin='ant-colony'] .crew-name {
+  font: 600 14px/1.15 var(--font-display);
+  letter-spacing: 0.03em;
+  color: var(--tx);
+}
+
+[data-skin='ant-colony'] .crew-sub {
+  font: 500 11.5px/1.2 var(--font-display);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--tx-3);
+}
+
+[data-skin='ant-colony'] .crew-row[data-status='working'] .crew-sub {
+  color: var(--a-amber);
+}
+[data-skin='ant-colony'] .crew-row[data-status='blocked'] .crew-sub,
+[data-skin='ant-colony'] .crew-row[data-status='error'] .crew-sub {
+  color: var(--red);
+}
+[data-skin='ant-colony'] .crew-row[data-status='done'] .crew-sub {
+  color: var(--green);
+}
+
+[data-skin='ant-colony'] .crew-msg {
+  color: var(--tx-2);
+  font-style: italic;
+}
+
+/* the header: the surface, grass along the top */
+[data-skin='ant-colony'] .rail-header {
+  position: relative;
+  height: 76px;
+  padding: 14px 18px 0 22px;
+  border-bottom: 0;
+  background:
+    linear-gradient(180deg, #8fbf55 0, var(--a-grass) 10px, var(--a-grass-dark) 16px, transparent 17px),
+    linear-gradient(180deg, var(--a-topsoil), rgba(59, 40, 23, 0));
+}
+
+[data-skin='ant-colony'] .rail-header::before {
+  /* blades of grass */
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -6px;
+  height: 10px;
+  background:
+    linear-gradient(115deg, transparent 45%, #8fbf55 46% 54%, transparent 55%) 0 0 / 14px 10px repeat-x,
+    linear-gradient(65deg, transparent 45%, #79a945 46% 54%, transparent 55%) 7px 2px / 18px 10px repeat-x;
+  pointer-events: none;
+}
+
+[data-skin='ant-colony'] .rail-when {
+  font: 600 12px/1.2 var(--font-display);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--a-sand);
+}
+
+[data-skin='ant-colony'] .rail-time {
+  font-size: 18px;
+  color: var(--tx);
+}
+
+[data-skin='ant-colony'] .rail-space-title {
+  font: 700 34px/1 var(--font-display);
+  letter-spacing: 0.02em;
+  color: var(--tx);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.45);
+}
+
+[data-skin='ant-colony'] .rail-space-title::after {
+  content: ' chamber';
+  font: 500 14px/1 var(--font-ui);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--a-sand);
+  text-shadow: none;
+}
+
+/* tabs: tunnel mouths, lit by what is inside */
+[data-skin='ant-colony'] .topbar {
+  background: transparent;
+  border-bottom: 0;
+}
+
+[data-skin='ant-colony'] .tab {
+  height: 30px;
+  padding: 0 16px;
+  border: 0;
+  background: var(--a-chamber);
+  box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.7), inset 0 -1px 0 rgba(199, 154, 94, 0.2);
+  color: var(--tx-2);
+  font: 600 14px/1 var(--font-display);
+  letter-spacing: 0.04em;
+}
+
+[data-skin='ant-colony'] .tab:hover {
+  background: #22170e;
+  color: var(--tx);
+}
+
+[data-skin='ant-colony'] .tab.is-active {
+  color: var(--tx);
+  background: #2f2012;
+  box-shadow: inset 0 0 0 2px var(--a-amber), 0 0 12px rgba(242, 169, 59, 0.25);
+}
+
+[data-skin='ant-colony'] .tab[data-status='working'] .dot {
+  background: var(--a-amber);
+  box-shadow: 0 0 6px var(--a-amber);
+}
+[data-skin='ant-colony'] .tab[data-status='blocked'] .dot,
+[data-skin='ant-colony'] .tab[data-status='error'] .dot {
+  background: var(--red);
+  box-shadow: 0 0 6px var(--red);
+}
+[data-skin='ant-colony'] .tab[data-status='done'] .dot {
+  background: var(--green);
+}
+
+[data-skin='ant-colony'] .tab-count {
+  background: rgba(242, 169, 59, 0.18);
+  color: var(--a-honey);
+}
+
+[data-skin='ant-colony'] .new-pane-btn,
+[data-skin='ant-colony'] .cmd-btn {
+  border: 0;
+  background: linear-gradient(180deg, var(--a-sand), var(--a-clay));
+  color: #1a0f05;
+  font: 600 13px/1 var(--font-display);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.35);
+}
+
+[data-skin='ant-colony'] .cmd-btn kbd {
+  border: 0;
+  background: rgba(26, 15, 5, 0.2);
+  color: #1a0f05;
+}
+
+[data-skin='ant-colony'] .icon-btn {
+  color: var(--a-sand);
+}
+
+[data-skin='ant-colony'] .icon-btn:hover {
+  color: var(--a-honey);
+  background: rgba(242, 169, 59, 0.12);
+}
+
+/* panes: chambers carved out of the soil */
+[data-skin='ant-colony'] .pane {
+  border: 0;
+  background: var(--a-chamber);
+  box-shadow:
+    inset 0 6px 14px rgba(0, 0, 0, 0.75),
+    0 0 0 3px #3a2818,
+    0 0 0 4px rgba(199, 154, 94, 0.18);
+  overflow: hidden;
+}
+
+[data-skin='ant-colony'] .pane[data-active='true'] {
+  box-shadow:
+    inset 0 6px 14px rgba(0, 0, 0, 0.75),
+    0 0 0 3px var(--a-clay),
+    0 0 0 4px rgba(255, 207, 110, 0.5);
+}
+
+[data-skin='ant-colony'] .pane[data-status='working'] {
+  animation: ant-colony-pheromone 2.6s ease-in-out infinite;
+}
+
+[data-skin='ant-colony'] .pane[data-status='blocked'],
+[data-skin='ant-colony'] .pane[data-status='error'] {
+  box-shadow:
+    inset 0 6px 14px rgba(0, 0, 0, 0.75),
+    0 0 0 3px var(--red),
+    0 0 18px rgba(224, 96, 74, 0.3);
+}
+
+[data-skin='ant-colony'] .pane[data-status='done'] {
+  box-shadow:
+    inset 0 6px 14px rgba(0, 0, 0, 0.75),
+    0 0 0 3px #5d7334,
+    0 0 0 4px rgba(157, 187, 90, 0.35);
+}
+
+[data-skin='ant-colony'] .pane-head {
+  padding-left: 18px;
+  background: linear-gradient(180deg, #2a1c10, #1f150c);
+  border-bottom: 1px dashed rgba(199, 154, 94, 0.25);
+}
+
+[data-skin='ant-colony'] .pane-title {
+  font: 700 15px/1 var(--font-display);
+  letter-spacing: 0.04em;
+  color: var(--tx);
+}
+
+[data-skin='ant-colony'] .pane-cwd,
+[data-skin='ant-colony'] .pane-msg {
+  color: var(--tx-3);
+}
+
+[data-skin='ant-colony'] .chip {
+  background: rgba(199, 154, 94, 0.2);
+  color: var(--a-sand);
+}
+
+[data-skin='ant-colony'] .badge {
+  font: 600 11px/1 var(--font-display);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #1a0f05;
+}
+
+[data-skin='ant-colony'] .badge::before {
+  background: #1a0f05;
+}
+
+[data-skin='ant-colony'] .badge-working {
+  background: linear-gradient(90deg, var(--a-amber), var(--a-honey));
+}
+[data-skin='ant-colony'] .badge-blocked,
+[data-skin='ant-colony'] .badge-error {
+  background: var(--red);
+}
+[data-skin='ant-colony'] .badge-done {
+  background: var(--green);
+}
+[data-skin='ant-colony'] .badge-idle {
+  background: var(--todo);
+}
+
+[data-skin='ant-colony'] .term-host {
+  padding-left: 6px;
+}
+
+[data-skin='ant-colony'] .gutter::after {
+  background: var(--a-sand);
+}
+
+/* the footer: the colony's stores, an amber gauge */
+[data-skin='ant-colony'] .rail-footer {
+  position: relative;
+  height: calc(var(--statusbar-height) + 8px);
+  border-top: 0;
+  background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.35));
+  font: 600 13px/1 var(--font-display);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--tx-2);
+}
+
+[data-skin='ant-colony'] .rail-footer::before {
+  content: '';
+  position: absolute;
+  left: 22px;
+  right: 18px;
+  top: 0;
+  height: 4px;
+  border-radius: 4px;
+  background:
+    linear-gradient(90deg, var(--a-honey), var(--a-amber) 55%, rgba(242, 169, 59, 0.15) 55.5%);
+  box-shadow: 0 0 8px rgba(242, 169, 59, 0.35);
+}
+
+[data-skin='ant-colony'] .rf-count[data-status='working'] {
+  color: var(--a-amber);
+}
+[data-skin='ant-colony'] .rf-count[data-status='blocked'] {
+  color: var(--red);
+}
+[data-skin='ant-colony'] .rf-count[data-status='done'] {
+  color: var(--green);
+}
+
+[data-skin='ant-colony'] .rail-footer .sb-help,
+[data-skin='ant-colony'] .rail-footer .sb-clock {
+  color: var(--a-sand);
+}
+
+/* panels and dialogs: deep chambers */
+[data-skin='ant-colony'] .agents,
+[data-skin='ant-colony'] .palette,
+[data-skin='ant-colony'] .help,
+[data-skin='ant-colony'] .menu {
+  background: #20160c;
+  border: 2px solid var(--a-clay);
+  box-shadow: var(--e3), inset 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+[data-skin='ant-colony'] .agents-head,
+[data-skin='ant-colony'] .pal-group,
+[data-skin='ant-colony'] .help h2 {
+  font-family: var(--font-display);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--a-sand);
+}
+
+[data-skin='ant-colony'] .agent-row[data-status='working'] {
+  box-shadow: inset 3px 0 0 var(--a-amber);
+}
+[data-skin='ant-colony'] .agent-row[data-status='blocked'] {
+  box-shadow: inset 3px 0 0 var(--red);
+}
+
+[data-skin='ant-colony'] .palette li.is-active {
+  background: var(--a-amber);
+  color: #1a0f05;
+}
+
+[data-skin='ant-colony'] .ask .ask-allow {
+  background: var(--green);
+  border-color: var(--green);
+  color: #1a0f05;
+}
+
+[data-skin='ant-colony'] .ask .ask-deny {
+  background: transparent;
+  border-color: var(--red);
+  color: var(--red);
+}
+
+[data-skin='ant-colony'] .lost-pane,
+[data-skin='ant-colony'] .ended {
+  background: repeating-linear-gradient(135deg, rgba(199, 154, 94, 0.06) 0 10px, transparent 10px 20px);
+}
+
+[data-skin='ant-colony'] .view-banner {
+  background: var(--a-grass-dark);
+  color: var(--tx);
+  border-bottom: 3px solid var(--a-grass);
+}
+
+@keyframes ant-colony-scurry {
+  0%, 100% { transform: translateX(0) rotate(0deg); }
+  25% { transform: translateX(2px) rotate(-3deg); }
+  75% { transform: translateX(-2px) rotate(3deg); }
+}
+
+@keyframes ant-colony-wave {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(-10deg); }
+}
+
+@keyframes ant-colony-trail {
+  from { background-position: 0 0; }
+  to { background-position: 10px 0; }
+}
+
+@keyframes ant-colony-pheromone {
+  0%, 100% {
+    box-shadow: inset 0 6px 14px rgba(0, 0, 0, 0.75), 0 0 0 3px var(--a-clay), 0 0 6px rgba(242, 169, 59, 0.15);
+  }
+  50% {
+    box-shadow: inset 0 6px 14px rgba(0, 0, 0, 0.75), 0 0 0 3px var(--a-amber), 0 0 22px rgba(242, 169, 59, 0.45);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-skin='ant-colony'] .crew-bar,
+  [data-skin='ant-colony'] .crew-row::after,
+  [data-skin='ant-colony'] .pane {
+    animation: none !important;
+  }
+}
+
+@media (max-width: 640px) {
+  [data-skin='ant-colony'] .rail-header {
+    height: 62px;
+    padding-left: 14px;
+  }
+  [data-skin='ant-colony'] .rail-space-title {
+    font-size: 24px;
+  }
+  [data-skin='ant-colony'] .rail-space-title::after,
+  [data-skin='ant-colony'] .rail-when {
+    display: none;
+  }
+}

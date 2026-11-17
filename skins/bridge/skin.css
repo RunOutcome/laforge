@@ -1,0 +1,599 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+/* SPDX-FileCopyrightText: 2026 COR Holdings, LLC */
+
+/* Bridge: a ship's bridge at night. Brushed-steel bezels with chamfered
+   corners, cyan instrument readouts, a sonar sweep in the header, the crew
+   at their stations in the rail, and a pulsing red alert on anything that
+   needs the captain. Layout: rail. System faces only. */
+
+:root[data-skin='bridge'] {
+  --b-steel: #1b2730;
+  --b-steel-2: #24343f;
+  --b-steel-hi: #3a4f5d;
+  --b-deck: #070d12;
+  --b-cyan: #3fe0ff;
+  --b-cyan-dim: rgba(63, 224, 255, 0.55);
+  --b-cyan-glow: rgba(63, 224, 255, 0.22);
+  --b-alert: #ff4d5e;
+  --b-amber: #ffc857;
+  --b-green: #5be3a0;
+  --b-cut: 12px;
+
+  --canvas: var(--b-deck);
+  --side: #0a1218;
+  --sunken: #050a0e;
+  --card: #0e1820;
+  --term: #050b10;
+  --hover: rgba(63, 224, 255, 0.08);
+  --press: rgba(63, 224, 255, 0.16);
+  --line: #2b3d49;
+  --line-2: #18242c;
+  --tx: #e2f3f8;
+  --tx-2: #9fc0cc;
+  --tx-3: #5f7e8b;
+  --acc: var(--b-cyan);
+  --acc-500: #8aeeff;
+  --acc-100: rgba(63, 224, 255, 0.16);
+  --acc-fill: #1fb8d6;
+  --on-acc: #02141a;
+  --ai: #b48cff;
+  --ai-600: #cdb2ff;
+  --ai-100: rgba(180, 140, 255, 0.26);
+  --ai-50: rgba(180, 140, 255, 0.12);
+  --red: var(--b-alert);
+  --red-50: rgba(255, 77, 94, 0.16);
+  --amber: var(--b-amber);
+  --amber-50: rgba(255, 200, 87, 0.14);
+  --green: var(--b-green);
+  --todo: #5f7e8b;
+  --on-red: #12030a;
+  --scrim: rgba(2, 6, 10, 0.72);
+  --e2: 0 6px 18px rgba(0, 0, 0, 0.5);
+  --e3: 0 14px 40px rgba(0, 0, 0, 0.6);
+  --shadow-tab: none;
+  --font-ui: 'Avenir Next Condensed', 'DIN Condensed', 'Roboto Condensed', 'Arial Narrow', system-ui, sans-serif;
+  --font-display: 'Avenir Next Condensed', 'DIN Condensed', 'Roboto Condensed', 'Arial Narrow', sans-serif;
+  --font-mono: 'SF Mono', Menlo, 'JetBrains Mono', Consolas, monospace;
+  --radius-pane: 0;
+  --radius-dialog: 0;
+  --radius-card: 0;
+  --radius-mono: 2px;
+  --radius-control: 2px;
+  --radius-button: 2px;
+  --radius-button-sm: 2px;
+  --radius-chip: 2px;
+  --rail-width: 248px;
+  --topbar-height: 42px;
+  --statusbar-height: 30px;
+  --work-gap: 10px;
+  --pane-gap: 6px;
+}
+
+[data-skin='bridge'] body,
+[data-skin='bridge'] .forge {
+  background:
+    radial-gradient(ellipse at 60% -20%, rgba(63, 224, 255, 0.08), transparent 60%),
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.012) 0 1px, transparent 1px 3px),
+    var(--b-deck);
+}
+
+/* ---------- the rail: station console ---------- */
+[data-skin='bridge'] .rail {
+  background: linear-gradient(180deg, #0d171e, #081016);
+  border-right: 2px solid var(--b-steel-hi);
+  box-shadow: inset -6px 0 12px rgba(0, 0, 0, 0.5);
+}
+
+[data-skin='bridge'] .rail-machine {
+  position: relative;
+  margin: 10px 10px 4px;
+  padding: 14px 14px 12px;
+  background: linear-gradient(135deg, var(--b-steel-2), var(--b-steel));
+  border: 1px solid var(--b-steel-hi);
+  clip-path: polygon(var(--b-cut) 0, 100% 0, 100% calc(100% - var(--b-cut)), calc(100% - var(--b-cut)) 100%, 0 100%, 0 var(--b-cut));
+}
+
+[data-skin='bridge'] .rail-machine::after {
+  content: 'VESSEL';
+  position: absolute;
+  right: 12px;
+  top: 10px;
+  font: 600 9px/1 var(--font-mono);
+  letter-spacing: 0.3em;
+  color: var(--b-cyan-dim);
+}
+
+[data-skin='bridge'] .rail-label {
+  font: 600 10px/1 var(--font-mono);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--tx-3);
+}
+
+[data-skin='bridge'] .rail-host {
+  font: 600 24px/1.05 var(--font-display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--b-cyan);
+  text-shadow: 0 0 10px var(--b-cyan-glow);
+}
+
+[data-skin='bridge'] .rail-title {
+  padding: 12px 14px 6px;
+  font: 600 11px/1 var(--font-mono);
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--tx-3);
+  border-bottom: 1px solid var(--line-2);
+  margin: 0 10px 4px;
+}
+
+[data-skin='bridge'] .rail-spaces .rail-title::before {
+  content: 'DECKS · ';
+  color: var(--b-cyan-dim);
+}
+[data-skin='bridge'] .rail-crew .rail-title::before {
+  content: 'STATIONS · ';
+  color: var(--b-cyan-dim);
+}
+
+[data-skin='bridge'] .rail-space {
+  position: relative;
+  margin: 0 10px;
+  padding-left: 18px;
+  min-height: 34px;
+  font: 600 15px/1 var(--font-display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--tx-2);
+  border-left: 3px solid transparent;
+  background: transparent;
+}
+
+[data-skin='bridge'] .rail-space::before {
+  content: '';
+  position: absolute;
+  left: 6px;
+  top: 50%;
+  width: 5px;
+  height: 5px;
+  margin-top: -2.5px;
+  background: var(--tx-3);
+  transform: rotate(45deg);
+}
+
+[data-skin='bridge'] .rail-space:hover {
+  background: rgba(63, 224, 255, 0.06);
+  color: var(--tx);
+}
+
+[data-skin='bridge'] .rail-space.is-active {
+  color: var(--b-cyan);
+  border-left-color: var(--b-cyan);
+  background: linear-gradient(90deg, rgba(63, 224, 255, 0.16), transparent 85%);
+}
+
+[data-skin='bridge'] .rail-space.is-active::before {
+  background: var(--b-cyan);
+  box-shadow: 0 0 6px var(--b-cyan);
+}
+
+[data-skin='bridge'] .rail-space .rail-count {
+  font: 600 12px/1 var(--font-mono);
+  color: var(--tx-3);
+}
+
+[data-skin='bridge'] .rail-add {
+  margin: 4px 10px 0;
+  border: 1px dashed var(--line);
+  color: var(--tx-3);
+  font: 600 12px/1 var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+[data-skin='bridge'] .rail-add:hover {
+  border-color: var(--b-cyan);
+  color: var(--b-cyan);
+}
+
+[data-skin='bridge'] .crew-row {
+  position: relative;
+  margin: 2px 10px;
+  padding: 8px 10px 8px 0;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.025), transparent);
+  border: 1px solid var(--line-2);
+}
+
+[data-skin='bridge'] .crew-row.is-current {
+  border-color: var(--b-cyan-dim);
+  background: linear-gradient(90deg, rgba(63, 224, 255, 0.1), transparent);
+}
+
+[data-skin='bridge'] .crew-bar {
+  width: 4px;
+  border-radius: 0;
+}
+
+[data-skin='bridge'] .crew-name {
+  font: 600 14px/1.1 var(--font-display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--tx);
+}
+
+[data-skin='bridge'] .crew-sub {
+  font: 500 10.5px/1.2 var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--tx-3);
+}
+
+[data-skin='bridge'] .crew-row[data-status='working'] .crew-sub { color: var(--b-amber); }
+[data-skin='bridge'] .crew-row[data-status='done'] .crew-sub { color: var(--b-green); }
+[data-skin='bridge'] .crew-row[data-status='done'] .crew-bar { background: var(--b-green); }
+[data-skin='bridge'] .crew-row[data-status='blocked'],
+[data-skin='bridge'] .crew-row[data-status='error'] {
+  border-color: rgba(255, 77, 94, 0.6);
+  animation: bridge-alert 1.6s ease-in-out infinite;
+}
+[data-skin='bridge'] .crew-row[data-status='blocked'] .crew-sub,
+[data-skin='bridge'] .crew-row[data-status='error'] .crew-sub { color: var(--b-alert); }
+
+[data-skin='bridge'] .crew-msg {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--tx-2);
+}
+
+/* ---------- header: bezel strip with a sonar sweep ---------- */
+[data-skin='bridge'] .rail-header {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(180deg, #0f1b23, #0a1319);
+  border-bottom: 2px solid var(--b-steel-hi);
+}
+
+[data-skin='bridge'] .rail-header::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(63, 224, 255, 0.12) 48%, rgba(63, 224, 255, 0.28) 50%, transparent 51%);
+  background-size: 50% 100%;
+  background-repeat: no-repeat;
+  animation: bridge-sweep 7s linear infinite;
+  pointer-events: none;
+}
+
+[data-skin='bridge'] .rail-header::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: repeating-linear-gradient(90deg, var(--b-cyan-dim) 0 2px, transparent 2px 22px);
+  opacity: 0.6;
+}
+
+[data-skin='bridge'] .rail-when {
+  font: 600 11px/1.3 var(--font-mono);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--tx-3);
+}
+
+[data-skin='bridge'] .rail-date::before {
+  content: 'LOG ';
+  color: var(--b-cyan-dim);
+}
+
+[data-skin='bridge'] .rail-time {
+  font: 600 20px/1.1 var(--font-mono);
+  color: var(--b-cyan);
+  text-shadow: 0 0 8px var(--b-cyan-glow);
+}
+
+[data-skin='bridge'] .rail-space-title {
+  font: 600 34px/1 var(--font-display);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--tx);
+}
+
+/* ---------- tabs: stations on a steel strip ---------- */
+[data-skin='bridge'] .topbar {
+  background: #0a1319;
+  border-bottom: 1px solid var(--line);
+}
+
+[data-skin='bridge'] .tab {
+  position: relative;
+  height: 30px;
+  padding: 0 16px;
+  border: 1px solid var(--line);
+  background: linear-gradient(180deg, var(--b-steel-2), var(--b-steel));
+  color: var(--tx-2);
+  font: 600 13px/1 var(--font-display);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+  box-shadow: none;
+}
+
+[data-skin='bridge'] .tab:hover {
+  color: var(--tx);
+  background: linear-gradient(180deg, var(--b-steel-hi), var(--b-steel-2));
+}
+
+[data-skin='bridge'] .tab.is-active {
+  color: var(--on-acc);
+  background: linear-gradient(180deg, #6eeaff, var(--b-cyan));
+  border-color: var(--b-cyan);
+}
+
+[data-skin='bridge'] .tab.is-active .tab-name,
+[data-skin='bridge'] .tab.is-active .tab-actions button {
+  color: var(--on-acc);
+}
+
+[data-skin='bridge'] .tab[data-status='blocked']:not(.is-active),
+[data-skin='bridge'] .tab[data-status='error']:not(.is-active) {
+  color: #fff;
+  background: linear-gradient(180deg, #a3202e, #6b1220);
+  border-color: var(--b-alert);
+  animation: bridge-alert-bg 1.6s ease-in-out infinite;
+}
+
+[data-skin='bridge'] .tab[data-status='done']:not(.is-active) {
+  box-shadow: inset 0 -3px 0 var(--b-green);
+}
+
+[data-skin='bridge'] .tab[data-status='working']:not(.is-active) {
+  box-shadow: inset 0 -3px 0 var(--b-amber);
+}
+
+[data-skin='bridge'] .tab-count {
+  background: rgba(0, 0, 0, 0.3);
+  color: inherit;
+  font-family: var(--font-mono);
+}
+
+[data-skin='bridge'] .new-pane-btn,
+[data-skin='bridge'] .cmd-btn {
+  border: 1px solid var(--b-cyan-dim);
+  background: rgba(63, 224, 255, 0.06);
+  color: var(--b-cyan);
+  font: 600 12px/1 var(--font-display);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+[data-skin='bridge'] .new-pane-btn:hover,
+[data-skin='bridge'] .cmd-btn:hover {
+  background: var(--b-cyan);
+  color: var(--on-acc);
+}
+
+[data-skin='bridge'] .icon-btn {
+  color: var(--tx-2);
+}
+
+[data-skin='bridge'] .icon-btn:hover {
+  color: var(--b-cyan);
+  background: rgba(63, 224, 255, 0.1);
+}
+
+/* ---------- panes: instrument screens in bezels ---------- */
+[data-skin='bridge'] .pane {
+  position: relative;
+  border: 1px solid var(--line);
+  background: var(--term);
+  box-shadow: inset 0 0 0 1px #000, inset 0 0 40px rgba(63, 224, 255, 0.04);
+}
+
+/* corner brackets on every screen */
+[data-skin='bridge'] .pane::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  pointer-events: none;
+  --bk: var(--b-steel-hi);
+  background:
+    linear-gradient(var(--bk), var(--bk)) top left / 18px 4px,
+    linear-gradient(var(--bk), var(--bk)) top left / 4px 18px,
+    linear-gradient(var(--bk), var(--bk)) top right / 18px 4px,
+    linear-gradient(var(--bk), var(--bk)) top right / 4px 18px,
+    linear-gradient(var(--bk), var(--bk)) bottom left / 18px 4px,
+    linear-gradient(var(--bk), var(--bk)) bottom left / 4px 18px,
+    linear-gradient(var(--bk), var(--bk)) bottom right / 18px 4px,
+    linear-gradient(var(--bk), var(--bk)) bottom right / 4px 18px;
+  background-repeat: no-repeat;
+}
+
+[data-skin='bridge'] .pane[data-active='true']::after {
+  --bk: var(--b-cyan);
+}
+
+[data-skin='bridge'] .pane[data-status='blocked']::after,
+[data-skin='bridge'] .pane[data-status='error']::after {
+  --bk: var(--b-alert);
+}
+
+[data-skin='bridge'] .pane[data-active='true'] {
+  border-color: rgba(63, 224, 255, 0.55);
+  box-shadow: inset 0 0 0 1px #000, inset 0 0 30px rgba(63, 224, 255, 0.08);
+}
+
+[data-skin='bridge'] .pane[data-status='blocked'],
+[data-skin='bridge'] .pane[data-status='error'] {
+  border-color: var(--b-alert);
+  animation: bridge-alert-border 1.6s ease-in-out infinite;
+}
+
+[data-skin='bridge'] .pane-head {
+  background: linear-gradient(180deg, var(--b-steel-2), var(--b-steel));
+  border-bottom: 1px solid #000;
+  padding-left: 18px;
+}
+
+[data-skin='bridge'] .pane-title {
+  font: 600 14px/1 var(--font-display);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--tx);
+}
+
+[data-skin='bridge'] .pane[data-active='true'] .pane-title {
+  color: var(--b-cyan);
+}
+
+[data-skin='bridge'] .pane-cwd,
+[data-skin='bridge'] .pane-msg {
+  font-family: var(--font-mono);
+  color: var(--tx-3);
+}
+
+[data-skin='bridge'] .pane[data-status='blocked'] .pane-msg {
+  color: var(--b-alert);
+}
+
+[data-skin='bridge'] .chip {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--tx-2);
+  font-family: var(--font-mono);
+}
+
+[data-skin='bridge'] .badge {
+  font: 600 10.5px/1 var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  border: 1px solid currentColor;
+  background: transparent;
+}
+
+[data-skin='bridge'] .badge-working { color: var(--b-amber); background: var(--amber-50); }
+[data-skin='bridge'] .badge-done { color: var(--b-green); background: rgba(91, 227, 160, 0.12); }
+[data-skin='bridge'] .badge-idle { color: var(--tx-3); }
+[data-skin='bridge'] .badge-blocked,
+[data-skin='bridge'] .badge-error {
+  color: #fff;
+  background: var(--b-alert);
+  border-color: var(--b-alert);
+}
+[data-skin='bridge'] .badge-blocked::after {
+  content: ' · RED ALERT';
+}
+
+[data-skin='bridge'] .ask .ask-allow {
+  background: var(--b-green);
+  border-color: var(--b-green);
+  color: #02140b;
+}
+
+[data-skin='bridge'] .ask .ask-deny {
+  background: transparent;
+  border-color: var(--b-alert);
+  color: var(--b-alert);
+}
+
+[data-skin='bridge'] .gutter::after {
+  background: var(--b-cyan-dim);
+}
+
+/* ---------- footer: power systems ---------- */
+[data-skin='bridge'] .rail-footer {
+  background: #0a1319;
+  border-top: 2px solid var(--b-steel-hi);
+  font: 600 11px/1 var(--font-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--tx-3);
+}
+
+[data-skin='bridge'] .rf-counts::before {
+  content: 'SYSTEMS ▸ ';
+  color: var(--b-cyan-dim);
+}
+
+[data-skin='bridge'] .rf-count[data-status='working'] { color: var(--b-amber); }
+[data-skin='bridge'] .rf-count[data-status='blocked'] { color: var(--b-alert); }
+[data-skin='bridge'] .rf-count[data-status='done'] { color: var(--b-green); }
+
+[data-skin='bridge'] .rail-footer .sb-clock {
+  color: var(--b-cyan);
+}
+
+/* ---------- panels, palette, dialogs ---------- */
+[data-skin='bridge'] .agents,
+[data-skin='bridge'] .palette,
+[data-skin='bridge'] .help,
+[data-skin='bridge'] .menu {
+  background: #0b151c;
+  border: 1px solid var(--b-cyan-dim);
+  box-shadow: 0 0 0 1px #000, 0 18px 50px rgba(0, 0, 0, 0.7), 0 0 30px rgba(63, 224, 255, 0.08);
+}
+
+[data-skin='bridge'] .agents-head,
+[data-skin='bridge'] .help h2,
+[data-skin='bridge'] .pal-group {
+  font-family: var(--font-mono);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--b-cyan-dim);
+}
+
+[data-skin='bridge'] .palette li.is-active {
+  background: rgba(63, 224, 255, 0.16);
+  box-shadow: inset 3px 0 0 var(--b-cyan);
+}
+
+[data-skin='bridge'] .agent-row[data-status='blocked'] {
+  box-shadow: inset 3px 0 0 var(--b-alert);
+}
+
+[data-skin='bridge'] .view-banner {
+  background: #0a1319;
+  border-bottom: 2px solid var(--b-cyan);
+  color: var(--b-cyan);
+  font-family: var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+@keyframes bridge-sweep {
+  from { background-position: -60% 0; }
+  to { background-position: 220% 0; }
+}
+
+@keyframes bridge-alert {
+  0%, 100% { box-shadow: inset 0 0 0 rgba(255, 77, 94, 0); }
+  50% { box-shadow: inset 0 0 18px rgba(255, 77, 94, 0.35); }
+}
+
+@keyframes bridge-alert-bg {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.35); }
+}
+
+@keyframes bridge-alert-border {
+  0%, 100% { border-color: var(--b-alert); }
+  50% { border-color: #7a1d28; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-skin='bridge'] *,
+  [data-skin='bridge'] *::before {
+    animation: none !important;
+  }
+}
+
+@media (max-width: 640px) {
+  [data-skin='bridge'] .rail-space-title {
+    font-size: 24px;
+  }
+  [data-skin='bridge'] .rail-when {
+    display: none;
+  }
+}
