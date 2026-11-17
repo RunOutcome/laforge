@@ -11,6 +11,8 @@ import { terminalTheme, type Mode } from './theme';
 
 export type SkinLayout = 'classic' | 'rail';
 
+export type TerminalColours = Partial<Record<Exclude<keyof ITheme, 'extendedAnsi'>, string>>;
+
 export interface Skin {
   name: string;
   label: string;
@@ -29,7 +31,6 @@ export interface Skin {
   builtin: boolean;
 }
 
-export type TerminalColours = Partial<Record<Exclude<keyof ITheme, 'extendedAnsi'>, string>>;
 export interface SkinTerminal {
   dark?: TerminalColours;
   light?: TerminalColours;
@@ -47,7 +48,7 @@ export interface SkinList {
 }
 
 /** classic is the client's own look; it needs nothing from the forge. */
-export const classic: Skin = { name: 'classic', label: 'Classic', layout: 'classic', mode: 'both', builtin: true };
+export const classic: Skin = { name: 'classic', label: 'Classic', layout: 'classic', builtin: true };
 
 const key = 'laforge.skin';
 
@@ -178,3 +179,6 @@ export async function installState(install: (source: string) => Promise<InstallR
     return { kind: 'error', reason: e.message || 'The install failed.' };
   }
 }
+
+/** modeOf is the mode to draw. Every skin draws light and dark, so it is the viewer's. */
+export const modeOf = (_skin: Skin, viewer: Mode): Mode => viewer;

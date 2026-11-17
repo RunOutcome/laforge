@@ -9,7 +9,7 @@ import { darkTerminal, lightTerminal } from './theme';
 const skin = (name: string, more: Partial<K.Skin> = {}): K.Skin => ({ name, label: name, builtin: false, ...more });
 
 describe('skin loader', () => {
-  const list: K.SkinList = { default: 'console', skins: [skin('classic', { builtin: true }), skin('console', { layout: 'rail', mode: 'dark' }), skin('paper')] };
+  const list: K.SkinList = { default: 'console', skins: [skin('classic', { builtin: true }), skin('console', { layout: 'rail' }), skin('paper')] };
 
   it("takes the browser's choice when the forge still has it", () => {
     expect(K.pick(list, 'paper').name).toBe('paper');
@@ -150,5 +150,13 @@ describe('rail', () => {
   it('counts working, need you and done for the footer', () => {
     const list = [pane('a', '/', { word: 'working' }), pane('b', '/', { word: 'blocked' }), pane('c', '/', { word: 'error' }), pane('d', '/', { word: 'done' }), pane('e', '/', { word: 'done', seen: true }), pane('f', '/')];
     expect(R.counts(list)).toEqual({ working: 1, needYou: 2, done: 1 });
+  });
+
+  it('pads counts and stamps dates for skins', () => {
+    expect(R.pad2(4)).toBe('04');
+    expect(R.pad2(12)).toBe('12');
+    expect(R.dateStamp(new Date(2026, 0, 1, 0, 0))).toEqual({ year: '2026', day: '001', tenth: '0' });
+    expect(R.dateStamp(new Date(2026, 10, 16, 23, 20))).toEqual({ year: '2026', day: '320', tenth: '9' });
+    expect(R.dateStamp(new Date(2024, 11, 31, 12, 0))).toEqual({ year: '2024', day: '366', tenth: '5' });
   });
 });

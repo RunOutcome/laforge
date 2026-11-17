@@ -1522,6 +1522,41 @@ kbd {
   margin-top: 3px;
 }
 
+.rail-link {
+  padding: 0 8px;
+  font-size: 11.5px;
+  color: var(--tx-3);
+}
+
+.rail-link[data-state='offline'] .rail-link-state {
+  color: var(--red);
+}
+
+.rail-menu {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--tx-3);
+  text-align: left;
+}
+
+.rail-menu:hover {
+  background: var(--hover);
+  color: var(--tx);
+}
+
+/* a machines count, for skins that show it; hidden by default */
+.rf-count[data-kind='machines'],
+.rf-machines-sep {
+  display: none;
+}
+
 .rail-header {
   height: 52px;
   flex: none;

@@ -1320,6 +1320,7 @@ export function Forge({ api: given, embedded = false }: Props) {
   const spaceList = R.spaces(pool);
   const crewList = R.crew(pool, profiles);
   const c = R.counts(pool);
+  const stamp = R.dateStamp(clock);
   const tabPanes = layout!.tabs.map((t) => ({ id: t.id, sessions: L.panes(t.root).map((p) => p.session).filter(Boolean) as string[] }));
   const shown = railSpace === null ? null : R.tabsIn(tabPanes, sessions, railSpace).add(layout!.active);
   const focusedPane = focusedSession ? sessions.get(focusedSession) : undefined;
@@ -1376,15 +1377,21 @@ export function Forge({ api: given, embedded = false }: Props) {
             <span className="rail-host">{config?.host?.replace(/\.local(domain)?$/, '') ?? 'forge'}</span>
           </div>
           <section className="rail-section rail-spaces">
-            <div className="rail-title">Spaces</div>
+            <div className="rail-title">
+              Spaces <span className="rail-count" data-padded={R.pad2(spaceList.length)}>{spaceList.length}</span>
+            </div>
             <button className={`rail-space ${railSpace === null ? 'is-active' : ''}`} data-space="" onClick={() => pickSpace(null)}>
               <span className="rail-space-name">All</span>
-              <span className="rail-count">{pool.length}</span>
+              <span className="rail-count" data-padded={R.pad2(pool.length)}>
+                {pool.length}
+              </span>
             </button>
             {spaceList.map((sp, i) => (
               <button key={sp.name} className={`rail-space ${railSpace === sp.name ? 'is-active' : ''}`} data-space={sp.name} data-index={i % 8} onClick={() => pickSpace(sp.name)} title={sp.name}>
                 <span className="rail-space-name">{sp.name}</span>
-                <span className="rail-count">{sp.count}</span>
+                <span className="rail-count" data-padded={R.pad2(sp.count)}>
+                  {sp.count}
+                </span>
               </button>
             ))}
             {newSpace ? (
@@ -1413,7 +1420,7 @@ export function Forge({ api: given, embedded = false }: Props) {
           </section>
           <section className="rail-section rail-crew">
             <div className="rail-title">
-              Crew <span className="rail-count">{crewList.length}</span>
+              Crew <span className="rail-count" data-padded={R.pad2(crewList.length)}>{crewList.length}</span>
             </div>
             {crewList.map((s) => {
               const word = S.shown(s);
@@ -1437,7 +1444,10 @@ export function Forge({ api: given, embedded = false }: Props) {
                       {s.status?.app || prof?.label || s.profile} · {s.title}
                     </span>
                     <span className="crew-sub">
-                      {word ?? s.state} · {R.spaceOf(s)}
+                      <span className="crew-word" data-status={word ?? s.state}>
+                        {word ?? s.state}
+                      </span>{' '}
+                      · <span className="crew-space">{R.spaceOf(s)}</span>
                     </span>
                     {msg && <span className="crew-msg">{msg}</span>}
                     <AskButtons asking={!!s.asking && !askHidden.has(`${s.id}|${s.asking.since}`)} note={askNotes[s.id]} onAnswer={(d) => answer(s, d)} />
@@ -1447,6 +1457,13 @@ export function Forge({ api: given, embedded = false }: Props) {
             })}
             {crewList.length === 0 && <p className="rail-empty">No agents yet.</p>}
           </section>
+          <div className="rail-link" data-state={connected ? 'online' : 'offline'}>
+            <span className="rail-link-name">Forge</span> <span className="rail-link-state">{connected ? 'online' : 'offline'}</span>
+          </div>
+          <button className="rail-menu" title="Commands (⌘K)" onClick={() => setPalette(true)}>
+            <I.Gear />
+            <span>Menu</span>
+          </button>
         </aside>
       ) : null}
       {rail ? <div className="rail-scrim" onMouseDown={() => setRailOpen(false)} /> : null}
@@ -1456,7 +1473,7 @@ export function Forge({ api: given, embedded = false }: Props) {
             <button className="icon-btn rail-toggle" title="Spaces and crew" onClick={() => setRailOpen((o) => !o)}>
               <I.Menu />
             </button>
-            <span className="rail-when">
+            <span className="rail-when" data-year={stamp.year} data-day={stamp.day} data-tenth={stamp.tenth}>
               <span className="rail-date">{clock.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })}</span>
               <span className="rail-time">{clock.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
             </span>
@@ -1485,16 +1502,32 @@ export function Forge({ api: given, embedded = false }: Props) {
         {rail ? (
           <footer className="statusbar rail-footer">
             <span className="rf-counts">
-              <span className="rf-count" data-status="working">
-                {c.working} working
+              <span className="rf-count" data-status="working" data-kind="working">
+                <span className="rf-num" data-padded={R.pad2(c.working)}>
+                  {c.working}
+                </span>{' '}
+                <span className="rf-word">working</span>
               </span>
               <span className="rf-sep">·</span>
-              <span className="rf-count" data-status="blocked">
-                {c.needYou} need you
+              <span className="rf-count" data-status="blocked" data-kind="need-you">
+                <span className="rf-num" data-padded={R.pad2(c.needYou)}>
+                  {c.needYou}
+                </span>{' '}
+                <span className="rf-word">need you</span>
               </span>
               <span className="rf-sep">·</span>
-              <span className="rf-count" data-status="done">
-                {c.done} done
+              <span className="rf-count" data-status="done" data-kind="done">
+                <span className="rf-num" data-padded={R.pad2(c.done)}>
+                  {c.done}
+                </span>{' '}
+                <span className="rf-word">done</span>
+              </span>
+              <span className="rf-sep rf-machines-sep">·</span>
+              <span className="rf-count" data-kind="machines">
+                <span className="rf-num" data-padded="01">
+                  1
+                </span>{' '}
+                <span className="rf-word">machine</span>
               </span>
             </span>
             <span className="grow" />

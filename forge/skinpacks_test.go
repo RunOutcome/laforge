@@ -28,9 +28,10 @@ func TestTheBuiltinSkinsParse(t *testing.T) {
 			t.Fatalf("%s: %+v %v", name, sk, err)
 		}
 	}
+	// a built-in skin that brings a terminal palette brings one for each mode
 	sub, _ := fs.Sub(builtinSkins, "skins/console")
-	if sk, _ := ReadSkin(sub); sk.Terminal.Dark["background"] != "#000000" {
-		t.Fatalf("console dark palette: %+v", sk.Terminal)
+	if sk, _ := ReadSkin(sub); sk.Terminal.Dark["background"] == "" || sk.Terminal.Light["background"] == "" {
+		t.Fatalf("console palettes: %+v", sk.Terminal)
 	}
 }
 

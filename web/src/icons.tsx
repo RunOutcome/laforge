@@ -141,3 +141,9 @@ export const Check = () => (
     <path d="M3 8.5 6.5 12 13 4.5" />
   </svg>
 );
+export const Gear = () => (
+  <svg {...base} aria-hidden>
+    <circle cx="8" cy="8" r="2.2" />
+    <path d="M8 1.8v1.8M8 12.4v1.8M1.8 8h1.8M12.4 8h1.8M3.6 3.6l1.3 1.3M11.1 11.1l1.3 1.3M3.6 12.4l1.3-1.3M11.1 4.9l1.3-1.3" />
+  </svg>
+);
