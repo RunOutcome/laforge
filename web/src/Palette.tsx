@@ -81,6 +81,7 @@ export const keyHelp: [string, string][] = [
   ['Ctrl-b space', 'Tiled layout'],
   ['Ctrl-b m', 'Main + stack layout'],
   ['Ctrl-b + / _', 'Bigger / smaller text'],
+  ['Ctrl-b a', 'Agents panel (show or hide)'],
   ['Ctrl-b :  or  ⌘K', 'Command palette'],
   ['Ctrl-b Ctrl-b', 'Send Ctrl-b to the pane'],
   ['Ctrl-b ?', 'This help'],

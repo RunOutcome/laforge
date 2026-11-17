@@ -16,6 +16,20 @@ export interface Profile {
 
 export type PaneState = 'starting' | 'running' | 'idle' | 'complete' | 'failed';
 
+/** A program's report about itself (OSC 7501 or a hook), in its own words. */
+export type StatusWord = 'idle' | 'working' | 'done' | 'blocked' | 'error';
+
+export interface Status {
+  state: StatusWord;
+  /** kind: what a blocked program waits for. */
+  kind?: 'permission' | 'question' | 'auth';
+  progress?: number;
+  app?: string;
+  title?: string;
+  msg?: string;
+  source?: 'hook';
+}
+
 export interface Session {
   id: string;
   command: string;
@@ -36,6 +50,15 @@ export interface Session {
   /** after: the agent profile this pane ran before it became a shell; agentExit: its exit code. */
   after?: string;
   agentExit?: number;
+  /** status: the program's own report; absent when it reports nothing. records: its child records. */
+  status?: Status;
+  records?: Record<string, Status>;
+  /** statusSince: when the root state last changed. */
+  statusSince?: string;
+  turn?: number;
+  reported?: boolean;
+  /** seen: a viewer has looked since the status last changed. */
+  seen?: boolean;
 }
 
 export interface Config {
@@ -87,6 +110,7 @@ export class ForgeApi {
   start = (req: { profile: string; cwd?: string; title?: string; cols?: number; rows?: number }) => this.call<Session>('POST', '/api/sessions', req);
   rename = (id: string, title: string) => this.call<Session>('PATCH', `/api/sessions/${encodeURIComponent(id)}`, { title });
   close = (id: string, force = false) => this.call<void>('DELETE', `/api/sessions/${encodeURIComponent(id)}${force ? '?force=1' : ''}`);
+  seen = (id: string) => this.call<Session>('POST', `/api/sessions/${encodeURIComponent(id)}/seen`);
   layout = () => this.call<unknown>('GET', '/api/layout');
   saveLayout = (layout: unknown) => this.call<void>('PUT', '/api/layout', layout);
 

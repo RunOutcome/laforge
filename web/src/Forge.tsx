@@ -5,12 +5,15 @@
 // It is one component so a host (the Outcome Arena) can mount it with its
 // own api base; the standalone client is this and nothing else.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Agents, Badge, type AgentRow } from './Agents';
 import { ApiError, ForgeApi, type Config, type Profile, type Session } from './api';
 import * as L from './layout';
 import { Help, Palette, type Action } from './Palette';
 import { Picker, monogram } from './Picker';
 import { TerminalView, type TerminalHandle } from './TerminalView';
 import { loadPref, savePref, systemMode, type Mode, type ModePref } from './theme';
+import * as N from './notify';
+import * as S from './status';
 import * as I from './icons';
 
 interface Props {
@@ -41,6 +44,11 @@ export function Forge({ api: given, embedded = false }: Props) {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [fontSize, setFontSize] = useState(13);
   const [clock, setClock] = useState(() => new Date());
+  const [agentsOpen, setAgentsOpen] = useState(() => N.loadFlag('laforge.agents', false));
+  const [notifyOn, setNotifyOn] = useState(() => N.loadFlag('laforge.notify', false));
+  const [soundOn, setSoundOn] = useState(() => N.loadFlag('laforge.sound', false));
+  const [permission, setPermission] = useState<N.Permission>(N.permission);
+  const [visible, setVisible] = useState(() => document.visibilityState === 'visible');
   const terms = useRef(new Map<string, TerminalHandle>());
   const mode: Mode = pref === 'system' ? sysMode : pref;
 
@@ -138,6 +146,10 @@ export function Forge({ api: given, embedded = false }: Props) {
   const tab = layout?.tabs.find((t) => t.id === layout.active);
   const layoutRef = useRef(layout);
   layoutRef.current = layout;
+  const sessionsRef = useRef(sessions);
+  sessionsRef.current = sessions;
+  const visibleRef = useRef(visible);
+  visibleRef.current = visible;
 
   const updateTab = useCallback((id: string, fn: (t: L.Tab) => L.Tab) => {
     setLayout((l) => (l ? { ...l, tabs: l.tabs.map((t) => (t.id === id ? fn(t) : t)) } : l));
@@ -147,6 +159,43 @@ export function Forge({ api: given, embedded = false }: Props) {
     (tabId: string, paneId: string) => updateTab(tabId, (t) => (t.focus === paneId ? t : { ...t, focus: paneId })),
     [updateTab],
   );
+
+  // goTo activates a tab and focuses one of its panes (zoomed onto it when the tab is zoomed).
+  const goTo = useCallback((tabId: string, paneId: string) => {
+    setLayout((l) => (l ? { ...l, active: tabId, tabs: l.tabs.map((t) => (t.id === tabId ? { ...t, focus: paneId, zoom: t.zoom ? paneId : null } : t)) } : l));
+  }, []);
+
+  // markSeen tells the forge a viewer looked at the pane, once per status change.
+  const seenSent = useRef(new Set<string>());
+  const markSeen = useCallback(
+    (s: Session | undefined) => {
+      if (!s || s.seen !== false) return;
+      const key = `${s.id}|${s.statusSince ?? ''}`;
+      if (seenSent.current.has(key)) return;
+      seenSent.current.add(key);
+      api
+        .seen(s.id)
+        .then((p) => setSessions((m) => (m.has(p.id) ? new Map(m).set(p.id, p) : m)))
+        .catch(() => seenSent.current.delete(key));
+    },
+    [api],
+  );
+
+  // locate finds the tab and pane a session is in.
+  const locate = useCallback((id: string): { tab: L.Tab; pane: L.PaneNode } | undefined => {
+    for (const t of layoutRef.current?.tabs ?? []) {
+      const pane = L.panes(t.root).find((p) => p.session === id);
+      if (pane) return { tab: t, pane };
+    }
+    return undefined;
+  }, []);
+
+  // watched: the session is in the focused pane of the active tab, and the page is visible.
+  const watched = useCallback((id: string) => {
+    const l = layoutRef.current;
+    const t = l?.tabs.find((x) => x.id === l.active);
+    return visibleRef.current && !!t && L.findPane(t.root, t.focus)?.session === id;
+  }, []);
 
   const startIn = useCallback(
     async (tabId: string, paneId: string, profile: string, cwd?: string) => {
@@ -253,6 +302,100 @@ export function Forge({ api: given, embedded = false }: Props) {
     });
   }, []);
 
+  useEffect(() => {
+    const on = () => setVisible(document.visibilityState === 'visible');
+    document.addEventListener('visibilitychange', on);
+    return () => document.removeEventListener('visibilitychange', on);
+  }, []);
+
+  // seen: the focused pane of the active tab, while the page is visible
+  const focusedSession = tab ? L.findPane(tab.root, tab.focus)?.session : undefined;
+  useEffect(() => {
+    if (visible && focusedSession) markSeen(sessions.get(focusedSession));
+  }, [visible, focusedSession, sessions, markSeen]);
+
+  // notifications: a pane newly blocked, error or done, a second later if it
+  // still is and nobody is looking at it
+  const alertRef = useRef<(t: S.Transition) => void>(() => undefined);
+  alertRef.current = (t: S.Transition) => {
+    const s = sessionsRef.current.get(t.id);
+    if (!s || S.shown(s) !== t.word || s.statusSince !== t.since || watched(t.id)) return;
+    if (soundOn) N.chime(t.word);
+    if (!notifyOn) return;
+    const name = s.status?.app || s.title;
+    const what = t.word === 'blocked' ? 'is waiting for you' : t.word === 'error' ? 'hit an error' : 'is done';
+    const body = s.status?.msg || (t.word === 'blocked' && s.status?.kind ? `Waiting for ${s.status.kind}` : s.title);
+    N.show(`${name} ${what}`, body, `laforge-${t.id}`, () => {
+      const at = locate(t.id);
+      if (at) goTo(at.tab.id, at.pane.id);
+      markSeen(sessionsRef.current.get(t.id));
+    });
+  };
+  const prevSessions = useRef<Session[]>([]);
+  const alertTimers = useRef(new Set<ReturnType<typeof setTimeout>>());
+  useEffect(() => {
+    const list = [...sessions.values()];
+    const prev = prevSessions.current;
+    prevSessions.current = list;
+    for (const t of S.transitions(prev, list)) {
+      const timer = setTimeout(() => {
+        alertTimers.current.delete(timer);
+        alertRef.current(t);
+      }, 1000);
+      alertTimers.current.add(timer);
+    }
+  }, [sessions]);
+  useEffect(() => {
+    const timers = alertTimers.current;
+    return () => timers.forEach(clearTimeout);
+  }, []);
+
+  // the page title leads with how many panes are blocked
+  const blocked = [...sessions.values()].filter((s) => S.shown(s) === 'blocked').length;
+  const baseTitle = useRef(document.title);
+  useEffect(() => {
+    document.title = blocked ? `(${blocked}) ${baseTitle.current}` : baseTitle.current;
+  }, [blocked]);
+  useEffect(() => {
+    const base = baseTitle.current;
+    return () => {
+      document.title = base;
+    };
+  }, []);
+
+  const toggleAgents = useCallback(() => {
+    setAgentsOpen((o) => {
+      N.saveFlag('laforge.agents', !o);
+      return !o;
+    });
+  }, []);
+  const setNotify = useCallback(async (on: boolean) => {
+    if (on) {
+      const p = N.permission() === 'granted' ? 'granted' : await N.ask();
+      setPermission(p);
+      if (p !== 'granted') return;
+    }
+    setNotifyOn(on);
+    N.saveFlag('laforge.notify', on);
+  }, []);
+  const setSound = useCallback((on: boolean) => {
+    setSoundOn(on);
+    N.saveFlag('laforge.sound', on);
+    if (on) {
+      N.unlock();
+      setTimeout(() => N.chime('done'), 50);
+    }
+  }, []);
+
+  // the agents panel's clock: finer than the status bar's while it is open
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!agentsOpen) return;
+    setNow(Date.now());
+    const t = setInterval(() => setNow(Date.now()), 5000);
+    return () => clearInterval(t);
+  }, [agentsOpen]);
+
   const actions: Action[] = useMemo(() => {
     const list: Action[] = [
       { id: 'split-right', group: 'Pane', label: 'Split right', hint: '^b %', run: () => splitPane('row') },
@@ -265,6 +408,7 @@ export function Forge({ api: given, embedded = false }: Props) {
       { id: 'prev-tab', group: 'Tab', label: 'Previous tab', hint: '^b p', run: () => stepTab(-1) },
       { id: 'tiled', group: 'Layout', label: 'Tiled', hint: '^b space', run: () => preset('tiled') },
       { id: 'main', group: 'Layout', label: 'Main and stack', hint: '^b m', run: () => preset('main') },
+      { id: 'agents', group: 'View', label: agentsOpen ? 'Hide the agents panel' : 'Show the agents panel', hint: '^b a', run: toggleAgents },
       { id: 'mode', group: 'View', label: `Theme: ${pref} (switch)`, run: cycleMode },
       { id: 'bigger', group: 'View', label: 'Bigger text', hint: '^b +', run: () => setFontSize((f) => Math.min(f + 1, 22)) },
       { id: 'smaller', group: 'View', label: 'Smaller text', hint: '^b _', run: () => setFontSize((f) => Math.max(f - 1, 9)) },
@@ -284,7 +428,7 @@ export function Forge({ api: given, embedded = false }: Props) {
       });
     }
     return list;
-  }, [profiles, tab, pref, config, splitPane, toggleZoom, newTabAction, stepTab, preset, cycleMode, startIn, updateTab]);
+  }, [profiles, tab, pref, config, agentsOpen, splitPane, toggleZoom, newTabAction, stepTab, preset, cycleMode, toggleAgents, startIn, updateTab]);
 
   // keys: the prefix (Ctrl-b) then one key, as in tmux
   const keys = useRef<(e: KeyboardEvent) => boolean>(() => false);
@@ -372,6 +516,9 @@ export function Forge({ api: given, embedded = false }: Props) {
       case 'm':
         preset('main');
         break;
+      case 'a':
+        toggleAgents();
+        break;
       case '+':
       case '=':
         setFontSize((f) => Math.min(f + 1, 22));
@@ -424,10 +571,13 @@ export function Forge({ api: given, embedded = false }: Props) {
     else counts.ended++;
   }
 
-  const tabState = (t: L.Tab): string => {
-    const ss = L.panes(t.root)
+  const tabSessions = (t: L.Tab) =>
+    L.panes(t.root)
       .map((p) => (p.session ? sessions.get(p.session) : undefined))
       .filter(Boolean) as Session[];
+
+  const tabState = (t: L.Tab): string => {
+    const ss = tabSessions(t);
     if (ss.some((s) => s.state === 'failed')) return 'failed';
     if (ss.some((s) => s.state === 'running' || s.state === 'starting')) return 'running';
     if (ss.some((s) => s.state === 'idle')) return 'idle';
@@ -501,13 +651,15 @@ export function Forge({ api: given, embedded = false }: Props) {
     const only = L.panes(t.root).length === 1;
     const ended = s && !live(s);
     const state = s ? s.state : 'empty';
+    const word = S.shown(s);
+    const msg = word ? s?.status?.msg || (word === 'blocked' && s?.status?.kind ? `waiting for ${s.status.kind}` : '') : '';
     return (
       <section
         className={`pane ${focused ? 'is-focused' : ''} ${zoomed ? 'is-zoomed' : ''}`}
         onMouseDown={() => focusPane(t.id, pane.id)}
       >
         <header className="pane-head">
-          <span className={`dot dot-${state}`} title={state} />
+          {!word && <span className={`dot dot-${state}`} title={state} />}
           {s ? (
             <>
               <span className={`chip ${profiles.find((p) => p.name === s.profile)?.agent ? 'chip-agent' : ''}`}>{monogram(profiles.find((p) => p.name === s.profile) ?? { name: s.profile, label: s.profile })}</span>
@@ -521,6 +673,12 @@ export function Forge({ api: given, embedded = false }: Props) {
               >
                 {s.title}
               </span>
+              {word && <Badge word={word} progress={s.status?.progress} />}
+              {msg && (
+                <span className={`pane-msg msg-${word}`} title={msg}>
+                  {msg}
+                </span>
+              )}
               {s.after && (
                 <span className="pane-after" title={`${profiles.find((p) => p.name === s.after)?.label ?? s.after} exited${s.agentExit !== undefined ? ` (${s.agentExit})` : ''}; this pane is a shell now`}>
                   after {profiles.find((p) => p.name === s.after)?.label ?? s.after}
@@ -635,6 +793,35 @@ export function Forge({ api: given, embedded = false }: Props) {
     if (profile) startIn(tab.id, pane.id, profile, config?.cwd);
   };
 
+  // agentRows: every pane with a status or an agent profile, most urgent first
+  const agentRows = (): AgentRow[] => {
+    const rows: (AgentRow & { s: Session })[] = [];
+    for (const t of layout.tabs) {
+      for (const p of L.panes(t.root)) {
+        const s = p.session ? sessions.get(p.session) : undefined;
+        if (!s) continue;
+        const prof = profiles.find((x) => x.name === s.profile);
+        if (!s.status && !prof?.agent) continue;
+        const word = S.shown(s);
+        rows.push({
+          s,
+          key: p.id,
+          tabId: t.id,
+          paneId: p.id,
+          tab: tabLabel(t),
+          title: s.title,
+          app: s.status?.app || prof?.label || s.profile,
+          word,
+          state: s.state,
+          msg: s.status?.msg || (word === 'blocked' && s.status?.kind ? `waiting for ${s.status.kind}` : ''),
+          since: s.statusSince,
+          current: t.id === layout.active && t.focus === p.id,
+        });
+      }
+    }
+    return rows.sort((a, b) => S.byUrgency(a.s, b.s)).map(({ s: _, ...r }) => r);
+  };
+
   const ModeIcon = pref === 'dark' ? I.Moon : pref === 'light' ? I.Sun : I.Monitor;
 
   return (
@@ -662,7 +849,10 @@ export function Forge({ api: given, embedded = false }: Props) {
                 onMouseDown={() => setLayout((l) => (l ? { ...l, active: t.id } : l))}
                 onDoubleClick={() => setRenaming(t.id)}
               >
-                <span className={`dot dot-${tabState(t)}`} />
+                {(() => {
+                  const w = S.tabStatus(tabSessions(t));
+                  return w ? <span className={`dot st-${w}`} title={`Most urgent: ${w}`} /> : <span className={`dot dot-${tabState(t)}`} />;
+                })()}
                 {renaming === t.id ? (
                   <input
                     className="tab-rename"
@@ -761,6 +951,10 @@ export function Forge({ api: given, embedded = false }: Props) {
         </div>
         <span className="grow" />
         <div className="tools">
+          <button className={`icon-btn agents-btn ${agentsOpen ? 'is-open' : ''}`} title="Agents (^b a)" onClick={toggleAgents}>
+            <I.Bell />
+            {blocked > 0 && <span className="agents-btn-count">{blocked}</span>}
+          </button>
           <button className="icon-btn" title="Tiled (^b space)" onClick={() => preset('tiled')}>
             <I.Grid />
           </button>
@@ -778,13 +972,32 @@ export function Forge({ api: given, embedded = false }: Props) {
         </div>
       </nav>
 
-      <main className="tab-bodies">
-        {layout.tabs.map((t) => (
-          <div key={t.id} className={`tab-body ${t.id === layout.active ? 'is-active' : ''}`}>
-            {renderTab(t)}
-          </div>
-        ))}
-      </main>
+      <div className="work">
+        <main className="tab-bodies">
+          {layout.tabs.map((t) => (
+            <div key={t.id} className={`tab-body ${t.id === layout.active ? 'is-active' : ''}`}>
+              {renderTab(t)}
+            </div>
+          ))}
+        </main>
+        {agentsOpen && (
+          <Agents
+            rows={agentRows()}
+            now={now}
+            permission={permission}
+            notify={notifyOn}
+            sound={soundOn}
+            onPick={(r) => {
+              goTo(r.tabId, r.paneId);
+              const id = L.findPane(layout.tabs.find((x) => x.id === r.tabId)!.root, r.paneId)?.session;
+              if (id) markSeen(sessions.get(id));
+            }}
+            onNotify={setNotify}
+            onSound={setSound}
+            onClose={toggleAgents}
+          />
+        )}
+      </div>
 
       <footer className="statusbar">
         <span className="sb-session">forge</span>
@@ -799,6 +1012,11 @@ export function Forge({ api: given, embedded = false }: Props) {
         {prefix && <span className="sb-prefix">PREFIX</span>}
         {!connected && !authLost && <span className="sb-down">disconnected — retrying</span>}
         <span className="sb-counts">
+          {blocked > 0 && (
+            <>
+              <span className="dot st-blocked" /> {blocked} blocked{' '}
+            </>
+          )}
           <span className="dot dot-running" /> {counts.running} running <span className="dot dot-idle" /> {counts.idle} idle
           {counts.ended ? (
             <>

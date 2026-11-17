@@ -107,3 +107,8 @@ export const SmallClose = () => (
     <path d="M4 4l8 8M12 4l-8 8" />
   </svg>
 );
+export const Bell = () => (
+  <svg {...base} aria-hidden>
+    <path d="M4 11.5V7a4 4 0 0 1 8 0v4.5l1 1H3l1-1ZM6.5 14h3" />
+  </svg>
+);

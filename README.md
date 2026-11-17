@@ -113,6 +113,7 @@ Keys follow tmux: press the prefix **Ctrl-b**, then
 | `,` | rename the tab |
 | space / `m` | tiled / main-and-stack layout |
 | `+` / `_` | bigger / smaller text |
+| `a` | show or hide the agents panel |
 | `:` or ⌘K | command palette |
 | `?` | all keys |
 | Ctrl-b | send a literal Ctrl-b |
@@ -125,6 +126,23 @@ A tab is named after its focused pane until you rename it: the pencil on the
 tab, a double-click, or Ctrl-b `,`. Clearing the name goes back to automatic.
 The tab's ✕ closes it and its panes (it asks first when any are running).
 Drag the gaps between panes to resize them; double-click a gap to even them.
+
+### Agent status
+
+A pane whose program reports its status (OSC 7501, or a hook from
+`la hooks install`) shows a badge in its header: **blocked** and **error** in
+red, **done** in blue, **working** in amber, **idle** muted, with what it says
+beside it (for blocked, what it waits for). Done means it finished while you
+weren't looking: once you focus the pane it reads idle. Each tab's dot takes
+the colour of its most urgent pane, and the page title leads with the number
+of blocked panes, e.g. `(2) LaForge`.
+
+The **agents panel** (the bell in the top bar, or Ctrl-b `a`) lists every agent
+and every reporting pane, most urgent first; click a row to go to it. At its
+foot, **Turn on notifications** lets the browser tell you when a pane becomes
+blocked, errors or is done while you are looking elsewhere (click the
+notification to go to the pane), and **Sound** adds a short chime. The panel,
+notifications and sound are remembered in this browser.
 
 ### Profiles
 
