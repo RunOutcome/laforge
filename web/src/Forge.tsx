@@ -4,14 +4,15 @@
 // Forge is the whole client: tabs of split panes, each a shell or an agent.
 // It is one component so a host (the Outcome Arena) can mount it with its
 // own api base; the standalone client is this and nothing else.
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Agents, AskButtons, Badge, LostActions, type AgentRow, type LostAction } from './Agents';
 import { ApiError, ForgeApi, type Config, type LostPane, type Profile, type Session, type Whoami } from './api';
 import * as L from './layout';
 import { Help, Palette, type Action } from './Palette';
 import { Picker, monogram } from './Picker';
 import { TerminalView, type TerminalHandle } from './TerminalView';
-import { loadPref, savePref, systemMode, terminalTheme, type Mode, type ModePref } from './theme';
+import { loadPref, modeLabel, nextPref, resolveMode, savePref, systemMode, terminalTheme, type Mode, type ModePref } from './theme';
+import { Themes } from './Themes';
 import * as K from './skins';
 import * as R from './rail';
 import * as N from './notify';
@@ -47,6 +48,7 @@ export function Forge({ api: given, embedded = false }: Props) {
   const [fontSize, setFontSize] = useState(13);
   const [clock, setClock] = useState(() => new Date());
   const [agentsOpen, setAgentsOpen] = useState(() => N.loadFlag('laforge.agents', false));
+  const [themesOpen, setThemesOpen] = useState(false);
   const [notifyOn, setNotifyOn] = useState(() => N.loadFlag('laforge.notify', false));
   const [soundOn, setSoundOn] = useState(() => N.loadFlag('laforge.sound', false));
   const [permission, setPermission] = useState<N.Permission>(N.permission);
@@ -64,12 +66,13 @@ export function Forge({ api: given, embedded = false }: Props) {
   const [railOpen, setRailOpen] = useState(false);
   const [newSpace, setNewSpace] = useState<{ name: string; cwd: string; error: string } | null>(null);
   const terms = useRef(new Map<string, TerminalHandle>());
-  // a skin that draws one mode forces it; otherwise the viewer's choice
-  const mode: Mode = K.modeOf(skin, pref === 'system' ? sysMode : pref);
-  const termTheme = useMemo(() => K.terminalOf(skin, terminalTheme(mode)), [skin, mode]);
+  // every skin draws both modes: the viewer's choice decides, always
+  const mode: Mode = resolveMode(pref, sysMode);
+  const termTheme = useMemo(() => K.terminalOf(skin, terminalTheme(mode), mode), [skin, mode]);
   const layoutKind = K.layoutOf(skin);
 
-  useEffect(() => {
+  // the root's data-mode is the resolved mode, set before the page paints
+  useLayoutEffect(() => {
     document.documentElement.dataset.mode = mode;
   }, [mode]);
 
@@ -114,12 +117,24 @@ export function Forge({ api: given, embedded = false }: Props) {
     },
     [skinList, showSkin],
   );
-  const makeDefaultSkin = useCallback(
-    (name: string) => {
-      api
-        .setDefaultSkin(name)
-        .then(loadSkins)
-        .catch(() => undefined);
+  const makeDefaultSkin = useCallback((name: string) => api.setDefaultSkin(name).then(loadSkins), [api, loadSkins]);
+  const removeSkin = useCallback(
+    async (name: string) => {
+      await api.removeSkin(name);
+      const list = await loadSkins();
+      // the skin in use went: show what this browser would pick now
+      if (name === skin.name) {
+        K.saveChoice(null);
+        showSkin(K.pick(list, null));
+      }
+    },
+    [api, loadSkins, skin, showSkin],
+  );
+  const installSkins = useCallback(
+    async (source: string) => {
+      const r = await api.installSkins(source);
+      await loadSkins();
+      return r;
     },
     [api, loadSkins],
   );
@@ -381,11 +396,12 @@ export function Forge({ api: given, embedded = false }: Props) {
   );
   const cycleMode = useCallback(() => {
     setPref((p) => {
-      const next: ModePref = p === 'dark' ? 'light' : p === 'light' ? 'system' : 'dark';
+      const next = nextPref(p);
       savePref(next);
       return next;
     });
   }, []);
+  const toggleThemes = useCallback(() => setThemesOpen((o) => !o), []);
 
   useEffect(() => {
     const on = () => setVisible(document.visibilityState === 'visible');
@@ -586,7 +602,8 @@ export function Forge({ api: given, embedded = false }: Props) {
       { id: 'tiled', group: 'Layout', label: 'Tiled', hint: '^b space', run: () => preset('tiled') },
       { id: 'main', group: 'Layout', label: 'Main and stack', hint: '^b m', run: () => preset('main') },
       { id: 'agents', group: 'View', label: agentsOpen ? 'Hide the agents panel' : 'Show the agents panel', hint: '^b a', run: toggleAgents },
-      { id: 'mode', group: 'View', label: `Theme: ${pref} (switch)`, run: cycleMode },
+      { id: 'mode', group: 'View', label: `Toggle light/dark (now ${pref === 'system' ? `system, ${mode}` : pref})`, run: cycleMode },
+      { id: 'themes', group: 'View', label: 'Themes…', run: () => setThemesOpen(true) },
       { id: 'bigger', group: 'View', label: 'Bigger text', hint: '^b +', run: () => setFontSize((f) => Math.min(f + 1, 22)) },
       { id: 'smaller', group: 'View', label: 'Smaller text', hint: '^b _', run: () => setFontSize((f) => Math.max(f - 1, 9)) },
       { id: 'help', group: 'Help', label: 'Keys', hint: '^b ?', run: () => setHelp(true) },
@@ -595,7 +612,7 @@ export function Forge({ api: given, embedded = false }: Props) {
       list.push({ id: `skin-${k.name}`, group: 'Skin', label: `Skin: ${k.label}${k.name === skin.name ? ' (in use)' : ''}`, run: () => chooseSkin(k.name) });
     }
     for (const k of skinList?.skins ?? []) {
-      if (k.name !== skinList?.default) list.push({ id: `skin-default-${k.name}`, group: 'Skin', label: `Make ${k.label} the forge default`, run: () => makeDefaultSkin(k.name) });
+      if (k.name !== skinList?.default) list.push({ id: `skin-default-${k.name}`, group: 'Skin', label: `Make ${k.label} the forge default`, run: () => makeDefaultSkin(k.name).catch(() => undefined) });
     }
     for (const p of profiles.filter((x) => x.available)) {
       list.push({
@@ -611,7 +628,7 @@ export function Forge({ api: given, embedded = false }: Props) {
       });
     }
     return list;
-  }, [profiles, tab, pref, config, agentsOpen, skinList, skin, chooseSkin, makeDefaultSkin, splitPane, toggleZoom, newTabAction, stepTab, preset, cycleMode, toggleAgents, startIn, updateTab]);
+  }, [profiles, tab, pref, mode, config, agentsOpen, skinList, skin, chooseSkin, makeDefaultSkin, splitPane, toggleZoom, newTabAction, stepTab, preset, cycleMode, toggleAgents, startIn, updateTab]);
 
   // keys: the prefix (Ctrl-b) then one key, as in tmux
   const keys = useRef<(e: KeyboardEvent) => boolean>(() => false);
@@ -619,6 +636,10 @@ export function Forge({ api: given, embedded = false }: Props) {
   prefixRef.current = prefix;
   keys.current = (e: KeyboardEvent) => {
     if (palette || help || renaming || viewingRef.current) return false;
+    if (themesOpen && e.key === 'Escape' && !prefixRef.current && !(e.target as HTMLElement | null)?.closest?.('.xterm')) {
+      setThemesOpen(false);
+      return true;
+    }
     if (paneMenu && e.key === 'Escape') {
       setPaneMenu(false);
       return true;
@@ -1083,6 +1104,7 @@ export function Forge({ api: given, embedded = false }: Props) {
   };
 
   const ModeIcon = pref === 'dark' ? I.Moon : pref === 'light' ? I.Sun : I.Monitor;
+  const modeTitle = modeLabel(pref, sysMode);
 
   // the pieces both layouts draw
   const tabBar = (shownTabs: Set<string> | null) => (
@@ -1211,14 +1233,17 @@ export function Forge({ api: given, embedded = false }: Props) {
         <I.Bell />
         {blocked > 0 && <span className="agents-btn-count">{blocked}</span>}
       </button>
-      <button className="icon-btn" title="Tiled (^b space)" onClick={() => preset('tiled')}>
+      <button className="icon-btn layout-btn" title="Tiled (^b space)" onClick={() => preset('tiled')}>
         <I.Grid />
       </button>
-      <button className="icon-btn" title="Main and stack (^b m)" onClick={() => preset('main')}>
+      <button className="icon-btn layout-btn" title="Main and stack (^b m)" onClick={() => preset('main')}>
         <I.MainStack />
       </button>
-      <button className="icon-btn" title={`Theme: ${pref}`} onClick={cycleMode}>
+      <button className="icon-btn mode-btn" title={modeTitle} aria-label={modeTitle} data-pref={pref} onClick={cycleMode}>
         <ModeIcon />
+      </button>
+      <button className={`icon-btn themes-btn ${themesOpen ? 'is-open' : ''}`} title="Themes" aria-label="Themes" aria-expanded={themesOpen} onClick={toggleThemes}>
+        <I.Palette />
       </button>
       <button className="cmd-btn" title="Commands" onClick={() => setPalette(true)}>
         <I.Command />
@@ -1258,6 +1283,17 @@ export function Forge({ api: given, embedded = false }: Props) {
           onNotify={setNotify}
           onSound={setSound}
           onClose={toggleAgents}
+        />
+      )}
+      {themesOpen && (
+        <Themes
+          list={skinList}
+          active={skin.name}
+          onPick={chooseSkin}
+          onDefault={makeDefaultSkin}
+          onRemove={removeSkin}
+          onInstall={installSkins}
+          onClose={() => setThemesOpen(false)}
         />
       )}
     </div>

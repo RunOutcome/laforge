@@ -7,7 +7,7 @@
 // adds the skin's stylesheets, marks the root with data-skin and
 // data-layout, and gives the terminals the skin's palette.
 import type { ITheme } from '@xterm/xterm';
-import type { Mode } from './theme';
+import { terminalTheme, type Mode } from './theme';
 
 export type SkinLayout = 'classic' | 'rail';
 
@@ -19,10 +19,26 @@ export interface Skin {
   author?: string;
   license?: string;
   layout?: SkinLayout;
+  /** mode is legacy: every skin now draws both modes, so the client ignores it. */
   mode?: 'dark' | 'light' | 'both';
   css?: string[];
-  terminal?: Partial<Record<Exclude<keyof ITheme, 'extendedAnsi'>, string>>;
+  /** terminal is the terminal palette per mode; a flat palette (the old shape) is the skin's one mode, or both. */
+  terminal?: SkinTerminal | TerminalColours;
+  /** source is where an installed skin came from (a folder or a GitHub repo). */
+  source?: string;
   builtin: boolean;
+}
+
+export type TerminalColours = Partial<Record<Exclude<keyof ITheme, 'extendedAnsi'>, string>>;
+export interface SkinTerminal {
+  dark?: TerminalColours;
+  light?: TerminalColours;
+}
+
+/** InstallResult is POST /api/skins/install's answer. */
+export interface InstallResult {
+  installed: Skin[];
+  failed: { path: string; reason: string }[];
 }
 
 export interface SkinList {
@@ -62,13 +78,23 @@ export function pick(list: SkinList | null, choice: string | null): Skin {
 /** layoutOf is the skin's layout; anything unknown is classic. */
 export const layoutOf = (skin: Skin): SkinLayout => (skin.layout === 'rail' ? 'rail' : 'classic');
 
-/** modeOf is the mode to draw: the skin's own when it draws only one, else the viewer's. */
-export const modeOf = (skin: Skin, viewer: Mode): Mode => (skin.mode === 'dark' || skin.mode === 'light' ? skin.mode : viewer);
+/** terminalFor is a skin's own terminal colours for a mode, if it has any. */
+export function terminalFor(skin: Skin, mode: Mode): TerminalColours | undefined {
+  const t = skin.terminal;
+  if (!t) return undefined;
+  if ('dark' in t || 'light' in t) {
+    const v = (t as SkinTerminal)[mode];
+    return v && typeof v === 'object' ? v : undefined;
+  }
+  // the old flat shape: one palette for the mode the skin declared, or both
+  if (skin.mode === 'dark' || skin.mode === 'light') return skin.mode === mode ? (t as TerminalColours) : undefined;
+  return t as TerminalColours;
+}
 
-/** terminalOf is the skin's terminal palette over the base one. */
-export function terminalOf(skin: Skin, base: ITheme): ITheme {
-  if (!skin.terminal) return base;
-  return { ...base, ...skin.terminal } as ITheme;
+/** terminalOf is the skin's terminal palette for the mode over the base (the client's palette for that mode). */
+export function terminalOf(skin: Skin, base: ITheme, mode: Mode): ITheme {
+  const own = terminalFor(skin, mode);
+  return own ? ({ ...base, ...own } as ITheme) : base;
 }
 
 /** cssUrls are a skin's stylesheets, as the forge serves them. */
@@ -111,4 +137,44 @@ export async function apply(skin: Skin, base = '', doc: Document = document): Pr
   for (const l of old) l.remove();
   root.dataset.skin = skin.name;
   root.dataset.layout = layoutOf(skin);
+}
+
+export interface Swatch {
+  background: string;
+  foreground: string;
+  accent: string;
+}
+
+/** swatches are a skin's light and dark strips: its terminal colours, else the client's palette for that mode. */
+export function swatches(skin: Skin): Record<Mode, Swatch> {
+  const one = (mode: Mode): Swatch => {
+    const t = terminalOf(skin, terminalTheme(mode), mode);
+    const base = terminalTheme(mode);
+    return { background: t.background ?? base.background!, foreground: t.foreground ?? base.foreground!, accent: t.cursor ?? base.cursor! };
+  };
+  return { light: one('light'), dark: one('dark') };
+}
+
+/** InstallState is the theme panel's install section. */
+export type InstallState =
+  | { kind: 'idle' }
+  | { kind: 'busy'; source: string }
+  | { kind: 'done'; result: InstallResult }
+  | { kind: 'unsupported' }
+  | { kind: 'error'; reason: string };
+
+/**
+ * installState runs an install and says how it went. A forge without the
+ * install route answers 405 (or a plain 404 with no JSON error code): it
+ * cannot install themes.
+ */
+export async function installState(install: (source: string) => Promise<InstallResult>, source: string): Promise<InstallState> {
+  try {
+    const r = await install(source);
+    return { kind: 'done', result: { installed: r?.installed ?? [], failed: r?.failed ?? [] } };
+  } catch (err) {
+    const e = err as { status?: number; code?: string; message?: string };
+    if (e.status === 405 || e.status === 501 || (e.status === 404 && (!e.code || e.code === 'error'))) return { kind: 'unsupported' };
+    return { kind: 'error', reason: e.message || 'The install failed.' };
+  }
 }

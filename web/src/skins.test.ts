@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import type { Session, StatusWord } from './api';
 import * as R from './rail';
 import * as K from './skins';
+import { darkTerminal, lightTerminal } from './theme';
 
 const skin = (name: string, more: Partial<K.Skin> = {}): K.Skin => ({ name, label: name, builtin: false, ...more });
 
@@ -25,17 +26,37 @@ describe('skin loader', () => {
     expect(K.pick({ default: 'x', skins: [] }, null)).toBe(K.classic);
   });
 
-  it('forces the mode a skin draws, and reads its layout', () => {
-    expect(K.modeOf(skin('a', { mode: 'dark' }), 'light')).toBe('dark');
-    expect(K.modeOf(skin('a', { mode: 'both' }), 'light')).toBe('light');
-    expect(K.modeOf(skin('a'), 'dark')).toBe('dark');
+  it('reads a skin layout', () => {
     expect(K.layoutOf(skin('a', { layout: 'rail' }))).toBe('rail');
     expect(K.layoutOf(skin('a', { layout: 'sideways' as K.SkinLayout }))).toBe('classic');
   });
 
-  it('lays the skin terminal palette over the base', () => {
-    const t = K.terminalOf(skin('a', { terminal: { background: '#000000', red: '#ff0000' } }), { background: '#111111', foreground: '#eeeeee' });
-    expect(t).toEqual({ background: '#000000', foreground: '#eeeeee', red: '#ff0000' });
+  it("picks the skin's terminal palette by mode, over the client's palette for that mode", () => {
+    const k = skin('a', { terminal: { dark: { background: '#000000', red: '#ff0000' }, light: { background: '#ffffff' } } });
+    expect(K.terminalOf(k, { background: '#111111', foreground: '#eeeeee' }, 'dark')).toEqual({ background: '#000000', foreground: '#eeeeee', red: '#ff0000' });
+    expect(K.terminalOf(k, { background: '#222222', foreground: '#111111' }, 'light')).toEqual({ background: '#ffffff', foreground: '#111111' });
+  });
+
+  it('falls back to the client palette for a mode the skin leaves out', () => {
+    const base = { background: '#fbfcfd' };
+    expect(K.terminalOf(skin('a', { terminal: { dark: { background: '#000000' } } }), base, 'light')).toBe(base);
+    expect(K.terminalOf(skin('a'), base, 'dark')).toBe(base);
+  });
+
+  it('reads the old flat palette as the mode the skin declared, or both', () => {
+    const flat = { background: '#000000' };
+    expect(K.terminalOf(skin('a', { mode: 'dark', terminal: flat }), {}, 'dark').background).toBe('#000000');
+    expect(K.terminalOf(skin('a', { mode: 'dark', terminal: flat }), { background: '#fff' }, 'light').background).toBe('#fff');
+    expect(K.terminalOf(skin('a', { terminal: flat }), {}, 'light').background).toBe('#000000');
+  });
+
+  it('draws swatches from the skin terminal colours, else the client palette per mode', () => {
+    const sw = K.swatches(skin('a', { terminal: { dark: { background: '#000000', foreground: '#f3e9dc', cursor: '#ffae42' } } }));
+    expect(sw.dark).toEqual({ background: '#000000', foreground: '#f3e9dc', accent: '#ffae42' });
+    expect(sw.light).toEqual({ background: lightTerminal.background, foreground: lightTerminal.foreground, accent: lightTerminal.cursor });
+    const partial = K.swatches(skin('b', { terminal: { light: { background: '#eeeeee' } } }));
+    expect(partial.light).toEqual({ background: '#eeeeee', foreground: lightTerminal.foreground, accent: lightTerminal.cursor });
+    expect(K.swatches(K.classic).dark).toEqual({ background: darkTerminal.background, foreground: darkTerminal.foreground, accent: darkTerminal.cursor });
   });
 
   it("serves a skin's stylesheets from its folder", () => {

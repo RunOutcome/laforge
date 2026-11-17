@@ -63,6 +63,15 @@ export function systemMode(): Mode {
   return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
+/** nextPref is the light/dark button's next step: system, then light, then dark. */
+export const nextPref = (p: ModePref): ModePref => (p === 'system' ? 'light' : p === 'light' ? 'dark' : 'system');
+
+/** resolveMode is the mode to draw for a preference and the system's mode. */
+export const resolveMode = (p: ModePref, system: Mode): Mode => (p === 'system' ? system : p);
+
+/** modeLabel is what the light/dark button's tooltip says. */
+export const modeLabel = (p: ModePref, system: Mode): string => (p === 'system' ? `Light/dark: system (${system} now)` : `Light/dark: ${p}`);
+
 export function loadPref(): ModePref {
   try {
     const v = localStorage.getItem('laforge.mode');
@@ -70,7 +79,7 @@ export function loadPref(): ModePref {
   } catch {
     /* storage blocked */
   }
-  return 'dark';
+  return 'system';
 }
 
 export function savePref(p: ModePref): void {

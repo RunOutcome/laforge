@@ -10,6 +10,10 @@ import '@fontsource/ibm-plex-mono/latin-500.css';
 import '@fontsource/ibm-plex-mono/latin-600.css';
 import './styles.css';
 import { Forge } from './Forge';
+import { loadPref, resolveMode, systemMode } from './theme';
+
+// the resolved light/dark mode before the first render, so nothing flashes
+document.documentElement.dataset.mode = resolveMode(loadPref(), systemMode());
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
