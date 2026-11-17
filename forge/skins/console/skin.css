@@ -1,0 +1,578 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+/* SPDX-FileCopyrightText: 2026 COR Holdings, LLC */
+
+/* Console: LaForge's own control-room look. A black ground, thick rounded
+   frame bars that join the rail to the header and the footer, solid warm
+   blocks for spaces and tabs, a condensed upper-case face. Layout: rail.
+   Barlow Condensed is by the Barlow Project Authors, SIL OFL 1.1
+   (fonts/OFL.txt). */
+
+@font-face {
+  font-family: 'Console Condensed';
+  src: url('fonts/barlow-condensed-latin-500-normal.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Console Condensed';
+  src: url('fonts/barlow-condensed-latin-600-normal.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root[data-skin='console'] {
+  /* the skin's own colours */
+  --k-sun: #ffae42;
+  --k-ember: #ff6b3d;
+  --k-coral: #f48a6a;
+  --k-rose: #e45d7e;
+  --k-gold: #f4c95d;
+  --k-clay: #c97b45;
+  --k-plum: #b56fa0;
+  --k-peach: #ffc99c;
+  --k-frame: 14px;
+  --k-elbow: 34px;
+
+  /* the forge's tokens */
+  --canvas: #000000;
+  --side: #000000;
+  --sunken: #000000;
+  --card: #0b0907;
+  --hover: rgba(255, 174, 66, 0.1);
+  --press: rgba(255, 174, 66, 0.18);
+  --line: #2b221a;
+  --line-2: #1c1611;
+  --tx: #f7ede0;
+  --tx-2: #dcc9b4;
+  --tx-3: #9c8a77;
+  --acc: #ffae42;
+  --acc-500: #ffc47a;
+  --acc-100: rgba(255, 174, 66, 0.18);
+  --acc-fill: #ffae42;
+  --on-acc: #000000;
+  --ai: #e45d7e;
+  --ai-600: #f07c98;
+  --ai-100: rgba(228, 93, 126, 0.3);
+  --ai-50: rgba(228, 93, 126, 0.16);
+  --red: #ff4f3f;
+  --red-50: rgba(255, 79, 63, 0.16);
+  --amber: #f4c95d;
+  --amber-50: rgba(244, 201, 93, 0.15);
+  --green: #9ccf6e;
+  --todo: #7d6c5c;
+  --term: #000000;
+  --scrim: rgba(0, 0, 0, 0.7);
+  --on-red: #000000;
+  --font-display: 'Console Condensed', 'Barlow Condensed', 'Roboto Condensed', 'Arial Narrow', sans-serif-condensed, sans-serif;
+  --font-ui: var(--font-display);
+  --radius-pane: 16px;
+  --radius-dialog: 18px;
+  --radius-control: 999px;
+  --radius-button: 999px;
+  --radius-button-sm: 999px;
+  --radius-chip: 999px;
+  --rail-width: 236px;
+  --topbar-height: 40px;
+  --statusbar-height: 30px;
+  --work-gap: 8px;
+  --shadow-tab: none;
+}
+
+[data-skin='console'] body,
+[data-skin='console'] .forge {
+  background: #000;
+  font-size: 15px;
+  letter-spacing: 0.02em;
+}
+
+/* the rail: an elbow at the top, colour blocks, the crew, an elbow at the bottom */
+[data-skin='console'] .rail {
+  padding: 0;
+  gap: 6px;
+  border-right: 0;
+  background: #000;
+  text-transform: uppercase;
+}
+
+[data-skin='console'] .rail-machine {
+  flex: none;
+  min-height: 84px;
+  padding: 14px 16px 10px;
+  justify-content: flex-end;
+  align-items: flex-end;
+  text-align: right;
+  border-radius: var(--k-elbow) 0 0 0;
+  background: var(--k-sun);
+  color: #000;
+}
+
+[data-skin='console'] .rail-machine .rail-label {
+  color: rgba(0, 0, 0, 0.62);
+  letter-spacing: 0.16em;
+}
+
+[data-skin='console'] .rail-host {
+  font: 600 26px/1 var(--font-display);
+  color: #000;
+}
+
+[data-skin='console'] .rail::after {
+  content: '';
+  flex: none;
+  min-height: 84px;
+  margin-top: auto;
+  border-radius: 0 0 0 var(--k-elbow);
+  background: var(--k-ember);
+}
+
+[data-skin='console'] .rail-section {
+  gap: 4px;
+}
+
+[data-skin='console'] .rail-title {
+  justify-content: flex-end;
+  padding: 10px 16px 4px;
+  font: 600 13px/1 var(--font-display);
+  letter-spacing: 0.18em;
+  color: var(--k-sun);
+}
+
+[data-skin='console'] .rail-title .rail-count {
+  color: var(--k-sun);
+}
+
+[data-skin='console'] .rail-space {
+  min-height: 36px;
+  padding: 0 16px;
+  border-radius: 0;
+  font: 600 17px/1 var(--font-display);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #000;
+  background: var(--k-clay);
+  filter: saturate(0.85) brightness(0.86);
+  justify-content: flex-end;
+}
+
+[data-skin='console'] .rail-space .rail-space-name {
+  text-align: right;
+}
+
+[data-skin='console'] .rail-space .rail-count {
+  min-width: 22px;
+  text-align: right;
+  font: 600 15px/1 var(--font-display);
+  color: rgba(0, 0, 0, 0.6);
+}
+
+[data-skin='console'] .rail-space[data-space=''] {
+  background: var(--k-peach);
+}
+[data-skin='console'] .rail-space[data-index='0'] {
+  background: var(--k-coral);
+}
+[data-skin='console'] .rail-space[data-index='1'] {
+  background: var(--k-gold);
+}
+[data-skin='console'] .rail-space[data-index='2'] {
+  background: var(--k-rose);
+}
+[data-skin='console'] .rail-space[data-index='3'] {
+  background: var(--k-sun);
+}
+[data-skin='console'] .rail-space[data-index='4'] {
+  background: var(--k-plum);
+}
+[data-skin='console'] .rail-space[data-index='5'] {
+  background: var(--k-ember);
+}
+[data-skin='console'] .rail-space[data-index='6'] {
+  background: var(--k-clay);
+}
+[data-skin='console'] .rail-space[data-index='7'] {
+  background: var(--k-peach);
+}
+
+[data-skin='console'] .rail-space:hover {
+  filter: none;
+  color: #000;
+}
+
+[data-skin='console'] .rail-space.is-active {
+  filter: none;
+  color: #000;
+  box-shadow: inset -8px 0 0 #fff4e6;
+}
+
+[data-skin='console'] .rail-add {
+  min-height: 32px;
+  padding: 0 16px;
+  justify-content: flex-end;
+  border-radius: 0;
+  background: #17110b;
+  color: var(--k-sun);
+  text-transform: uppercase;
+  font: 600 15px/1 var(--font-display);
+  letter-spacing: 0.08em;
+}
+
+[data-skin='console'] .rail-new-space input {
+  border-radius: 0;
+  border-color: var(--k-clay);
+  background: #0b0907;
+  text-transform: none;
+}
+
+[data-skin='console'] .crew-row {
+  gap: 10px;
+  padding: 6px 12px 6px 0;
+  border-radius: 0;
+}
+
+[data-skin='console'] .crew-row.is-current {
+  background: #17110b;
+}
+
+[data-skin='console'] .crew-bar {
+  width: 12px;
+  border-radius: 0 6px 6px 0;
+}
+
+[data-skin='console'] .crew-name {
+  font: 600 15px/1.1 var(--font-display);
+  letter-spacing: 0.05em;
+}
+
+[data-skin='console'] .crew-sub {
+  font: 500 12.5px/1.1 var(--font-display);
+  letter-spacing: 0.1em;
+}
+
+[data-skin='console'] .crew-row[data-status='blocked'] .crew-sub,
+[data-skin='console'] .crew-row[data-status='error'] .crew-sub {
+  color: var(--red);
+}
+[data-skin='console'] .crew-row[data-status='working'] .crew-sub {
+  color: var(--amber);
+}
+[data-skin='console'] .crew-row[data-status='done'] .crew-sub {
+  color: var(--green);
+}
+[data-skin='console'] .crew-row[data-status='done'] .crew-bar {
+  background: var(--green);
+}
+
+[data-skin='console'] .crew-msg {
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+[data-skin='console'] .rail-empty {
+  padding: 0 16px;
+  text-align: right;
+}
+
+/* the header: a thick bar from the top elbow, the date and the space */
+[data-skin='console'] .rail-header {
+  position: relative;
+  height: calc(64px + var(--k-frame));
+  padding: 0 16px 0 26px;
+  border-top: var(--k-frame) solid var(--k-sun);
+  border-bottom: 0;
+  background: #000;
+}
+
+[data-skin='console'] .rail-header::before {
+  /* the elbow's inner curve */
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 26px;
+  height: 26px;
+  background: radial-gradient(circle at 100% 100%, transparent 25.5px, var(--k-sun) 26px);
+}
+
+[data-skin='console'] .rail-when {
+  align-items: flex-start;
+  font: 600 14px/1.1 var(--font-display);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--k-coral);
+}
+
+[data-skin='console'] .rail-time {
+  font-size: 22px;
+  color: var(--k-sun);
+}
+
+[data-skin='console'] .rail-space-title {
+  font: 600 40px/1 var(--font-display);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--k-sun);
+}
+
+[data-skin='console'] .icon-btn {
+  color: var(--k-sun);
+  border-radius: 999px;
+}
+
+[data-skin='console'] .icon-btn:hover {
+  background: var(--k-sun);
+  color: #000;
+}
+
+[data-skin='console'] .agents-btn.is-open {
+  background: var(--k-sun);
+  color: #000;
+}
+
+[data-skin='console'] .cmd-btn,
+[data-skin='console'] .new-pane-btn {
+  height: 28px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--k-plum);
+  color: #000;
+  font: 600 14px/1 var(--font-display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+[data-skin='console'] .new-pane-btn {
+  background: var(--k-gold);
+}
+
+[data-skin='console'] .cmd-btn kbd {
+  border: 0;
+  background: rgba(0, 0, 0, 0.25);
+  color: #000;
+}
+
+/* tabs: solid blocks coloured by what their panes are doing */
+[data-skin='console'] .topbar {
+  background: #000;
+  border-bottom: 0;
+}
+
+[data-skin='console'] .tab {
+  height: 28px;
+  border: 0;
+  border-radius: 999px;
+  padding: 0 14px;
+  background: var(--k-clay);
+  color: #000;
+  font: 600 15px/1 var(--font-display);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  filter: brightness(0.7) saturate(0.8);
+  box-shadow: none;
+}
+
+[data-skin='console'] .tab:hover {
+  filter: brightness(0.9);
+  background: var(--k-clay);
+}
+
+[data-skin='console'] .tab.is-active {
+  filter: none;
+  background: var(--k-sun);
+  color: #000;
+  border: 0;
+}
+
+[data-skin='console'] .tab[data-status='working'] {
+  background: var(--k-gold);
+}
+[data-skin='console'] .tab[data-status='blocked'],
+[data-skin='console'] .tab[data-status='error'],
+[data-skin='console'] .tab[data-status='failed'] {
+  background: var(--red);
+}
+[data-skin='console'] .tab[data-status='done'] {
+  background: var(--green);
+}
+
+[data-skin='console'] .tab .dot {
+  background: #000;
+  box-shadow: none;
+  border-color: #000;
+}
+
+[data-skin='console'] .tab-name,
+[data-skin='console'] .tab-name.is-auto,
+[data-skin='console'] .tab-actions button {
+  color: #000;
+}
+
+[data-skin='console'] .tab-count {
+  background: rgba(0, 0, 0, 0.25);
+  color: #000;
+}
+
+/* panes: framed, the active one in the skin's sun */
+[data-skin='console'] .pane {
+  border: 2px solid var(--line);
+  background: #000;
+}
+
+[data-skin='console'] .pane[data-active='true'] {
+  border-color: var(--k-sun);
+  box-shadow: none;
+}
+
+[data-skin='console'] .pane[data-status='blocked'],
+[data-skin='console'] .pane[data-status='error'] {
+  border-color: var(--red);
+}
+
+[data-skin='console'] .pane-head {
+  background: #000;
+  border-bottom: 2px solid var(--line-2);
+  text-transform: uppercase;
+}
+
+[data-skin='console'] .pane-title {
+  font: 600 16px/1 var(--font-display);
+  letter-spacing: 0.06em;
+  color: var(--k-sun);
+}
+
+[data-skin='console'] .pane-msg,
+[data-skin='console'] .pane-cwd {
+  text-transform: none;
+}
+
+[data-skin='console'] .chip {
+  background: var(--k-clay);
+  color: #000;
+}
+
+[data-skin='console'] .badge {
+  padding: 4px 9px;
+  font: 600 12px/1 var(--font-display);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #000;
+}
+
+[data-skin='console'] .badge::before {
+  background: #000;
+}
+
+[data-skin='console'] .badge-blocked,
+[data-skin='console'] .badge-error {
+  background: var(--red);
+}
+[data-skin='console'] .badge-done {
+  background: var(--green);
+}
+[data-skin='console'] .badge-working {
+  background: var(--amber);
+}
+[data-skin='console'] .badge-idle {
+  background: var(--todo);
+}
+
+[data-skin='console'] .gutter::after {
+  background: var(--k-sun);
+}
+
+/* the footer: a thick bar into the bottom elbow, and the counts */
+[data-skin='console'] .rail-footer {
+  position: relative;
+  height: calc(var(--statusbar-height) + var(--k-frame) + 6px);
+  padding: 0 16px 0 26px;
+  border-top: 0;
+  border-bottom: var(--k-frame) solid var(--k-ember);
+  background: #000;
+  font: 600 15px/1 var(--font-display);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--tx-2);
+}
+
+[data-skin='console'] .rail-footer::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 26px;
+  height: 26px;
+  background: radial-gradient(circle at 100% 0%, transparent 25.5px, var(--k-ember) 26px);
+}
+
+[data-skin='console'] .rail-footer .sb-help,
+[data-skin='console'] .rail-footer .sb-clock {
+  font: inherit;
+  color: var(--k-coral);
+}
+
+[data-skin='console'] .rf-count[data-status='done'] {
+  color: var(--green);
+}
+
+/* panels, palette and dialogs */
+[data-skin='console'] .agents,
+[data-skin='console'] .palette,
+[data-skin='console'] .help,
+[data-skin='console'] .menu {
+  background: #070503;
+  border: 2px solid var(--k-sun);
+  box-shadow: none;
+}
+
+[data-skin='console'] .agents-head,
+[data-skin='console'] .help h2,
+[data-skin='console'] .agents-sub,
+[data-skin='console'] .pal-group {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--k-sun);
+}
+
+[data-skin='console'] .palette li.is-active {
+  background: var(--k-sun);
+  color: #000;
+}
+
+[data-skin='console'] .palette li.is-active .pal-group {
+  color: #000;
+}
+
+[data-skin='console'] .ask .ask-allow {
+  background: var(--green);
+  border-color: var(--green);
+  color: #000;
+}
+
+[data-skin='console'] .ask .ask-deny {
+  background: var(--red);
+  border-color: var(--red);
+  color: #000;
+}
+
+[data-skin='console'] .view-banner {
+  border-bottom: var(--k-frame) solid var(--k-sun);
+  background: #000;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--k-sun);
+}
+
+@media (max-width: 640px) {
+  [data-skin='console'] .rail-header {
+    height: calc(52px + var(--k-frame));
+    padding-left: 18px;
+  }
+  [data-skin='console'] .rail-space-title {
+    font-size: 26px;
+  }
+  [data-skin='console'] .rail-when {
+    display: none;
+  }
+}

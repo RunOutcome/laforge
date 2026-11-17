@@ -193,6 +193,16 @@ at most 7 days); `la share --list` and `la share --revoke TOKEN` manage links.
 The link reaches only people who can reach the forge's address, which is
 127.0.0.1 (this machine) unless you have tunnelled it somewhere.
 
+### Skins
+
+A skin changes how the forge looks. **Classic** is LaForge's own; **Console**
+is a black control-room look with spaces and the crew in a rail at the left.
+Pick one in ⌘K (**Skin: …**); each browser keeps its own choice, and **Make
+… the forge default** sets what others see. `la skin install DIR`, `la skin
+list`, `la skin use NAME` and `la skin remove NAME` manage them. A skin is
+stylesheets, fonts and images, never code: see [docs/skins.md](docs/skins.md)
+to make one.
+
 ### Profiles
 
 The built-in profiles are your login shell and each agent CLI that is

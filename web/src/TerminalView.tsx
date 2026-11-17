@@ -6,7 +6,7 @@
 // JSON text frames. A dropped connection reconnects and redraws from the
 // buffer; a normal close with "ended" means the session is over.
 import { useEffect, useRef } from 'react';
-import { Terminal } from '@xterm/xterm';
+import { Terminal, type ITheme } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import '@xterm/xterm/css/xterm.css';
@@ -33,9 +33,11 @@ interface Props {
   readOnly?: boolean;
   cols?: number;
   rows?: number;
+  /** theme is the skin's terminal palette; without it, the mode's own. */
+  theme?: ITheme;
 }
 
-export function TerminalView({ api, session, mode, focused, fontSize, onKey, onFocus, onEnded, register, readOnly = false, cols, rows }: Props) {
+export function TerminalView({ api, session, mode, focused, fontSize, onKey, onFocus, onEnded, register, readOnly = false, cols, rows, theme }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const termRef = useRef<Terminal | null>(null);
   const refitRef = useRef<() => void>(() => undefined);
@@ -57,7 +59,7 @@ export function TerminalView({ api, session, mode, focused, fontSize, onKey, onF
       scrollback: 10000,
       allowProposedApi: true,
       macOptionIsMeta: true,
-      theme: terminalTheme(mode),
+      theme: theme ?? terminalTheme(mode),
       disableStdin: readOnly,
       cursorInactiveStyle: readOnly ? 'none' : undefined,
     });
@@ -200,8 +202,8 @@ export function TerminalView({ api, session, mode, focused, fontSize, onKey, onF
   }, [api, session]);
 
   useEffect(() => {
-    if (termRef.current) termRef.current.options.theme = terminalTheme(mode);
-  }, [mode]);
+    if (termRef.current) termRef.current.options.theme = theme ?? terminalTheme(mode);
+  }, [mode, theme]);
 
   useEffect(() => {
     if (!termRef.current) return;

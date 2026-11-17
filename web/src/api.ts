@@ -3,6 +3,7 @@
 
 // The forge's HTTP API. base is '' for the standalone client; a host that
 // embeds the forge (the Outcome Arena) passes the forge's own origin.
+import type { SkinList } from './skins';
 
 export interface Profile {
   name: string;
@@ -139,7 +140,7 @@ export class ForgeApi {
   profiles = () => this.call<Profile[]>('GET', '/api/profiles');
   sessions = () => this.call<Session[]>('GET', '/api/sessions');
   config = () => this.call<Config>('GET', '/api/config');
-  start = (req: { profile: string; cwd?: string; title?: string; cols?: number; rows?: number; resume?: string }) => this.call<Session>('POST', '/api/sessions', req);
+  start = (req: { profile: string; cwd?: string; title?: string; cols?: number; rows?: number; resume?: string; labels?: Record<string, string> }) => this.call<Session>('POST', '/api/sessions', req);
   rename = (id: string, title: string) => this.call<Session>('PATCH', `/api/sessions/${encodeURIComponent(id)}`, { title });
   close = (id: string, force = false) => this.call<void>('DELETE', `/api/sessions/${encodeURIComponent(id)}${force ? '?force=1' : ''}`);
   seen = (id: string) => this.call<Session>('POST', `/api/sessions/${encodeURIComponent(id)}/seen`);
@@ -147,6 +148,8 @@ export class ForgeApi {
   lost = () => this.call<LostPane[]>('GET', '/api/lost');
   dismissLost = (id: string) => this.call<void>('DELETE', `/api/lost/${encodeURIComponent(id)}`);
   answer = (id: string, decision: 'allow' | 'deny') => this.call<{ decision: string }>('POST', `/api/sessions/${encodeURIComponent(id)}/answer`, { decision });
+  skins = () => this.call<SkinList>('GET', '/api/skins');
+  setDefaultSkin = (name: string) => this.call<{ default: string }>('PUT', '/api/skins/default', { name });
   layout = () => this.call<unknown>('GET', '/api/layout');
   saveLayout = (layout: unknown) => this.call<void>('PUT', '/api/layout', layout);
 

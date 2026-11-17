@@ -123,3 +123,8 @@ export const Held = () => (
     <path d="M8 2.5v9M5 13.5h6M3.5 8.5c0 2.5 2 4 4.5 4s4.5-1.5 4.5-4M6 4.5h4" />
   </svg>
 );
+export const Menu = () => (
+  <svg {...base} aria-hidden>
+    <path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11" />
+  </svg>
+);

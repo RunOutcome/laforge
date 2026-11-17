@@ -65,6 +65,7 @@ export function Agents({ rows, lost, lostError, now, permission, notify, sound, 
               role="button"
               tabIndex={0}
               className={`agent-row ${r.current ? 'is-current' : ''} ${r.depth ? 'is-child' : ''}`}
+              data-status={r.word ?? r.state}
               style={indent ? { marginLeft: `${indent}px`, width: `calc(100% - ${indent}px)` } : undefined}
               onClick={() => onPick(r)}
               onKeyDown={(e) => {

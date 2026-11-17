@@ -11,7 +11,9 @@ import * as L from './layout';
 import { Help, Palette, type Action } from './Palette';
 import { Picker, monogram } from './Picker';
 import { TerminalView, type TerminalHandle } from './TerminalView';
-import { loadPref, savePref, systemMode, type Mode, type ModePref } from './theme';
+import { loadPref, savePref, systemMode, terminalTheme, type Mode, type ModePref } from './theme';
+import * as K from './skins';
+import * as R from './rail';
 import * as N from './notify';
 import * as S from './status';
 import * as I from './icons';
@@ -56,12 +58,71 @@ export function Forge({ api: given, embedded = false }: Props) {
   const [askNotes, setAskNotes] = useState<Record<string, string>>({});
   const viewingRef = useRef(false);
   viewingRef.current = who?.mode === 'view';
+  const [skinList, setSkinList] = useState<K.SkinList | null>(null);
+  const [skin, setSkin] = useState<K.Skin>(K.classic);
+  const [railSpace, setRailSpace] = useState<string | null>(null);
+  const [railOpen, setRailOpen] = useState(false);
+  const [newSpace, setNewSpace] = useState<{ name: string; cwd: string; error: string } | null>(null);
   const terms = useRef(new Map<string, TerminalHandle>());
-  const mode: Mode = pref === 'system' ? sysMode : pref;
+  // a skin that draws one mode forces it; otherwise the viewer's choice
+  const mode: Mode = K.modeOf(skin, pref === 'system' ? sysMode : pref);
+  const termTheme = useMemo(() => K.terminalOf(skin, terminalTheme(mode)), [skin, mode]);
+  const layoutKind = K.layoutOf(skin);
 
   useEffect(() => {
     document.documentElement.dataset.mode = mode;
   }, [mode]);
+
+  // skins: the browser's choice if the forge still has it, else the forge's
+  // default; one that fails to load falls back to classic
+  const skinSeq = useRef(0);
+  const showSkin = useCallback(
+    (next: K.Skin) => {
+      const seq = ++skinSeq.current;
+      K.apply(next, api.base)
+        .then(() => seq === skinSeq.current && setSkin(next))
+        .catch(() => {
+          if (seq !== skinSeq.current) return;
+          K.apply(K.classic, api.base).catch(() => undefined);
+          setSkin(K.classic);
+        });
+    },
+    [api],
+  );
+  const loadSkins = useCallback(
+    () =>
+      api
+        .skins()
+        .then((list) => {
+          setSkinList(list);
+          return list;
+        })
+        .catch(() => null),
+    [api],
+  );
+  useEffect(() => {
+    let stop = false;
+    loadSkins().then((list) => !stop && showSkin(K.pick(list, K.loadChoice())));
+    return () => {
+      stop = true;
+    };
+  }, [loadSkins, showSkin]);
+  const chooseSkin = useCallback(
+    (name: string) => {
+      K.saveChoice(name);
+      showSkin(K.pick(skinList, name));
+    },
+    [skinList, showSkin],
+  );
+  const makeDefaultSkin = useCallback(
+    (name: string) => {
+      api
+        .setDefaultSkin(name)
+        .then(loadSkins)
+        .catch(() => undefined);
+    },
+    [api, loadSkins],
+  );
   useEffect(() => {
     const mq = window.matchMedia?.('(prefers-color-scheme: dark)');
     const on = () => setSysMode(mq.matches ? 'dark' : 'light');
@@ -530,6 +591,12 @@ export function Forge({ api: given, embedded = false }: Props) {
       { id: 'smaller', group: 'View', label: 'Smaller text', hint: '^b _', run: () => setFontSize((f) => Math.max(f - 1, 9)) },
       { id: 'help', group: 'Help', label: 'Keys', hint: '^b ?', run: () => setHelp(true) },
     ];
+    for (const k of skinList?.skins ?? []) {
+      list.push({ id: `skin-${k.name}`, group: 'Skin', label: `Skin: ${k.label}${k.name === skin.name ? ' (in use)' : ''}`, run: () => chooseSkin(k.name) });
+    }
+    for (const k of skinList?.skins ?? []) {
+      if (k.name !== skinList?.default) list.push({ id: `skin-default-${k.name}`, group: 'Skin', label: `Make ${k.label} the forge default`, run: () => makeDefaultSkin(k.name) });
+    }
     for (const p of profiles.filter((x) => x.available)) {
       list.push({
         id: `new-${p.name}`,
@@ -544,7 +611,7 @@ export function Forge({ api: given, embedded = false }: Props) {
       });
     }
     return list;
-  }, [profiles, tab, pref, config, agentsOpen, splitPane, toggleZoom, newTabAction, stepTab, preset, cycleMode, toggleAgents, startIn, updateTab]);
+  }, [profiles, tab, pref, config, agentsOpen, skinList, skin, chooseSkin, makeDefaultSkin, splitPane, toggleZoom, newTabAction, stepTab, preset, cycleMode, toggleAgents, startIn, updateTab]);
 
   // keys: the prefix (Ctrl-b) then one key, as in tmux
   const keys = useRef<(e: KeyboardEvent) => boolean>(() => false);
@@ -695,7 +762,7 @@ export function Forge({ api: given, embedded = false }: Props) {
           {s && !authLost ? (
             <div className="pane view-pane">
               <div className="pane-body">
-                <TerminalView api={api} session={s.id} mode={mode} focused fontSize={fontSize} readOnly cols={s.columns} rows={s.rows} onKey={() => false} onFocus={() => undefined} onEnded={refresh} register={() => undefined} />
+                <TerminalView api={api} session={s.id} mode={mode} theme={termTheme} focused fontSize={fontSize} readOnly cols={s.columns} rows={s.rows} onKey={() => false} onFocus={() => undefined} onEnded={refresh} register={() => undefined} />
               </div>
             </div>
           ) : (
@@ -812,6 +879,8 @@ export function Forge({ api: given, embedded = false }: Props) {
     return (
       <section
         className={`pane ${focused ? 'is-focused' : ''} ${zoomed ? 'is-zoomed' : ''}`}
+        data-status={word ?? (lp ? 'lost' : state)}
+        data-active={focused ? 'true' : 'false'}
         onMouseDown={() => focusPane(t.id, pane.id)}
       >
         <header className="pane-head">
@@ -892,6 +961,7 @@ export function Forge({ api: given, embedded = false }: Props) {
               api={api}
               session={s.id}
               mode={mode}
+              theme={termTheme}
               focused={focused && !palette && !help}
               fontSize={fontSize}
               onKey={(e) => keys.current(e)}
@@ -1014,225 +1084,186 @@ export function Forge({ api: given, embedded = false }: Props) {
 
   const ModeIcon = pref === 'dark' ? I.Moon : pref === 'light' ? I.Sun : I.Monitor;
 
-  return (
-    <div className={`forge ${embedded ? 'is-embedded' : ''}`}>
-      <nav className="topbar">
-        {!embedded && (
-          <div className="brand">
-            <I.Mark />
-            <span className="brand-name">
-              La<b>Forge</b>
-            </span>
+  // the pieces both layouts draw
+  const tabBar = (shownTabs: Set<string> | null) => (
+    <div className="tabs" role="tablist">
+      {layout.tabs.map((t, i) => {
+        if (shownTabs && !shownTabs.has(t.id)) return null;
+        const count = L.panes(t.root).length;
+        const liveCount = L.panes(t.root).filter((p) => p.session && live(sessions.get(p.session))).length;
+        return (
+          <div
+            key={t.id}
+            role="tab"
+            aria-selected={t.id === layout.active}
+            className={`tab ${t.id === layout.active ? 'is-active' : ''}`}
+            data-status={S.tabStatus(tabSessions(t)) ?? tabState(t)}
+            title={`Tab ${i + 1} · double-click to rename`}
+            onMouseDown={() => setLayout((l) => (l ? { ...l, active: t.id } : l))}
+            onDoubleClick={() => setRenaming(t.id)}
+          >
+            {(() => {
+              const w = S.tabStatus(tabSessions(t));
+              return w ? <span className={`dot st-${w}`} title={`Most urgent: ${w}`} /> : <span className={`dot dot-${tabState(t)}`} />;
+            })()}
+            {renaming === t.id ? (
+              <input
+                className="tab-rename"
+                autoFocus
+                defaultValue={L.autoNamed(t) ? '' : t.name}
+                placeholder={tabLabel(t)}
+                onFocus={(e) => e.target.select()}
+                onBlur={(e) => {
+                  const name = e.target.value.trim();
+                  updateTab(t.id, (x) => (name ? { ...x, name, custom: true } : { ...x, name: '', custom: false }));
+                  setRenaming(null);
+                }}
+                onKeyDown={(e) => {
+                  e.stopPropagation();
+                  if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                  if (e.key === 'Escape') setRenaming(null);
+                }}
+              />
+            ) : (
+              <span className={`tab-name ${L.autoNamed(t) ? 'is-auto' : ''}`}>{tabLabel(t)}</span>
+            )}
+            {count > 1 && (
+              <span className="tab-count" title={`${count} panes`}>
+                {count}
+              </span>
+            )}
+            {closingTab === t.id ? (
+              <span className="tab-confirm" onMouseDown={(e) => e.stopPropagation()}>
+                Close{liveCount ? ` ${liveCount} running` : ''}?
+                <button onClick={() => closeTab(t.id)}>Yes</button>
+                <button onClick={() => setClosingTab(null)}>No</button>
+              </span>
+            ) : (
+              renaming !== t.id && (
+                <span className="tab-actions">
+                  <button
+                    title="Rename tab (^b ,)"
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={() => {
+                      setLayout((l) => (l ? { ...l, active: t.id } : l));
+                      setRenaming(t.id);
+                    }}
+                  >
+                    <I.Pencil />
+                  </button>
+                  <button title="Close tab" onMouseDown={(e) => e.stopPropagation()} onClick={() => (liveCount ? setClosingTab(t.id) : closeTab(t.id))}>
+                    <I.SmallClose />
+                  </button>
+                </span>
+              )
+            )}
           </div>
-        )}
-        <div className="tabs" role="tablist">
-          {layout.tabs.map((t, i) => {
-            const count = L.panes(t.root).length;
-            const liveCount = L.panes(t.root).filter((p) => p.session && live(sessions.get(p.session))).length;
-            return (
-              <div
-                key={t.id}
-                role="tab"
-                aria-selected={t.id === layout.active}
-                className={`tab ${t.id === layout.active ? 'is-active' : ''}`}
-                title={`Tab ${i + 1} · double-click to rename`}
-                onMouseDown={() => setLayout((l) => (l ? { ...l, active: t.id } : l))}
-                onDoubleClick={() => setRenaming(t.id)}
-              >
-                {(() => {
-                  const w = S.tabStatus(tabSessions(t));
-                  return w ? <span className={`dot st-${w}`} title={`Most urgent: ${w}`} /> : <span className={`dot dot-${tabState(t)}`} />;
-                })()}
-                {renaming === t.id ? (
-                  <input
-                    className="tab-rename"
-                    autoFocus
-                    defaultValue={L.autoNamed(t) ? '' : t.name}
-                    placeholder={tabLabel(t)}
-                    onFocus={(e) => e.target.select()}
-                    onBlur={(e) => {
-                      const name = e.target.value.trim();
-                      updateTab(t.id, (x) => (name ? { ...x, name, custom: true } : { ...x, name: '', custom: false }));
-                      setRenaming(null);
-                    }}
-                    onKeyDown={(e) => {
-                      e.stopPropagation();
-                      if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
-                      if (e.key === 'Escape') setRenaming(null);
-                    }}
-                  />
-                ) : (
-                  <span className={`tab-name ${L.autoNamed(t) ? 'is-auto' : ''}`}>{tabLabel(t)}</span>
-                )}
-                {count > 1 && (
-                  <span className="tab-count" title={`${count} panes`}>
-                    {count}
-                  </span>
-                )}
-                {closingTab === t.id ? (
-                  <span className="tab-confirm" onMouseDown={(e) => e.stopPropagation()}>
-                    Close{liveCount ? ` ${liveCount} running` : ''}?
-                    <button onClick={() => closeTab(t.id)}>Yes</button>
-                    <button onClick={() => setClosingTab(null)}>No</button>
-                  </span>
-                ) : (
-                  renaming !== t.id && (
-                    <span className="tab-actions">
-                      <button
-                        title="Rename tab (^b ,)"
-                        onMouseDown={(e) => e.stopPropagation()}
-                        onClick={() => {
-                          setLayout((l) => (l ? { ...l, active: t.id } : l));
-                          setRenaming(t.id);
-                        }}
-                      >
-                        <I.Pencil />
-                      </button>
-                      <button title="Close tab" onMouseDown={(e) => e.stopPropagation()} onClick={() => (liveCount ? setClosingTab(t.id) : closeTab(t.id))}>
-                        <I.SmallClose />
-                      </button>
-                    </span>
-                  )
-                )}
-              </div>
-            );
-          })}
-          <button className="icon-btn" title="New tab (^b c)" onClick={newTabAction}>
-            <I.Plus />
-          </button>
-        </div>
-        <div className="pane-menu-wrap">
-          <button className={`new-pane-btn ${paneMenu ? 'is-open' : ''}`} title="Add a pane to this tab" onClick={() => setPaneMenu((o) => !o)}>
-            <I.SplitRight />
-            <span>New pane</span>
-            <I.Chevron />
-          </button>
-          {paneMenu && (
-            <>
-              <div className="menu-scrim" onMouseDown={() => setPaneMenu(false)} />
-              <div className="menu" role="menu">
-                <div className="menu-label">Start in a new pane</div>
-                {profiles
-                  .filter((p) => p.available)
-                  .map((p) => (
-                    <button key={p.name} role="menuitem" className="menu-item" onClick={() => startNewPane(p.name)}>
-                      <span className={`menu-mono ${p.agent ? 'is-agent' : 'is-shell'}`}>{monogram(p)}</span>
-                      <span className="menu-text">{p.label}</span>
-                    </button>
-                  ))}
-                <div className="menu-sep" />
-                <button role="menuitem" className="menu-item" onClick={() => startNewPane(null, 'row')}>
-                  <span className="menu-mono">
-                    <I.SplitRight />
-                  </span>
-                  <span className="menu-text">Empty pane, right</span>
-                  <kbd>^b %</kbd>
+        );
+      })}
+      <button className="icon-btn" title="New tab (^b c)" onClick={newTabAction}>
+        <I.Plus />
+      </button>
+    </div>
+  );
+  const paneMenuButton = () => (
+    <div className="pane-menu-wrap">
+      <button className={`new-pane-btn ${paneMenu ? 'is-open' : ''}`} title="Add a pane to this tab" onClick={() => setPaneMenu((o) => !o)}>
+        <I.SplitRight />
+        <span>New pane</span>
+        <I.Chevron />
+      </button>
+      {paneMenu && (
+        <>
+          <div className="menu-scrim" onMouseDown={() => setPaneMenu(false)} />
+          <div className="menu" role="menu">
+            <div className="menu-label">Start in a new pane</div>
+            {profiles
+              .filter((p) => p.available)
+              .map((p) => (
+                <button key={p.name} role="menuitem" className="menu-item" onClick={() => startNewPane(p.name)}>
+                  <span className={`menu-mono ${p.agent ? 'is-agent' : 'is-shell'}`}>{monogram(p)}</span>
+                  <span className="menu-text">{p.label}</span>
                 </button>
-                <button role="menuitem" className="menu-item" onClick={() => startNewPane(null, 'col')}>
-                  <span className="menu-mono">
-                    <I.SplitDown />
-                  </span>
-                  <span className="menu-text">Empty pane, below</span>
-                  <kbd>^b &quot;</kbd>
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-        <span className="grow" />
-        <div className="tools">
-          <button className={`icon-btn agents-btn ${agentsOpen ? 'is-open' : ''}`} title="Agents (^b a)" onClick={toggleAgents}>
-            <I.Bell />
-            {blocked > 0 && <span className="agents-btn-count">{blocked}</span>}
-          </button>
-          <button className="icon-btn" title="Tiled (^b space)" onClick={() => preset('tiled')}>
-            <I.Grid />
-          </button>
-          <button className="icon-btn" title="Main and stack (^b m)" onClick={() => preset('main')}>
-            <I.MainStack />
-          </button>
-          <button className="icon-btn" title={`Theme: ${pref}`} onClick={cycleMode}>
-            <ModeIcon />
-          </button>
-          <button className="cmd-btn" title="Commands" onClick={() => setPalette(true)}>
-            <I.Command />
-            <span>Commands</span>
-            <kbd>⌘K</kbd>
-          </button>
-        </div>
-      </nav>
-
-      <div className="work">
-        <main className="tab-bodies">
-          {layout.tabs.map((t) => (
-            <div key={t.id} className={`tab-body ${t.id === layout.active ? 'is-active' : ''}`}>
-              {renderTab(t)}
-            </div>
-          ))}
-        </main>
-        {agentsOpen && (
-          <Agents
-            rows={agentRows()}
-            lost={lost.filter((x) => !placedSessions.has(x.id))}
-            lostError={lostError}
-            onAnswer={(r, d) => {
-              const s = sessions.get(r.id);
-              if (s) answer(s, d);
-            }}
-            onLost={(lp, a) => lostAction(lp, a)}
-            now={now}
-            permission={permission}
-            notify={notifyOn}
-            sound={soundOn}
-            onPick={(r) => {
-              if (r.tabId) goTo(r.tabId, r.paneId);
-              else openUnplaced(r.id);
-              markSeen(sessions.get(r.id));
-            }}
-            onNotify={setNotify}
-            onSound={setSound}
-            onClose={toggleAgents}
-          />
-        )}
-      </div>
-
-      <footer className="statusbar">
-        <span className="sb-session">forge</span>
-        {layout.tabs.map((t, i) => (
-          <span key={t.id} className={`sb-tab ${t.id === layout.active ? 'is-active' : ''}`}>
-            {i + 1}:{tabLabel(t)}
-            {t.id === layout.active ? '*' : ''}
-            {t.zoom ? 'Z' : ''}
-          </span>
+              ))}
+            <div className="menu-sep" />
+            <button role="menuitem" className="menu-item" onClick={() => startNewPane(null, 'row')}>
+              <span className="menu-mono">
+                <I.SplitRight />
+              </span>
+              <span className="menu-text">Empty pane, right</span>
+              <kbd>^b %</kbd>
+            </button>
+            <button role="menuitem" className="menu-item" onClick={() => startNewPane(null, 'col')}>
+              <span className="menu-mono">
+                <I.SplitDown />
+              </span>
+              <span className="menu-text">Empty pane, below</span>
+              <kbd>^b &quot;</kbd>
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+  const toolButtons = () => (
+    <div className="tools">
+      <button className={`icon-btn agents-btn ${agentsOpen ? 'is-open' : ''}`} title="Agents (^b a)" onClick={toggleAgents}>
+        <I.Bell />
+        {blocked > 0 && <span className="agents-btn-count">{blocked}</span>}
+      </button>
+      <button className="icon-btn" title="Tiled (^b space)" onClick={() => preset('tiled')}>
+        <I.Grid />
+      </button>
+      <button className="icon-btn" title="Main and stack (^b m)" onClick={() => preset('main')}>
+        <I.MainStack />
+      </button>
+      <button className="icon-btn" title={`Theme: ${pref}`} onClick={cycleMode}>
+        <ModeIcon />
+      </button>
+      <button className="cmd-btn" title="Commands" onClick={() => setPalette(true)}>
+        <I.Command />
+        <span>Commands</span>
+        <kbd>⌘K</kbd>
+      </button>
+    </div>
+  );
+  const workArea = () => (
+    <div className="work">
+      <main className="tab-bodies">
+        {layout.tabs.map((t) => (
+          <div key={t.id} className={`tab-body ${t.id === layout.active ? 'is-active' : ''}`}>
+            {renderTab(t)}
+          </div>
         ))}
-        <span className="grow" />
-        {prefix && <span className="sb-prefix">PREFIX</span>}
-        {!connected && !authLost && <span className="sb-down">disconnected — retrying</span>}
-        <span className="sb-counts">
-          {blocked > 0 && (
-            <>
-              <span className="dot st-blocked" /> {blocked} blocked{' '}
-            </>
-          )}
-          <span className="dot dot-running" /> {counts.running} running <span className="dot dot-idle" /> {counts.idle} idle
-          {counts.ended ? (
-            <>
-              {' '}
-              <span className="dot dot-complete" /> {counts.ended} ended
-            </>
-          ) : null}
-        </span>
-        <button className="sb-help" onClick={() => setHelp(true)}>
-          ^b ? keys
-        </button>
-        {config && (
-          <span className="sb-host">
-            {config.user}@{config.host.replace(/\.local$/, '')}
-          </span>
-        )}
-        <span className="sb-clock">{clock.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-      </footer>
-
+      </main>
+      {agentsOpen && (
+        <Agents
+          rows={agentRows()}
+          lost={lost.filter((x) => !placedSessions.has(x.id))}
+          lostError={lostError}
+          onAnswer={(r, d) => {
+            const s = sessions.get(r.id);
+            if (s) answer(s, d);
+          }}
+          onLost={(lp, a) => lostAction(lp, a)}
+          now={now}
+          permission={permission}
+          notify={notifyOn}
+          sound={soundOn}
+          onPick={(r) => {
+            if (r.tabId) goTo(r.tabId, r.paneId);
+            else openUnplaced(r.id);
+            markSeen(sessions.get(r.id));
+          }}
+          onNotify={setNotify}
+          onSound={setSound}
+          onClose={toggleAgents}
+        />
+      )}
+    </div>
+  );
+  const overlays = () => (
+    <>
       {authLost && (
         <div className="scrim">
           <div className="help">
@@ -1245,6 +1276,239 @@ export function Forge({ api: given, embedded = false }: Props) {
       )}
       {palette && <Palette actions={actions} onClose={() => setPalette(false)} />}
       {help && <Help onClose={() => setHelp(false)} />}
+    </>
+  );
+
+  // the rail layout's model: spaces, crew and counts
+  const pool = [...sessions.values()].filter((x) => placedSessions.has(x.id) || live(x));
+  const spaceList = R.spaces(pool);
+  const crewList = R.crew(pool, profiles);
+  const c = R.counts(pool);
+  const tabPanes = layout!.tabs.map((t) => ({ id: t.id, sessions: L.panes(t.root).map((p) => p.session).filter(Boolean) as string[] }));
+  const shown = railSpace === null ? null : R.tabsIn(tabPanes, sessions, railSpace).add(layout!.active);
+  const focusedPane = focusedSession ? sessions.get(focusedSession) : undefined;
+  const spaceName = railSpace ?? (focusedPane ? R.spaceOf(focusedPane) : 'All spaces');
+  const pickSpace = (name: string | null) => {
+    setRailSpace(name);
+    setRailOpen(false);
+    if (name === null) return;
+    const ids = R.tabsIn(tabPanes, sessions, name);
+    const first = layout!.tabs.find((t) => ids.has(t.id));
+    if (!first || first.id === layout!.active) return;
+    const pane = L.panes(first.root).find((p) => p.session && sessions.get(p.session) && R.spaceOf(sessions.get(p.session)!) === name);
+    goTo(first.id, pane?.id ?? first.focus);
+  };
+  const goToSession = (s: Session) => {
+    const at = locate(s.id);
+    if (at) goTo(at.tab.id, at.pane.id);
+    else openUnplaced(s.id);
+    markSeen(s);
+    setRailOpen(false);
+  };
+  const startSpace = async () => {
+    if (!newSpace) return;
+    const name = newSpace.name.trim();
+    if (!name) return setNewSpace({ ...newSpace, error: 'Name the space.' });
+    const shell = profiles.find((p) => !p.agent && p.available)?.name ?? 'shell';
+    try {
+      const s = await api.start({ profile: shell, cwd: newSpace.cwd.trim() || undefined, labels: { space: name }, cols: 100, rows: 30 });
+      setSessions((m) => new Map(m).set(s.id, s));
+      setLayout((l) => {
+        if (!l) return l;
+        const t = { ...L.newTab(name, s.id), custom: true };
+        return { ...l, tabs: [...l.tabs, t], active: t.id };
+      });
+      setNewSpace(null);
+      setRailSpace(name);
+      setRailOpen(false);
+    } catch (err) {
+      setNewSpace({ ...newSpace, error: (err as Error).message });
+    }
+  };
+
+  const rail = layoutKind === 'rail';
+
+  // Both layouts share one tree: the panes sit at the same place in each, so
+  // switching skins never remounts a terminal. In classic the rail parts are
+  // absent and .forge-main is display: contents.
+  return (
+    <div className={`forge ${embedded ? 'is-embedded' : ''} ${rail ? 'layout-rail' : ''} ${rail && railOpen ? 'is-rail-open' : ''}`} data-layout={layoutKind}>
+      {rail ? (
+        <aside className="rail" aria-label="Spaces and crew">
+          <div className="rail-machine">
+            <span className="rail-label">Machine</span>
+            <span className="rail-host">{config?.host?.replace(/\.local(domain)?$/, '') ?? 'forge'}</span>
+          </div>
+          <section className="rail-section rail-spaces">
+            <div className="rail-title">Spaces</div>
+            <button className={`rail-space ${railSpace === null ? 'is-active' : ''}`} data-space="" onClick={() => pickSpace(null)}>
+              <span className="rail-space-name">All</span>
+              <span className="rail-count">{pool.length}</span>
+            </button>
+            {spaceList.map((sp, i) => (
+              <button key={sp.name} className={`rail-space ${railSpace === sp.name ? 'is-active' : ''}`} data-space={sp.name} data-index={i % 8} onClick={() => pickSpace(sp.name)} title={sp.name}>
+                <span className="rail-space-name">{sp.name}</span>
+                <span className="rail-count">{sp.count}</span>
+              </button>
+            ))}
+            {newSpace ? (
+              <form
+                className="rail-new-space"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  startSpace();
+                }}
+              >
+                <input autoFocus placeholder="Space name" value={newSpace.name} onChange={(e) => setNewSpace({ ...newSpace, name: e.target.value, error: '' })} onKeyDown={(e) => e.key === 'Escape' && setNewSpace(null)} />
+                <input placeholder="Folder" value={newSpace.cwd} spellCheck={false} onChange={(e) => setNewSpace({ ...newSpace, cwd: e.target.value, error: '' })} onKeyDown={(e) => e.key === 'Escape' && setNewSpace(null)} />
+                <span className="rail-form-actions">
+                  <button type="submit">Start a shell</button>
+                  <button type="button" onClick={() => setNewSpace(null)}>
+                    Cancel
+                  </button>
+                </span>
+                {newSpace.error && <span className="rail-error">{newSpace.error}</span>}
+              </form>
+            ) : (
+              <button className="rail-add" onClick={() => setNewSpace({ name: '', cwd: config?.cwd ?? '', error: '' })}>
+                + New space
+              </button>
+            )}
+          </section>
+          <section className="rail-section rail-crew">
+            <div className="rail-title">
+              Crew <span className="rail-count">{crewList.length}</span>
+            </div>
+            {crewList.map((s) => {
+              const word = S.shown(s);
+              const prof = profiles.find((p) => p.name === s.profile);
+              const msg = s.status?.msg || (word === 'blocked' && s.status?.kind ? `waiting for ${s.status.kind}` : '');
+              const current = s.id === focusedSession;
+              return (
+                <div
+                  key={s.id}
+                  role="button"
+                  tabIndex={0}
+                  className={`crew-row ${current ? 'is-current' : ''}`}
+                  data-status={word ?? s.state}
+                  title={msg || undefined}
+                  onClick={() => goToSession(s)}
+                  onKeyDown={(e) => e.key === 'Enter' && e.target === e.currentTarget && goToSession(s)}
+                >
+                  <span className="crew-bar" />
+                  <span className="crew-body">
+                    <span className="crew-name">
+                      {s.status?.app || prof?.label || s.profile} · {s.title}
+                    </span>
+                    <span className="crew-sub">
+                      {word ?? s.state} · {R.spaceOf(s)}
+                    </span>
+                    {msg && <span className="crew-msg">{msg}</span>}
+                    <AskButtons asking={!!s.asking && !askHidden.has(`${s.id}|${s.asking.since}`)} note={askNotes[s.id]} onAnswer={(d) => answer(s, d)} />
+                  </span>
+                </div>
+              );
+            })}
+            {crewList.length === 0 && <p className="rail-empty">No agents yet.</p>}
+          </section>
+        </aside>
+      ) : null}
+      {rail ? <div className="rail-scrim" onMouseDown={() => setRailOpen(false)} /> : null}
+      <div className={rail ? 'rail-main' : 'forge-main'}>
+        {rail ? (
+          <header className="rail-header">
+            <button className="icon-btn rail-toggle" title="Spaces and crew" onClick={() => setRailOpen((o) => !o)}>
+              <I.Menu />
+            </button>
+            <span className="rail-when">
+              <span className="rail-date">{clock.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+              <span className="rail-time">{clock.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+            </span>
+            <span className="rail-space-title">{spaceName}</span>
+            <span className="grow" />
+            {toolButtons()}
+          </header>
+        ) : null}
+        <nav className={rail ? 'topbar rail-tabs' : 'topbar'}>
+          {!rail && !embedded && (
+            <div className="brand">
+              <I.Mark />
+              <span className="brand-name">
+                La<b>Forge</b>
+              </span>
+            </div>
+          )}
+          {tabBar(rail ? shown : null)}
+          {paneMenuButton()}
+          {!rail && <span className="grow" />}
+          {!rail && toolButtons()}
+        </nav>
+
+        {workArea()}
+
+        {rail ? (
+          <footer className="statusbar rail-footer">
+            <span className="rf-counts">
+              <span className="rf-count" data-status="working">
+                {c.working} working
+              </span>
+              <span className="rf-sep">·</span>
+              <span className="rf-count" data-status="blocked">
+                {c.needYou} need you
+              </span>
+              <span className="rf-sep">·</span>
+              <span className="rf-count" data-status="done">
+                {c.done} done
+              </span>
+            </span>
+            <span className="grow" />
+            {prefix && <span className="sb-prefix">PREFIX</span>}
+            {!connected && !authLost && <span className="sb-down">disconnected — retrying</span>}
+            <button className="sb-help" onClick={() => setHelp(true)}>
+              ^b ? keys
+            </button>
+            <span className="sb-clock">{clock.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+          </footer>
+        ) : (
+          <footer className="statusbar">
+            <span className="sb-session">forge</span>
+            {layout.tabs.map((t, i) => (
+              <span key={t.id} className={`sb-tab ${t.id === layout.active ? 'is-active' : ''}`}>
+                {i + 1}:{tabLabel(t)}
+                {t.id === layout.active ? '*' : ''}
+                {t.zoom ? 'Z' : ''}
+              </span>
+            ))}
+            <span className="grow" />
+            {prefix && <span className="sb-prefix">PREFIX</span>}
+            {!connected && !authLost && <span className="sb-down">disconnected — retrying</span>}
+            <span className="sb-counts">
+              {blocked > 0 && (
+                <>
+                  <span className="dot st-blocked" /> {blocked} blocked{' '}
+                </>
+              )}
+              <span className="dot dot-running" /> {counts.running} running <span className="dot dot-idle" /> {counts.idle} idle
+              {counts.ended ? (
+                <>
+                  {' '}
+                  <span className="dot dot-complete" /> {counts.ended} ended
+                </>
+              ) : null}
+            </span>
+            <button className="sb-help" onClick={() => setHelp(true)}>
+              ^b ? keys
+            </button>
+            {config && (
+              <span className="sb-host">
+                {config.user}@{config.host.replace(/\.local$/, '')}
+              </span>
+            )}
+            <span className="sb-clock">{clock.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+          </footer>
+        )}
+      </div>
+      {overlays()}
     </div>
   );
 }

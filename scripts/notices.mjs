@@ -61,7 +61,17 @@ for (const [key, meta] of Object.entries(lock.packages)) {
   npm.push({ name, version: meta.version, declared: meta.license, dir: join(root, 'web', key), ecosystem: 'npm package' });
 }
 
-const entries = [...[...goModules.values()].sort((a, b) => a.name.localeCompare(b.name)), ...npm.sort((a, b) => a.name.localeCompare(b.name))];
+// Fonts that built-in skins bundle (forge/skins/<skin>/fonts, with font.json and the licence).
+const fonts = [];
+const skinsDir = join(root, 'forge/skins');
+for (const skin of existsSync(skinsDir) ? readdirSync(skinsDir) : []) {
+  const dir = join(skinsDir, skin, 'fonts');
+  if (!existsSync(join(dir, 'font.json'))) continue;
+  const meta = JSON.parse(readFileSync(join(dir, 'font.json'), 'utf8'));
+  fonts.push({ name: `${meta.name} (${skin} skin)`, version: meta.version, declared: meta.license, dir, ecosystem: 'font' });
+}
+
+const entries = [...[...goModules.values()].sort((a, b) => a.name.localeCompare(b.name)), ...npm.sort((a, b) => a.name.localeCompare(b.name)), ...fonts];
 let missing = [];
 let body = `# Third-party notices
 
