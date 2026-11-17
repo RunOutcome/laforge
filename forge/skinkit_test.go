@@ -42,6 +42,21 @@ func TestTheSkinKit(t *testing.T) {
 	if err != nil || !strings.Contains(joined, "no [data-mode='light'] rules") || !strings.Contains(joined, "terminal.dark: foreground #2a2d33") {
 		t.Fatalf("%v\n%s", err, joined)
 	}
+	// a seam, faint interface text, a folder named otherwise
+	raw, _ = os.ReadFile(css)
+	bad := strings.Replace(string(raw), "--term: #14161a;", "--term: #ff0000;", 1)
+	bad = strings.Replace(bad, "--tx: #e4e6ea;", "--tx: #1a2e31;", 1)
+	os.WriteFile(css, []byte(bad), 0o644)
+	moved := filepath.Join(filepath.Dir(dir), "elsewhere")
+	os.Rename(dir, moved)
+	res, _ = CheckSkin(moved)
+	joined = strings.Join(res.Warnings, "\n")
+	for _, want := range []string{"dark mode: --term #ff0000 is not terminal.dark.background", "dark mode: --tx #1a2e31 on --canvas", "the folder is elsewhere but skin.json names harbour-lights"} {
+		if !strings.Contains(joined, want) {
+			t.Errorf("no warning %q in:\n%s", want, joined)
+		}
+	}
+	dir = moved
 	os.WriteFile(filepath.Join(dir, "x.js"), []byte("x"), 0o644)
 	if _, err := CheckSkin(dir); err == nil {
 		t.Fatal("a skin with code checked")

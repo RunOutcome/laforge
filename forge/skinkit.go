@@ -99,6 +99,27 @@ func CheckSkin(dir string) (SkinCheck, error) {
 				out.Warnings = append(out.Warnings, fmt.Sprintf("terminal.%s: foreground %s on %s is %.1f:1; text wants 4.5:1", mode, pal["foreground"], pal["background"], ratio))
 			}
 		}
+		tokens := modeTokens(all, sk.Name, mode)
+		if term, ok := tokens["--term"]; ok && okb {
+			if t, ok := parseColour(term); ok && t != bg {
+				out.Warnings = append(out.Warnings, fmt.Sprintf("%s mode: --term %s is not terminal.%s.background %s; the pane shows a seam", mode, term, mode, pal["background"]))
+			}
+		}
+	}
+	for _, mode := range []string{"dark", "light"} {
+		tokens := modeTokens(all, sk.Name, mode)
+		for _, pair := range [][2]string{{"--tx", "--canvas"}, {"--tx", "--card"}, {"--tx", "--side"}, {"--on-acc", "--acc-fill"}} {
+			f, okf := parseColour(tokens[pair[0]])
+			b, okb := parseColour(tokens[pair[1]])
+			if okf && okb {
+				if ratio := contrast(f, b); ratio < 4.5 {
+					out.Warnings = append(out.Warnings, fmt.Sprintf("%s mode: %s %s on %s %s is %.1f:1; text wants 4.5:1", mode, pair[0], tokens[pair[0]], pair[1], tokens[pair[1]], ratio))
+				}
+			}
+		}
+	}
+	if base := filepath.Base(filepath.Clean(dir)); base != sk.Name && base != "." {
+		out.Warnings = append(out.Warnings, fmt.Sprintf("the folder is %s but skin.json names %s: it installs as %s; name the folder the same", base, sk.Name, sk.Name))
 	}
 	if sk.License == "" {
 		out.Warnings = append(out.Warnings, "no license in skin.json: say how others may use it (Apache-2.0, CC-BY-4.0 …)")
@@ -260,3 +281,25 @@ A [LaForge](https://github.com/RunOutcome/laforge) skin, in light and dark.
 
 Made with ` + "`la skin new`" + `. How skins work: docs/skins.md in LaForge.
 `
+
+// modeTokens are the custom properties a skin's stylesheets set for a mode,
+// read from rules whose selector names the skin and that mode (the last
+// setting wins, as in CSS). Values it cannot read as a colour are kept but
+// not judged.
+func modeTokens(css, name, mode string) map[string]string {
+	out := map[string]string{}
+	css = regexp.MustCompile(`(?s)/\*.*?\*/`).ReplaceAllString(css, "")
+	rule := regexp.MustCompile(`(?s)([^{}]+)\{([^{}]*)\}`)
+	decl := regexp.MustCompile(`(--[a-z0-9-]+)\s*:\s*([^;]+)`)
+	skinSel := regexp.MustCompile(`data-skin=['"]?` + regexp.QuoteMeta(name) + `['"]?`)
+	modeSel := regexp.MustCompile(`data-mode=['"]?` + mode + `['"]?`)
+	for _, m := range rule.FindAllStringSubmatch(css, -1) {
+		if !skinSel.MatchString(m[1]) || !modeSel.MatchString(m[1]) {
+			continue
+		}
+		for _, d := range decl.FindAllStringSubmatch(m[2], -1) {
+			out[d[1]] = strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(d[2]), "!important"))
+		}
+	}
+	return out
+}

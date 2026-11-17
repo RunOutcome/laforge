@@ -28,13 +28,13 @@ skin styles both.
 
 ```sh
 la skin new my-theme        # skin.json, skin.css (light and dark), README.md
-la skin check my-theme      # what install would refuse, then warnings
+la skin check my-theme      # what install would refuse, then warnings (--strict: exit 1 on any)
 la skin install my-theme
 ```
 
 `la skin check` warns about what install allows but people notice: a mode
 the stylesheets never style, a mode with no terminal palette, terminal text
-under 4.5:1, no licence or description. An agent can build a theme for you
+under 4.5:1, interface text (`--tx` on its backgrounds, `--on-acc` on `--acc-fill`) under 4.5:1, a `--term` that differs from the terminal background, a folder named otherwise, no licence or description. An agent can build a theme for you
 with the `laforge-theme` skill in this repository
 (`.claude/skills/laforge-theme/`; Claude Code picks it up when run here, or
 copy the folder to `~/.claude/skills/`).

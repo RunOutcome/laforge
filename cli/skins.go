@@ -17,7 +17,7 @@ import (
 	"github.com/RunOutcome/laforge/forge"
 )
 
-const skinUsage = "skin list | new NAME [DIR] | check DIR | browse [COLLECTION] | install SOURCE|COLLECTION[/NAME]… | collections [add LINK | remove ID] | update [NAME] | remove NAME | use NAME"
+const skinUsage = "skin list | new NAME [DIR] | check [--strict] DIR | browse [COLLECTION] | install SOURCE|COLLECTION[/NAME]… | collections [add LINK | remove ID] | update [NAME] | remove NAME | use NAME"
 
 // skin is `la skin list|install SOURCE|update [NAME]|remove NAME|use NAME`.
 func (c *cmd) skin(args []string) error {
@@ -50,16 +50,28 @@ func (c *cmd) skin(args []string) error {
 		fmt.Fprintf(c.cfg.Stdout, "made %s in %s (skin.json, skin.css, README.md)\nnext: edit skin.css, then %s skin check %s && %s skin install %s\n", args[1], dir, c.cfg.Prog, dir, c.cfg.Prog, dir)
 		return nil
 	case "check":
-		if len(args) != 2 {
-			return usageError{errors.New("skin check DIR")}
+		strict := false
+		var dirs []string
+		for _, a := range args[1:] {
+			if a == "--strict" {
+				strict = true
+			} else {
+				dirs = append(dirs, a)
+			}
 		}
-		res, err := forge.CheckSkin(args[1])
+		if len(dirs) != 1 {
+			return usageError{errors.New("skin check [--strict] DIR")}
+		}
+		res, err := forge.CheckSkin(dirs[0])
 		if err != nil {
-			return fmt.Errorf("%s would not install: %v", args[1], err)
+			return fmt.Errorf("%s would not install: %v", dirs[0], err)
 		}
 		fmt.Fprintf(c.cfg.Stdout, "%s (%s, %s layout) installs\n", res.Skin.Name, res.Skin.Label, res.Skin.Layout)
 		for _, w := range res.Warnings {
 			fmt.Fprintf(c.cfg.Stdout, "  warning: %s\n", w)
+		}
+		if strict && len(res.Warnings) > 0 {
+			return exitCode(1)
 		}
 		return nil
 	case "browse":

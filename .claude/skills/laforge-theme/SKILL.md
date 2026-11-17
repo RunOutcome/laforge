@@ -24,8 +24,10 @@ repository: https://github.com/RunOutcome/laforge/blob/main/docs/skins.md
    one line; it becomes `description`.
 
 2. **Scaffold:** `la skin new <name> [dir]`. The name is lower-case letters,
-   digits and dashes. It writes a manifest with both terminal palettes, a
-   stylesheet with the main tokens for both modes, and a README.
+   digits and dashes; `dir` is the skin folder itself (default `./<name>`).
+   It writes a manifest with both terminal palettes, a stylesheet with the
+   main tokens for both modes, and a README. Fill in `author` (the person
+   you build it for, or ask) and replace the placeholder `description`.
 
 3. **Design dark and light together**, in `skin.css`:
    - colours under `:root[data-skin='<name>'][data-mode='dark']` and
@@ -33,7 +35,8 @@ repository: https://github.com/RunOutcome/laforge/blob/main/docs/skins.md
    - start with the tokens that change the most: `--canvas`, `--side`,
      `--card`, `--term`, `--line`, `--tx`/`--tx-2`/`--tx-3`, `--acc`,
      `--acc-fill`, `--on-acc`, then the status colours `--red` (blocked,
-     error), `--amber` (working), `--green` (running);
+     error), `--amber` (working), `--green` (running); **done** is shown in
+     the accent, `--acc`;
    - keep `--term` equal to that mode's `terminal.<mode>.background` in
      `skin.json`, or the pane shows a seam;
    - the light mode is a design of its own, not the dark one inverted: the
@@ -43,7 +46,11 @@ repository: https://github.com/RunOutcome/laforge/blob/main/docs/skins.md
    `.tab[data-status]`, `.pane[data-status][data-active]`,
    `.pane-head`, the agents panel, and in the rail layout `.rail`, the
    spaces and crew rows, `.rail-when`, the footer counts. Scope every rule
-   with `[data-skin='<name>']` so it never leaks into other skins. Use the
+   with `[data-skin='<name>']` so it never leaks into other skins. A pane's
+   status colours its border; make the focused pane show on top of that
+   with a ring, e.g.
+   `[data-skin='<name>'] .pane[data-active='true'] { box-shadow: 0 0 0 2px var(--acc); }`,
+   so the active pane still stands out when it is also working. Use the
    hook names from `docs/skins.md`; do not target generated or unlisted
    class names, which may change.
 
@@ -60,23 +67,42 @@ repository: https://github.com/RunOutcome/laforge/blob/main/docs/skins.md
 
 7. **Check, then install:**
    ```sh
-   la skin check <dir>      # refusals as install gives them, then warnings
+   la skin check --strict <dir>   # refusals as install gives them, then warnings
    la skin install <dir>
-   la skin use <name>       # or pick it in the Themes panel
+   la skin use <name>             # or pick it in the Themes panel
    ```
-   Fix every warning: an unstyled mode, a missing terminal palette, text
-   under 4.5:1. After each edit run `la skin install <dir>` again and reload
-   the page (skin files are served uncached).
+   `--strict` exits 1 on any warning (without it, warnings still exit 0).
+   Fix every warning. It checks: each mode styled and with a terminal
+   palette; terminal text, `--tx` on `--canvas`/`--card`/`--side` and
+   `--on-acc` on `--acc-fill` at 4.5:1 or better; `--term` matching the
+   terminal background; the folder named as the skin; a licence and a
+   description. Values it cannot read as colours (`var()`, gradients) it
+   does not judge: look at those yourself. After each edit run
+   `la skin install <dir>` again and reload the page (skin files are served
+   uncached).
 
-8. **Look at it, in both modes.** Use a scratch forge so nobody's work is
-   touched: `LAFORGE_HOME=$(mktemp -d) la up --no-open --port <spare>`, start
-   a few panes, give some a status (`la report working --msg "…"`,
-   `la report blocked --kind question --msg "…"` inside a pane), install the
-   skin there, and screenshot it in light and dark (the header's light/dark
-   button, or the `laforge.mode` localStorage key). Check: text readable,
-   status colours tell blocked from working from done, the active pane
-   stands out, nothing overflows at phone width (390px). Stop the forge with
-   `la down` when done.
+8. **Look at it, in both modes,** in a scratch forge so nobody's work is
+   touched. Export the home first, so **every** later `la` command uses it
+   (setting it on `la up` alone sends the rest to the user's real forge):
+   ```sh
+   export LAFORGE_HOME=$(mktemp -d)
+   la up --no-open --port 47400         # prints the URL; the page needs its ?token=
+   la status                            # the port it really got
+   la skin install <dir> && la skin use <name>
+   la run --bg --name tests  sh -c 'la report working --msg "running the suite"; exec sh'
+   la run --bg --name review sh -c 'la report blocked --kind question --msg "Which branch?"; exec sh'
+   la run --bg --name docs   sh -c 'la report done --msg "README updated"; exec sh'
+   ```
+   Open the printed URL. Panes started from the command line open in a tab
+   of their own (named "Found"); click it. The mode is the
+   `laforge.mode` localStorage key (`light`, `dark` or `system`): set it and
+   reload, or use the header's light/dark button. For headless screenshots,
+   drive Chrome over the DevTools protocol: set the window size (1400x875,
+   and 390x844 for a phone), set the key, reload, click the tab with real
+   mouse events (a script's `.click()` is not enough), and capture.
+   Check: text readable, blocked, working and done tell apart, the active
+   pane stands out, nothing a skin draws overflows at 390px. Then
+   `la down` (it stops only this forge) and delete the home.
 
 9. **Share it.** A GitHub repository holding the skin at its root, or many
    skins in subfolders (or under `skins/`), installs with
@@ -103,7 +129,7 @@ The message names the problem; the common ones:
 
 | Message | Fix |
 | --- | --- |
-| `skins draw both light and dark; remove mode` | delete `"mode"`, split `terminal` into `dark` and `light`, add `[data-mode]` rules |
+| `skin.json: skins draw both light and dark; remove mode` | delete `"mode"`, split `terminal` into `dark` and `light`, add `[data-mode]` rules |
 | `a skin carries stylesheets, fonts and images only` | remove the named file (scripts, HTML, binaries) |
 | `css "…" is not in the skin` | fix the path in `css`, relative to the skin folder |
 | `terminal.<mode>.<key> "…": a known key and a #hex or rgb() colour` | use an xterm key and a plain colour (no names, no `var()`) |
