@@ -116,13 +116,15 @@ func (c *cmd) run(args []string) error {
 	if req.Profile == "" {
 		req.Argv = argv
 	}
-	if parent != "" {
-		if _, err := f.resolve(parent); err != nil {
-			req.Parent, req.Notes = "", false // not a pane of this forge
-		}
-	}
 	var p forge.Pane
-	if err := f.do(http.MethodPost, "/api/sessions", req, &p); err != nil {
+	err = f.do(http.MethodPost, "/api/sessions", req, &p)
+	var api *apiError
+	if errors.As(err, &api) && api.code == "no_parent" {
+		// $LAFORGE_SESSION names a pane of another forge: start without a parent
+		req.Parent, req.Notes = "", false
+		err = f.do(http.MethodPost, "/api/sessions", req, &p)
+	}
+	if err != nil {
 		return err
 	}
 	if *bg {

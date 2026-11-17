@@ -228,7 +228,7 @@ func resumeArgs(p Profile, session string) []string {
 // setAgentSession is POST /api/sessions/{id}/agent: the agent's hook names
 // its own session, so the pane can be resumed after its program is gone.
 func (s *Server) setAgentSession(w http.ResponseWriter, r *http.Request) {
-	e, ok := s.sessions.get(r.PathValue("id"))
+	e, ok := s.sessions.own(r.PathValue("id"))
 	if !ok {
 		writeError(w, http.StatusNotFound, "no_session", errNoSession.Error())
 		return

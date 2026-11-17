@@ -313,7 +313,7 @@ func (s *Server) startSession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if req.Parent != "" {
-		if _, ok := s.sessions.get(req.Parent); !ok {
+		if _, ok := s.sessions.own(req.Parent); !ok { // the parent may be starting
 			writeError(w, http.StatusBadRequest, "no_parent", "There is no pane "+req.Parent+" to be the parent.")
 			return
 		}

@@ -142,7 +142,7 @@ func (s *Server) streamEvents(w http.ResponseWriter, r *http.Request) {
 // holding the token) reports a status record for the pane, with the meaning
 // the same report has as the program's own OSC 7501.
 func (s *Server) reportStatus(w http.ResponseWriter, r *http.Request) {
-	e, ok := s.sessions.get(r.PathValue("id"))
+	e, ok := s.sessions.own(r.PathValue("id"))
 	if !ok {
 		writeError(w, http.StatusNotFound, "no_session", errNoSession.Error())
 		return

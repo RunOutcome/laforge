@@ -92,9 +92,12 @@ type entry struct {
 
 // sessions holds every session the forge has started.
 type sessions struct {
-	mu      sync.RWMutex
-	byID    map[string]*entry
-	changed func(id string)
+	mu   sync.RWMutex
+	byID map[string]*entry
+	// starting are panes whose program runs before the forge has them in
+	// byID: a program that reports at once (la report) waits for them.
+	starting map[string]chan struct{}
+	changed  func(id string)
 	// home is the forge's folder, given to every pane as LAFORGE_HOME so a
 	// program in it (la report, la run) finds this forge.
 	home string
@@ -106,7 +109,7 @@ type sessions struct {
 }
 
 func newSessions(changed func(id string)) *sessions {
-	return &sessions{byID: map[string]*entry{}, changed: changed, lost: map[string]record{}}
+	return &sessions{byID: map[string]*entry{}, starting: map[string]chan struct{}{}, changed: changed, lost: map[string]record{}}
 }
 
 // StartRequest is the body of POST /api/sessions.
@@ -165,6 +168,16 @@ func (s *sessions) start(p Profile, req StartRequest, defaultCwd string, scrollb
 		return Pane{}, fmt.Errorf("start %s: the command is not installed on this machine", p.Command)
 	}
 	id := newID()
+	ready := make(chan struct{})
+	s.mu.Lock()
+	s.starting[id] = ready
+	s.mu.Unlock()
+	defer func() {
+		s.mu.Lock()
+		delete(s.starting, id)
+		s.mu.Unlock()
+		close(ready)
+	}()
 	env := []string{"LAFORGE_SESSION=" + id, "COLORTERM=truecolor", "TERM_PROGRAM=LaForge"}
 	if s.home != "" {
 		env = append(env, "LAFORGE_HOME="+s.home)
@@ -411,6 +424,23 @@ func (s *sessions) get(id string) (*entry, bool) {
 	defer s.mu.RUnlock()
 	e, ok := s.byID[id]
 	return e, ok
+}
+
+// own is get for a request a pane's program makes about itself, which can
+// arrive while the forge is still starting that pane.
+func (s *sessions) own(id string) (*entry, bool) {
+	s.mu.RLock()
+	e, ok := s.byID[id]
+	ready := s.starting[id]
+	s.mu.RUnlock()
+	if ok || ready == nil {
+		return e, ok
+	}
+	select {
+	case <-ready:
+	case <-time.After(10 * time.Second):
+	}
+	return s.get(id)
 }
 
 func (s *sessions) list() []Pane {

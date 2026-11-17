@@ -38,7 +38,7 @@ const maxAskWait = 10 * time.Minute
 // or "" when no one answered in time.
 func (s *Server) askPermission(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
-	e, ok := s.sessions.get(id)
+	e, ok := s.sessions.own(id)
 	if !ok {
 		writeError(w, http.StatusNotFound, "no_session", errNoSession.Error())
 		return

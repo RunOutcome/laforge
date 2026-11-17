@@ -167,3 +167,30 @@ func TestAPermissionIsAnsweredFromTheForge(t *testing.T) {
 		t.Fatalf("unanswered: %+v after %v", out, time.Since(start))
 	}
 }
+
+// A request a pane makes about itself while the forge is still starting it
+// waits for the pane (la report in a child started with la run, which can
+// run before the forge has the pane); an unknown id does not wait.
+func TestAPaneIsFoundWhileItStarts(t *testing.T) {
+	s := newSessions(nil)
+	ready := make(chan struct{})
+	s.starting["s-new"] = ready
+	go func() {
+		time.Sleep(200 * time.Millisecond)
+		s.mu.Lock()
+		s.byID["s-new"] = &entry{title: "new"}
+		delete(s.starting, "s-new")
+		s.mu.Unlock()
+		close(ready)
+	}()
+	if _, ok := s.get("s-new"); ok {
+		t.Fatal("found before it started")
+	}
+	if e, ok := s.own("s-new"); !ok || e.title != "new" {
+		t.Fatalf("own: %v %v", e, ok)
+	}
+	start := time.Now()
+	if _, ok := s.own("s-none"); ok || time.Since(start) > 50*time.Millisecond {
+		t.Fatal("waited for an unknown pane")
+	}
+}
