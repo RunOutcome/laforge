@@ -6,6 +6,7 @@ package forge
 import (
 	"archive/tar"
 	"compress/gzip"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,6 +14,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -29,6 +31,29 @@ import (
 // codeloadBase is where GitHub serves repository tarballs. Tests point it
 // at a local server; nothing else may.
 var codeloadBase = "https://codeload.github.com"
+
+// githubAPIBase serves a private repository's tarball to a signed-in
+// request (it redirects to codeload with a short-lived link). Tests point it
+// at a local server.
+var githubAPIBase = "https://api.github.com"
+
+// githubToken is the user's GitHub token for private skin repositories:
+// $GH_TOKEN, $GITHUB_TOKEN, else the GitHub CLI's login. It is sent only to
+// GitHub, and only after an anonymous fetch was refused.
+var githubToken = func() string {
+	for _, k := range []string{"GH_TOKEN", "GITHUB_TOKEN"} {
+		if v := strings.TrimSpace(os.Getenv(k)); v != "" {
+			return v
+		}
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	out, err := exec.CommandContext(ctx, "gh", "auth", "token", "--hostname", "github.com").Output()
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(out))
+}
 
 const (
 	maxPackDownload = 32 << 20  // the tarball as fetched
@@ -374,13 +399,19 @@ func downloadRepo(src SkinSource, dest string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	allowed := map[string]bool{"codeload.github.com": true, "github.com": true, strings.ToLower(base.Host): true}
+	api, err := url.Parse(githubAPIBase)
+	if err != nil {
+		return "", err
+	}
+	allowed := map[string]bool{"codeload.github.com": true, "github.com": true, "api.github.com": true,
+		strings.ToLower(base.Host): true, strings.ToLower(api.Host): true}
 	client := &http.Client{
 		Timeout: packFetchTime,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			if len(via) >= 5 || !allowed[strings.ToLower(req.URL.Host)] || req.URL.Scheme != base.Scheme {
 				return fmt.Errorf("refused a redirect to %s", req.URL.Host)
 			}
+			req.Header.Del("Authorization") // the token is for the API alone; codeload's link carries its own
 			return nil
 		},
 	}
@@ -392,9 +423,31 @@ func downloadRepo(src SkinSource, dest string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("fetch %s/%s: %v", src.Owner, src.Repo, err)
 	}
+	signedIn := false
+	if resp.StatusCode == http.StatusNotFound {
+		// private, or not there: ask again signed in, if the user is
+		if token := githubToken(); token != "" {
+			resp.Body.Close()
+			apiSegs := []string{"repos", url.PathEscape(src.Owner), url.PathEscape(src.Repo), "tarball"}
+			if src.ref() != "HEAD" { // the API's default branch is no ref at all
+				apiSegs = append(apiSegs, segs[3:]...)
+			}
+			req, _ := http.NewRequest(http.MethodGet, strings.TrimSuffix(githubAPIBase, "/")+"/"+strings.Join(apiSegs, "/"), nil)
+			req.Header.Set("Authorization", "Bearer "+token) // CheckRedirect drops it before codeload
+			req.Header.Set("Accept", "application/vnd.github+json")
+			if resp, err = client.Do(req); err != nil {
+				return "", fmt.Errorf("fetch %s/%s: %v", src.Owner, src.Repo, err)
+			}
+			signedIn = true
+		}
+	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("GitHub answered %s for %s/%s at %s: is it public, and the ref right?", resp.Status, src.Owner, src.Repo, src.ref())
+		hint := "is it public (or are you signed in: gh auth login, or $GH_TOKEN), and the ref right?"
+		if signedIn {
+			hint = "your GitHub login cannot read it, or the ref is wrong"
+		}
+		return "", fmt.Errorf("GitHub answered %s for %s/%s at %s: %s", resp.Status, src.Owner, src.Repo, src.ref(), hint)
 	}
 	body := &capReader{r: resp.Body, left: maxPackDownload}
 	return extractTarGz(body, dest)

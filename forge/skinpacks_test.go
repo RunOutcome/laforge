@@ -258,6 +258,9 @@ func TestAGitHubPackInstalls(t *testing.T) {
 	old := codeloadBase
 	codeloadBase = cl.URL
 	defer func() { codeloadBase = old }()
+	oldToken := githubToken
+	githubToken = func() string { return "" } // never the real login in tests
+	defer func() { githubToken = oldToken }()
 
 	srv, ts := newTestServer(t)
 	r := call(t, ts, "POST", "/api/skins/install", "secret", map[string]string{"source": "you/skins@v2//themes"})
@@ -290,5 +293,63 @@ func TestAGitHubPackInstalls(t *testing.T) {
 	defer mu.Unlock()
 	if paths[0] != "/you/skins/tar.gz/v2" {
 		t.Fatalf("fetched %v", paths)
+	}
+}
+
+// A private repository: codeload refuses it anonymously, so the fetch asks
+// GitHub's API signed in, which redirects to a short-lived codeload link.
+// The token goes only to the API, never to codeload; a public fetch never
+// sends it.
+func TestAPrivateSkinRepoInstallsSignedIn(t *testing.T) {
+	tarball := tarGz(t, []tarEntry{
+		{name: "you-private-abc/", kind: tar.TypeDir},
+		{name: "you-private-abc/neon/skin.json", body: `{"name":"neon"}`},
+		{name: "you-private-abc/ember/skin.json", body: `{"name":"ember"}`},
+	})
+	var mu sync.Mutex
+	var auths []string
+	cl := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		auths = append(auths, r.URL.Path+"="+r.Header.Get("Authorization"))
+		mu.Unlock()
+		if r.URL.Path == "/you/private/tar.gz/signed" && r.URL.Query().Get("token") == "short" {
+			w.Write(tarball)
+			return
+		}
+		http.NotFound(w, r)
+	}))
+	defer cl.Close()
+	api := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		auths = append(auths, "api"+r.URL.Path+"="+r.Header.Get("Authorization"))
+		mu.Unlock()
+		if r.URL.Path == "/repos/you/private/tarball" && r.Header.Get("Authorization") == "Bearer tok" {
+			http.Redirect(w, r, cl.URL+"/you/private/tar.gz/signed?token=short", http.StatusFound)
+			return
+		}
+		http.NotFound(w, r)
+	}))
+	defer api.Close()
+	oc, oa, ot := codeloadBase, githubAPIBase, githubToken
+	codeloadBase, githubAPIBase, githubToken = cl.URL, api.URL, func() string { return "tok" }
+	defer func() { codeloadBase, githubAPIBase, githubToken = oc, oa, ot }()
+
+	res, err := InstallSource(t.TempDir(), SkinSource{Owner: "you", Repo: "private"})
+	if err != nil || len(res.Installed) != 2 {
+		t.Fatalf("%+v %v", res, err)
+	}
+	mu.Lock()
+	for _, a := range auths {
+		if !strings.HasPrefix(a, "api") && strings.Contains(a, "tok") {
+			t.Fatalf("the token reached codeload: %v", auths)
+		}
+	}
+	if len(auths) != 3 || auths[1] != "api/repos/you/private/tarball=Bearer tok" {
+		t.Fatalf("requests: %v", auths)
+	}
+	mu.Unlock()
+	githubToken = func() string { return "" }
+	if _, err := InstallSource(t.TempDir(), SkinSource{Owner: "you", Repo: "private"}); err == nil || !strings.Contains(err.Error(), "gh auth login") {
+		t.Fatalf("signed out: %v", err)
 	}
 }
