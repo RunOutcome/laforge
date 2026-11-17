@@ -128,3 +128,16 @@ export const Menu = () => (
     <path d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11" />
   </svg>
 );
+export const Palette = () => (
+  <svg {...base} aria-hidden>
+    <path d="M8 1.75a6.25 6.25 0 0 0 0 12.5c.9 0 1.4-.55 1.4-1.25 0-.4-.2-.7-.4-.95-.2-.25-.35-.5-.35-.85 0-.65.55-1.2 1.2-1.2h1.4a3 3 0 0 0 3-3C14.25 4.2 11.45 1.75 8 1.75Z" />
+    <circle cx="4.75" cy="7.5" r=".9" fill="currentColor" stroke="none" />
+    <circle cx="6.75" cy="4.75" r=".9" fill="currentColor" stroke="none" />
+    <circle cx="10" cy="4.75" r=".9" fill="currentColor" stroke="none" />
+  </svg>
+);
+export const Check = () => (
+  <svg {...base} aria-hidden>
+    <path d="M3 8.5 6.5 12 13 4.5" />
+  </svg>
+);

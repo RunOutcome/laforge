@@ -3,7 +3,7 @@
 
 // The forge's HTTP API. base is '' for the standalone client; a host that
 // embeds the forge (the Outcome Arena) passes the forge's own origin.
-import type { SkinList } from './skins';
+import type { InstallResult, SkinList } from './skins';
 
 export interface Profile {
   name: string;
@@ -150,6 +150,8 @@ export class ForgeApi {
   answer = (id: string, decision: 'allow' | 'deny') => this.call<{ decision: string }>('POST', `/api/sessions/${encodeURIComponent(id)}/answer`, { decision });
   skins = () => this.call<SkinList>('GET', '/api/skins');
   setDefaultSkin = (name: string) => this.call<{ default: string }>('PUT', '/api/skins/default', { name });
+  installSkins = (source: string) => this.call<InstallResult>('POST', '/api/skins/install', { source });
+  removeSkin = (name: string) => this.call<void>('DELETE', `/api/skins/${encodeURIComponent(name)}`);
   layout = () => this.call<unknown>('GET', '/api/layout');
   saveLayout = (layout: unknown) => this.call<void>('PUT', '/api/layout', layout);
 
