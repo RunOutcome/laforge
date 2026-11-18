@@ -23,11 +23,15 @@ interface Props {
   collections?: CollectionsApi;
   /** onInstalled refreshes the installed list after "Get more" installs. */
   onInstalled?: () => Promise<unknown> | unknown;
+  /** onAllowCode allows or turns off a skin's animated scene; left out, scenes are not offered. */
+  onAllowCode?: (name: string, allow: boolean) => Promise<unknown>;
+  /** onScenes turns every scene in the forge on or off. */
+  onScenes?: (on: boolean) => Promise<unknown>;
   /** moreInitial: a starting state for "Get more", for tests and screenshots. */
   moreInitial?: Parameters<typeof GetMore>[0]['initial'];
 }
 
-export function Themes({ list, active, onPick, onDefault, onRemove, onInstall, onClose, collections, onInstalled, moreInitial }: Props) {
+export function Themes({ list, active, onPick, onDefault, onRemove, onInstall, onClose, collections, onInstalled, onAllowCode, onScenes, moreInitial }: Props) {
   const [confirming, setConfirming] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [rowError, setRowError] = useState<{ name: string; reason: string } | null>(null);
@@ -133,11 +137,20 @@ export function Themes({ list, active, onPick, onDefault, onRemove, onInstall, o
                     )}
                   </span>
                 )}
+                {k.scene && onAllowCode && (
+                  <SceneConsent skin={k} busy={busy === k.name} scenesOn={list?.scenes !== false} onAllow={(allow) => run(k.name, () => onAllowCode(k.name, allow))} />
+                )}
                 {rowError?.name === k.name && <span className="theme-error">{rowError.reason}</span>}
               </div>
             );
           })}
         </div>
+        {onScenes && skins.some((k) => k.scene) && (
+          <label className="themes-scenes">
+            <input type="checkbox" checked={list?.scenes !== false} onChange={(e) => run('', () => onScenes(e.target.checked))} />
+            Animated scenes in this forge
+          </label>
+        )}
         {collections && <GetMore api={collections} installedNames={skins.map((k) => k.name)} active={active} onPick={onPick} onInstalled={onInstalled ?? (() => undefined)} initial={moreInitial} />}
         <section className="themes-install">
           <label className="agents-sub" htmlFor="themes-source">
@@ -161,6 +174,48 @@ export function Themes({ list, active, onPick, onDefault, onRemove, onInstall, o
         </section>
       </div>
     </aside>
+  );
+}
+
+/** SceneConsent says a skin runs code and lets the user allow it, or turn it off. */
+export function SceneConsent({ skin, busy, scenesOn, onAllow }: { skin: K.Skin; busy: boolean; scenesOn: boolean; onAllow: (allow: boolean) => void }) {
+  const [asking, setAsking] = useState(false);
+  if (skin.builtin) return null;
+  if (skin.codeAllowed)
+    return (
+      <span className="theme-scene is-allowed">
+        <span className="theme-scene-text">Animated scene allowed{scenesOn ? '' : ' (scenes are off in this forge)'}</span>
+        <button disabled={busy} onClick={() => onAllow(false)}>
+          Turn off
+        </button>
+      </span>
+    );
+  if (!asking)
+    return (
+      <span className="theme-scene">
+        <span className="theme-scene-text">Has an animated scene (runs code)</span>
+        <button disabled={busy} onClick={() => setAsking(true)}>
+          Allow scene…
+        </button>
+      </span>
+    );
+  return (
+    <span className="theme-scene is-asking" role="group" aria-label={`Allow ${skin.label}'s scene`}>
+      <span className="theme-scene-text">
+        {skin.label} draws with {skin.scene?.library} code. It runs in a sandbox with no network and no access to your terminals, the forge's API or its token; it sees pane statuses and positions only. You accept the risk.
+      </span>
+      <button
+        className="theme-scene-allow"
+        disabled={busy}
+        onClick={() => {
+          setAsking(false);
+          onAllow(true);
+        }}
+      >
+        Allow and run
+      </button>
+      <button onClick={() => setAsking(false)}>Not now</button>
+    </span>
   );
 }
 

@@ -311,7 +311,7 @@ func TestSkinInstall(t *testing.T) {
 		t.Fatal(err)
 	}
 	os.WriteFile(filepath.Join(src, "evil.js"), []byte(`x`), 0o644)
-	if code, _, errs := run(t, "", "skin", "install", src); code == 0 || !strings.Contains(errs, "fonts and images only") {
+	if code, _, errs := run(t, "", "skin", "install", src); code == 0 || !strings.Contains(errs, "code only under scene/") {
 		t.Fatalf("installed code: %d %q", code, errs)
 	}
 }

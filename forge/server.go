@@ -183,6 +183,10 @@ func (s *Server) routes(web fs.FS) {
 	s.mux.HandleFunc("DELETE /api/skins/{name}", s.auth(s.removeSkin))
 	s.mux.HandleFunc("POST /api/skins/install", s.auth(s.installSkins))
 	s.mux.HandleFunc("POST /api/skins/{name}/update", s.auth(s.updateSkin))
+	s.mux.HandleFunc("POST /api/skins/{name}/code", s.auth(s.skinCode))
+	s.mux.HandleFunc("PUT /api/skins/scenes", s.auth(s.setScenes))
+	// a scene's frame cannot present the cookie; its key is its pass
+	s.mux.HandleFunc("GET /scene/{key}/{name}/{file...}", s.sceneFile)
 	s.mux.HandleFunc("GET /skins/{name}/{file...}", func(w http.ResponseWriter, r *http.Request) {
 		if _, viewing := s.viewer(r); !s.authorized(r) && !viewing {
 			http.Error(w, "Present this forge's token.", http.StatusUnauthorized)

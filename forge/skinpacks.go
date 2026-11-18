@@ -579,6 +579,7 @@ func (s *Server) installSkins(w http.ResponseWriter, r *http.Request) {
 		Source     string   `json:"source"`
 		Collection string   `json:"collection"`
 		Names      []string `json:"names"`
+		AllowCode  bool     `json:"allowCode"`
 	}
 	if err := json.NewDecoder(io.LimitReader(r.Body, 16<<10)).Decode(&body); err != nil {
 		writeError(w, http.StatusBadRequest, "input", "The body is not JSON.")
@@ -589,6 +590,9 @@ func (s *Server) installSkins(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			writeError(w, http.StatusBadRequest, "source", err.Error())
 			return
+		}
+		if body.AllowCode {
+			allowInstalled(s.opts.Home, &res)
 		}
 		writeJSON(w, http.StatusOK, res)
 		return
@@ -602,6 +606,9 @@ func (s *Server) installSkins(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "source", err.Error())
 		return
+	}
+	if body.AllowCode {
+		allowInstalled(s.opts.Home, &res)
 	}
 	writeJSON(w, http.StatusOK, res)
 }

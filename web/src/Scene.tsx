@@ -1,0 +1,198 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 COR Holdings, LLC
+
+// Scene shows a skin's animated scene behind the forge: a frame the forge
+// serves sandboxed (opaque origin: no cookies, storage, API or network past
+// its own files) and the page sandboxes again. The page tells it what it
+// may know — the mode, the layout, and each visible pane's status, focus
+// and box, under ids that mean nothing outside the scene — never titles,
+// output or paths. A scene that errs or stops beating is removed and the
+// skin's stylesheet draws on its own.
+import { useEffect, useRef, useState } from 'react';
+import type { Mode } from './theme';
+
+export interface ScenePane {
+  id: string;
+  status: string;
+  active: boolean;
+  tab: number;
+  rect: { x: number; y: number; w: number; h: number };
+}
+
+export type SceneEvent =
+  | { type: 'init'; mode: Mode; layout: 'classic' | 'rail'; reducedMotion: boolean; size: { w: number; h: number } }
+  | { type: 'panes'; panes: ScenePane[]; chrome: { top: number; left: number } }
+  | { type: 'mode'; mode: Mode }
+  | { type: 'resize'; size: { w: number; h: number } }
+  | { type: 'visibility'; visible: boolean }
+  | { type: 'idle'; idle: boolean };
+
+/** How long without a status change before the scene is told it is idle. */
+export const IDLE_MS = 30_000;
+/** A scene that sends nothing for this long after ready is dropped. */
+export const BEAT_MS = 3_500;
+/** A scene that is not ready by then is dropped. */
+export const READY_MS = 20_000;
+
+const ids = new WeakMap<Element, string>();
+let nextId = 1;
+
+/** readPanes reads the visible panes from the page: geometry and status only. */
+export function readPanes(root: ParentNode): { panes: ScenePane[]; chrome: { top: number; left: number } } {
+  const panes: ScenePane[] = [];
+  root.querySelectorAll<HTMLElement>('.pane[data-status]').forEach((el) => {
+    const r = el.getBoundingClientRect();
+    if (r.width < 1 || r.height < 1) return;
+    if (el.checkVisibility && !el.checkVisibility({ visibilityProperty: true } as CheckVisibilityOptions)) return;
+    let id = ids.get(el);
+    if (!id) {
+      id = 'p' + nextId++;
+      ids.set(el, id);
+    }
+    panes.push({
+      id,
+      status: el.dataset.status ?? 'idle',
+      active: el.dataset.active === 'true',
+      tab: 0,
+      rect: { x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height) },
+    });
+  });
+  const top = panes.length ? Math.min(...panes.map((p) => p.rect.y)) : 0;
+  const left = panes.length ? Math.min(...panes.map((p) => p.rect.x)) : 0;
+  return { panes, chrome: { top, left } };
+}
+
+interface Props {
+  url: string;
+  mode: Mode;
+  layout: 'classic' | 'rail';
+  /** a zoomed pane covers the scene: it pauses */
+  covered?: boolean;
+}
+
+export function Scene({ url, mode, layout, covered = false }: Props) {
+  const frame = useRef<HTMLIFrameElement>(null);
+  const [failed, setFailed] = useState<string | null>(null);
+  const now = useRef({ mode, layout, covered });
+  now.current = { mode, layout, covered };
+  const post = useRef<(ev: SceneEvent) => void>(() => undefined);
+
+  useEffect(() => {
+    if (failed === url) return;
+    const root = document.documentElement;
+    const motion = window.matchMedia?.('(prefers-reduced-motion: reduce)');
+    let ready = false;
+    let lastBeat = Date.now();
+    const started = Date.now();
+    let lastChange = Date.now();
+    let idle = false;
+    let lastStatus = '';
+    let lastSent = '';
+    let pending: number | undefined;
+    let dead = false;
+
+    const send = (ev: SceneEvent) => frame.current?.contentWindow?.postMessage(ev, '*');
+    post.current = send;
+    const size = () => ({ w: window.innerWidth, h: window.innerHeight });
+    const visible = () => document.visibilityState === 'visible' && !now.current.covered;
+
+    const sendPanes = (force = false) => {
+      const forge = document.querySelector('.forge') ?? document;
+      const p = readPanes(forge);
+      const status = p.panes.map((x) => x.id + x.status + x.active).join();
+      if (status !== lastStatus) {
+        lastStatus = status;
+        lastChange = Date.now();
+        if (idle) {
+          idle = false;
+          send({ type: 'idle', idle: false });
+        }
+      }
+      const key = JSON.stringify(p);
+      if (force || key !== lastSent) {
+        lastSent = key;
+        send({ type: 'panes', ...p });
+      }
+    };
+    // at most ten updates a second
+    const soon = () => {
+      if (pending === undefined) pending = window.setTimeout(() => ((pending = undefined), sendPanes()), 100);
+    };
+
+    const fail = (why: string) => {
+      if (dead) return;
+      dead = true;
+      delete root.dataset.scene;
+      console.warn('[laforge] scene removed: ' + why);
+      setFailed(url);
+    };
+
+    const onMessage = (e: MessageEvent) => {
+      if (!frame.current || e.source !== frame.current.contentWindow) return;
+      const m = e.data as { laforgeScene?: number; type?: string; message?: string };
+      if (!m || m.laforgeScene !== 1) return;
+      lastBeat = Date.now();
+      if (m.type === 'hello') {
+        send({ type: 'init', mode: now.current.mode, layout: now.current.layout, reducedMotion: !!motion?.matches, size: size() });
+        sendPanes(true);
+        send({ type: 'visibility', visible: visible() });
+        send({ type: 'idle', idle });
+      } else if (m.type === 'ready') {
+        ready = true;
+        root.dataset.scene = 'on';
+      } else if (m.type === 'error') {
+        fail(String(m.message ?? 'error').slice(0, 300));
+      }
+    };
+    const onResize = () => {
+      send({ type: 'resize', size: size() });
+      soon();
+    };
+    const onVisibility = () => send({ type: 'visibility', visible: visible() });
+
+    const watch = window.setInterval(() => {
+      const t = Date.now();
+      if (!ready && t - started > READY_MS) fail('not ready');
+      else if (ready && document.visibilityState === 'visible' && t - lastBeat > BEAT_MS) fail('stopped beating');
+      if (!idle && t - lastChange > IDLE_MS) {
+        idle = true;
+        send({ type: 'idle', idle: true });
+      }
+    }, 1000);
+
+    const observer = new MutationObserver(soon);
+    const forge = document.querySelector('.forge');
+    if (forge) observer.observe(forge, { subtree: true, childList: true, attributes: true, attributeFilter: ['data-status', 'data-active', 'style', 'class'] });
+    window.addEventListener('message', onMessage);
+    window.addEventListener('resize', onResize);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      dead = true;
+      observer.disconnect();
+      window.clearInterval(watch);
+      window.clearTimeout(pending);
+      window.removeEventListener('message', onMessage);
+      window.removeEventListener('resize', onResize);
+      document.removeEventListener('visibilitychange', onVisibility);
+      delete root.dataset.scene;
+      post.current = () => undefined;
+    };
+  }, [url, failed]);
+
+  useEffect(() => post.current({ type: 'mode', mode }), [mode]);
+  useEffect(() => post.current({ type: 'visibility', visible: document.visibilityState === 'visible' && !covered }), [covered]);
+
+  if (failed === url) return null;
+  return (
+    <iframe
+      ref={frame}
+      className="scene-frame"
+      src={url}
+      sandbox="allow-scripts"
+      referrerPolicy="no-referrer"
+      title="Theme scene"
+      aria-hidden="true"
+      tabIndex={-1}
+    />
+  );
+}

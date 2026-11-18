@@ -112,10 +112,25 @@ repository: https://github.com/RunOutcome/laforge/blob/main/docs/skins.md
    link. For the LaForge library (RunOutcome/laforge-skins), open a pull
    request; its rules are below.
 
+## An animated scene (optional)
+
+A theme can also move. Add a PixiJS scene under `scene/` and declare it in
+`skin.json`. The section "Scenes: animated skins" in `docs/skins.md` covers the
+contract.
+- Draw into `host.app.stage` and move things from `host.app.ticker`.
+- Read `panes` for each pane's status and box.
+- Under `host.reducedMotion`, draw a still frame.
+- Clear the skin's own backdrops under `:root[data-scene='on']`.
+
+Install with `la skin install --allow-code <dir>`, and check it in a
+scratch forge in both modes. Keep the code small, use no network, and use only
+what PixiJS draws or the skin's own images.
+
 ## Rules
 
 - Stylesheets, fonts and images only (`.css .woff2 .woff .ttf .otf .png
-  .jpg .jpeg .webp .gif .svg .json .md .txt`), 16 MB at most, no links.
+  .jpg .jpeg .webp .gif .svg .json .md .txt`), plus a scene's `.js`/`.mjs`
+  under `scene/`; 16 MB at most, no links.
 - `skin.json` has no `mode` key (that was the old one-mode format). Its
   `name` is what the skin installs as; keep its folder named the same.
 - Original work for anything public or in the library: no trademarks,

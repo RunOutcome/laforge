@@ -11,6 +11,13 @@ Agents you can see, keep and hand work to.
 
 ### Added
 
+- **Animated skins (scenes).** A skin may carry a PixiJS scene that draws
+  behind the panes and reacts to their status. It is off until you allow it
+  (Themes panel, `la skin allow`, `la skin install --allow-code`), pinned to a
+  hash of the code, and run in a sandbox with no network, API, token or
+  terminal access. `la skin scenes off` turns them all off (docs/skins.md).
+- **Swap panes** by dragging one by its header onto another.
+
 - **Agent status.** A program reports what it is doing with OSC 7501, the
   Program Status Protocol herdr-core reads (docs/status-protocol.md), or
   with `la report`. `la hooks install` makes Claude Code and Codex report

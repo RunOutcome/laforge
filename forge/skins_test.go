@@ -37,7 +37,8 @@ func TestASkinIsChecked(t *testing.T) {
 	}{
 		{"good", fstest.MapFS{"skin.json": {Data: []byte(good)}, "skin.css": {Data: []byte("a{}")}, "fonts/x.woff2": {}, ".DS_Store": {}}, ""},
 		{"no manifest", fstest.MapFS{"skin.css": {}}, "needs a skin.json"},
-		{"script", fstest.MapFS{"skin.json": {Data: []byte(good)}, "skin.css": {}, "x.js": {}}, "stylesheets, fonts and images only"},
+		{"script", fstest.MapFS{"skin.json": {Data: []byte(good)}, "skin.css": {}, "x.js": {}}, "code only under scene/"},
+		{"html", fstest.MapFS{"skin.json": {Data: []byte(good)}, "skin.css": {}, "x.html": {}}, "stylesheets, fonts and images only"},
 		{"html", fstest.MapFS{"skin.json": {Data: []byte(good)}, "skin.css": {}, "x.html": {}}, "only"},
 		{"bad name", fstest.MapFS{"skin.json": {Data: []byte(`{"name":"../x"}`)}}, "name"},
 		{"bad layout", fstest.MapFS{"skin.json": {Data: []byte(`{"name":"x","layout":"grid"}`)}}, "layout"},

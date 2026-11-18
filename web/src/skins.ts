@@ -29,6 +29,12 @@ export interface Skin {
   /** source is where an installed skin came from (a folder or a GitHub repo). */
   source?: string;
   builtin: boolean;
+  /** scene is an animated scene: code that runs only once allowed. */
+  scene?: { library: string; entry: string; slot?: string };
+  codeHash?: string;
+  codeAllowed?: boolean;
+  /** sceneUrl is where the scene's frame loads, when it may run. */
+  sceneUrl?: string;
 }
 
 export interface SkinTerminal {
@@ -45,6 +51,8 @@ export interface InstallResult {
 export interface SkinList {
   default: string;
   skins: Skin[];
+  /** scenes is the forge-wide switch for animated scenes. */
+  scenes?: boolean;
 }
 
 /** classic is the client's own look; it needs nothing from the forge. */

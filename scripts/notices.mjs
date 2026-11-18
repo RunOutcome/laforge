@@ -71,6 +71,13 @@ for (const skin of existsSync(skinsDir) ? readdirSync(skinsDir) : []) {
   fonts.push({ name: `${meta.name} (${skin} skin)`, version: meta.version, declared: meta.license, dir, ecosystem: 'font' });
 }
 
+// Libraries the forge bundles for skin scenes (forge/scenehost, vendor.json and the licence).
+const sceneHost = join(root, 'forge/scenehost');
+if (existsSync(join(sceneHost, 'vendor.json'))) {
+  const meta = JSON.parse(readFileSync(join(sceneHost, 'vendor.json'), 'utf8'));
+  fonts.push({ name: meta.name, version: meta.version, declared: meta.license, dir: sceneHost, ecosystem: 'vendored library' });
+}
+
 const entries = [...[...goModules.values()].sort((a, b) => a.name.localeCompare(b.name)), ...npm.sort((a, b) => a.name.localeCompare(b.name)), ...fonts];
 let missing = [];
 let body = `# Third-party notices

@@ -4,8 +4,11 @@
 package cli
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
+	"io"
+	"io/fs"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -17,7 +20,7 @@ import (
 	"github.com/RunOutcome/laforge/forge"
 )
 
-const skinUsage = "skin list | new NAME [DIR] | check [--strict] DIR | browse [COLLECTION] | install SOURCE|COLLECTION[/NAME]… | collections [add LINK | remove ID] | update [NAME] | remove NAME | use NAME"
+const skinUsage = "skin list | new NAME [DIR] | check [--strict] DIR | browse [COLLECTION] | install [--allow-code] SOURCE|COLLECTION[/NAME]… | collections [add LINK | remove ID] | update [NAME] | remove NAME | use NAME | allow NAME | disallow NAME | scenes on|off"
 
 // skin is `la skin list|install SOURCE|update [NAME]|remove NAME|use NAME`.
 func (c *cmd) skin(args []string) error {
@@ -26,6 +29,16 @@ func (c *cmd) skin(args []string) error {
 	}
 	switch args[0] {
 	case "install":
+		c.allowCode = false
+		kept := args[:1:1]
+		for _, a := range args[1:] {
+			if a == "--allow-code" {
+				c.allowCode = true
+			} else {
+				kept = append(kept, a)
+			}
+		}
+		args = kept
 		if len(args) < 2 {
 			return usageError{errors.New("skin install SOURCE (a folder, owner/repo[@ref][//folder] or a github.com link) | COLLECTION[/NAME]…")}
 		}
@@ -36,6 +49,27 @@ func (c *cmd) skin(args []string) error {
 			return usageError{errors.New("skin install takes one source (or collection skins: official/NAME …)")}
 		}
 		return c.skinInstall(args[1])
+	case "allow", "disallow":
+		if len(args) != 2 {
+			return usageError{fmt.Errorf("skin %s NAME", args[0])}
+		}
+		if err := c.setSkinCode(args[1], args[0] == "allow"); err != nil {
+			return err
+		}
+		if args[0] == "allow" {
+			fmt.Fprintf(c.cfg.Stdout, "%s's scene is allowed; reload the page to see it\n", args[1])
+		} else {
+			fmt.Fprintf(c.cfg.Stdout, "%s's scene is off; its stylesheet still draws\n", args[1])
+		}
+		return nil
+	case "scenes":
+		if len(args) != 2 || (args[1] != "on" && args[1] != "off") {
+			return usageError{errors.New("skin scenes on|off")}
+		}
+		if f, err := c.apiClient(); err == nil {
+			return f.do(http.MethodPut, "/api/skins/scenes", map[string]bool{"on": args[1] == "on"}, nil)
+		}
+		return forge.SetScenes(c.home, args[1] == "on")
 	case "new":
 		if len(args) < 2 || len(args) > 3 {
 			return usageError{errors.New("skin new NAME [DIR]")}
@@ -103,7 +137,7 @@ func (c *cmd) skin(args []string) error {
 			return err
 		}
 		tw := tabwriter.NewWriter(c.cfg.Stdout, 0, 4, 2, ' ', 0)
-		fmt.Fprintln(tw, "\tNAME\tLABEL\tLAYOUT\tFROM")
+		fmt.Fprintln(tw, "\tNAME\tLABEL\tLAYOUT\tSCENE\tFROM")
 		for _, sk := range out.Skins {
 			mark, from := "", "installed"
 			if sk.Name == out.Default {
@@ -114,7 +148,14 @@ func (c *cmd) skin(args []string) error {
 			} else if sk.Source != "" {
 				from = sk.Source
 			}
-			fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\n", mark, sk.Name, sk.Label, sk.Layout, from)
+			scene := "-"
+			if sk.Scene != nil {
+				scene = "code, not allowed"
+				if sk.CodeAllowed {
+					scene = "code, allowed"
+				}
+			}
+			fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\n", mark, sk.Name, sk.Label, sk.Layout, scene, from)
 		}
 		return tw.Flush()
 	case "use", "remove", "rm":
@@ -162,6 +203,7 @@ func (c *cmd) skinInstall(arg string) error {
 	for _, sk := range res.Installed {
 		fmt.Fprintf(c.cfg.Stdout, "installed %s (%s, %s layout)\n", sk.Name, sk.Label, sk.Layout)
 	}
+	c.consentScenes(res.Installed)
 	if len(res.Installed) == 1 {
 		fmt.Fprintf(c.cfg.Stdout, "choose it in the palette, or: %s skin use %s\n", c.cfg.Prog, res.Installed[0].Name)
 	} else if len(res.Installed) > 1 {
@@ -278,6 +320,7 @@ func (c *cmd) collectionInstall(args []string) (done bool, err error) {
 		for _, sk := range res.Installed {
 			fmt.Fprintf(c.cfg.Stdout, "installed %s (%s) from %s\n", sk.Name, sk.Label, id)
 		}
+		c.consentScenes(res.Installed)
 		failed = append(failed, res.Failed...)
 	}
 	return true, skinFailures(failed)
@@ -340,4 +383,63 @@ func (c *cmd) skinCollections(args []string) error {
 		return f.do(http.MethodDelete, "/api/skins/collections/"+args[1], nil, nil)
 	}
 	return usageError{errors.New("skin collections [add LINK | remove ID]")}
+}
+
+// consentScenes asks, for each skin just installed with a scene the user
+// has not allowed, whether to allow its code; --allow-code says yes for
+// all. Without a terminal and without --allow-code the scene stays off.
+func (c *cmd) consentScenes(installed []forge.Skin) {
+	for _, sk := range installed {
+		if sk.Scene == nil || sk.CodeAllowed {
+			continue
+		}
+		dir := filepath.Join(c.home, "skins", sk.Name)
+		var files []string
+		var size int64
+		_ = filepath.WalkDir(filepath.Join(dir, "scene"), func(p string, d fs.DirEntry, err error) error {
+			if err == nil && !d.IsDir() {
+				rel, _ := filepath.Rel(dir, p)
+				files = append(files, filepath.ToSlash(rel))
+				if info, err := d.Info(); err == nil {
+					size += info.Size()
+				}
+			}
+			return nil
+		})
+		fmt.Fprintf(c.cfg.Stdout, "%s has an animated scene: code (%s, %d KB) that draws with %s.\n", sk.Name, strings.Join(files, ", "), (size+1023)/1024, sk.Scene.Library)
+		fmt.Fprintln(c.cfg.Stdout, "  It runs in a sandbox: no network, no access to your terminals, the forge's API or its token; it sees pane statuses and positions only.")
+		allow := c.allowCode
+		if !allow && isTerminal(c.cfg.Stdin) {
+			fmt.Fprint(c.cfg.Stdout, "  This skin runs code. Allow it? [y/N] ")
+			line, _ := bufio.NewReader(c.cfg.Stdin).ReadString('\n')
+			allow = strings.EqualFold(strings.TrimSpace(line), "y") || strings.EqualFold(strings.TrimSpace(line), "yes")
+		}
+		if !allow {
+			fmt.Fprintf(c.cfg.Stdout, "  scene off (its stylesheet still draws); to allow it: %s skin allow %s\n", c.cfg.Prog, sk.Name)
+			continue
+		}
+		if err := c.setSkinCode(sk.Name, true); err != nil {
+			fmt.Fprintf(c.cfg.Stdout, "  could not allow it: %v\n", err)
+			continue
+		}
+		fmt.Fprintln(c.cfg.Stdout, "  scene allowed")
+	}
+}
+
+// setSkinCode allows or disallows a skin's scene code, through the forge
+// when it runs.
+func (c *cmd) setSkinCode(name string, allow bool) error {
+	if f, err := c.apiClient(); err == nil {
+		return f.do(http.MethodPost, "/api/skins/"+name+"/code", map[string]bool{"allow": allow}, nil)
+	}
+	if allow {
+		_, err := forge.AllowSkinCode(c.home, name)
+		return err
+	}
+	return forge.DisallowSkinCode(c.home, name)
+}
+
+func isTerminal(r io.Reader) bool {
+	f, ok := r.(*os.File)
+	return ok && ttyFile(f)
 }

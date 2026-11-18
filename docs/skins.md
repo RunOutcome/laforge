@@ -418,9 +418,90 @@ and its skins in a `collection.json` at its root:
 Without one, the skins are found as a theme pack's are, and the collection
 is named after its repository.
 
+## Scenes: animated skins
+
+A skin may carry one **scene**: code that draws behind the panes with a
+library LaForge bundles, and reacts to what the panes are doing. A skin
+without a scene works exactly as before, and a scene is off until the user
+allows it.
+
+```json
+"scene": { "library": "pixi@8", "entry": "scene/main.js" }
+```
+
+- **library:** `pixi@8` (PixiJS 8.22, bundled; a skin never ships its own).
+- **entry:** a `.js` or `.mjs` file under `scene/`. Code is allowed only under
+  `scene/`, and only in a skin that declares a scene. No HTML, no WebAssembly.
+- **slot:** `background`, the default and the only slot for now. It covers the
+  whole window, behind everything, and never takes the pointer.
+
+**Consent.** Installing a skin with a scene installs its stylesheet. The scene
+stays off until the user allows it:
+- in the Themes panel: **Allow scene…**, then **Allow and run**;
+- with `la skin install --allow-code`;
+- with `la skin allow NAME`, or by answering the install prompt.
+
+The allowance is pinned to a sha256 of everything under `scene/`. An update
+that changes the code turns the scene off until it is allowed again.
+`la skin disallow NAME` turns one off, and `la skin scenes off` (or the
+panel's switch) turns them all off. `la skin list` shows each skin's scene.
+
+**The sandbox.** The scene runs in a frame with an opaque origin. Both the page
+and the forge's `Content-Security-Policy: sandbox` enforce it, so the code is
+just as shut in when someone opens its URL directly. It cannot reach:
+- the forge's API, token or cookies;
+- storage, the page or its terminals;
+- the network. It can fetch only its own skin's files (images, JSON).
+
+It is told the mode, the layout and each visible pane's status, focus and
+position, under ids that mean nothing outside the scene. It is never told
+titles, output or paths.
+
+**The code.** The entry exports one function. LaForge has already made the
+PixiJS app (`resizeTo` the window, transparent):
+
+```js
+export default function scene(PIXI, host) {
+  const g = new PIXI.Graphics();
+  host.app.stage.addChild(g);
+  let panes = [];
+  host.on('panes', (e) => { panes = e.panes; });    // [{id, status, active, rect: {x, y, w, h}}], chrome: {top, left}
+  host.on('mode', (e) => { /* e.mode: 'light' | 'dark' (also host.mode) */ });
+  host.app.ticker.add(() => {
+    g.clear();
+    for (const p of panes) g.circle(p.rect.x + 12, p.rect.y - 4, 5).fill(p.status === 'blocked' ? 0xff4040 : 0x40d080);
+  });
+}
+```
+
+Events (`host.on(type, fn)` replays the latest one of a type):
+- `init`: mode, layout, reducedMotion, size
+- `panes`
+- `mode`
+- `resize`
+- `visibility`: hidden, or a pane is zoomed
+- `idle`: no status change for 30 s
+
+**Pacing.** The host paces `host.app.ticker`:
+- stopped while hidden;
+- 12 fps while idle, 60 otherwise;
+- under `prefers-reduced-motion` (`host.reducedMotion`), one frame per event,
+  so draw a still picture there.
+
+Move things from the ticker, not your own timers. A scene that throws, or stops
+answering for 3.5 s, is removed, and the stylesheet draws alone.
+
+**Backdrops.** While a scene runs, the root has `data-scene="on"` and the
+forge's own page backgrounds turn transparent. Clear your skin's own
+backdrops the same way, so the scene shows through the gutters:
+
+```css
+:root[data-scene='on'][data-skin='my-skin'] .forge-main { background: transparent; }
+```
+
 ## Rules
 
-- No code: stylesheets, fonts and images only.
+- No code, except a scene's, under `scene/` (above).
 - Nothing from the network: bundle what you use.
 - Fonts need a licence that lets you bundle them (SIL OFL, for instance); put
   the licence text in the skin.

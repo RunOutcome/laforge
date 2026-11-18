@@ -188,7 +188,7 @@ Usage:
                      how the forge looks; SOURCE is a folder, owner/repo[@ref]
                      or a github.com link, holding one skin or many
                      (docs/skins.md to make one)
-  %[1]s skin new NAME [DIR] | skin check [--strict] DIR
+  %[1]s skin new NAME [DIR] | skin check [--strict] DIR | skin allow|disallow NAME | skin scenes on|off
                      start a skin (light and dark) / check one before installing
   %[1]s skin browse [COLLECTION] | skin install official[/NAME]…
   %[1]s skin collections [add LINK | remove ID]
@@ -213,6 +213,8 @@ it again. Its files are in %[2]s ($LAFORGE_HOME to change).
 type cmd struct {
 	cfg  Config
 	home string
+	// allowCode is la skin install --allow-code: allow installed scenes.
+	allowCode bool
 }
 
 func (c *cmd) statePath() string { return filepath.Join(c.home, "forge.json") }

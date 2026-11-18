@@ -13,6 +13,7 @@ import { Picker, monogram } from './Picker';
 import { TerminalView, type TerminalHandle } from './TerminalView';
 import { loadPref, modeLabel, nextPref, resolveMode, savePref, systemMode, terminalTheme, type Mode, type ModePref } from './theme';
 import { Themes } from './Themes';
+import { Scene } from './Scene';
 import * as K from './skins';
 import * as R from './rail';
 import { usePaneDrag } from './paneDrag';
@@ -128,6 +129,23 @@ export function Forge({ api: given, embedded = false }: Props) {
         K.saveChoice(null);
         showSkin(K.pick(list, null));
       }
+    },
+    [api, loadSkins, skin, showSkin],
+  );
+  // allowing a scene changes the skin's sceneUrl: show the fresh copy
+  const allowSkinCode = useCallback(
+    async (name: string, allow: boolean) => {
+      await api.allowSkinCode(name, allow);
+      const list = await loadSkins();
+      if (name === skin.name && list) showSkin(K.pick(list, name));
+    },
+    [api, loadSkins, skin, showSkin],
+  );
+  const setScenes = useCallback(
+    async (on: boolean) => {
+      await api.setScenes(on);
+      const list = await loadSkins();
+      if (list) showSkin(K.pick(list, skin.name));
     },
     [api, loadSkins, skin, showSkin],
   );
@@ -1303,6 +1321,8 @@ export function Forge({ api: given, embedded = false }: Props) {
           onInstall={installSkins}
           collections={api}
           onInstalled={loadSkins}
+          onAllowCode={allowSkinCode}
+          onScenes={setScenes}
           onClose={() => setThemesOpen(false)}
         />
       )}
@@ -1380,6 +1400,7 @@ export function Forge({ api: given, embedded = false }: Props) {
   // absent and .forge-main is display: contents.
   return (
     <div className={`forge ${embedded ? 'is-embedded' : ''} ${rail ? 'layout-rail' : ''} ${rail && railOpen ? 'is-rail-open' : ''}`} data-layout={layoutKind}>
+      {skin.sceneUrl && !embedded && <Scene url={api.base + skin.sceneUrl} mode={mode} layout={layoutKind} covered={!!tab?.zoom} />}
       {rail ? (
         <aside className="rail" aria-label="Spaces and crew">
           <div className="rail-machine">

@@ -53,6 +53,15 @@ type Skin struct {
 	// github:owner/repo//subdir), from its .source.json; empty for a
 	// built-in or a skin installed without one.
 	Source string `json:"source,omitempty"`
+	// Scene is an animated scene the skin carries: code under scene/ that
+	// draws with a library LaForge bundles, run only once allowed (scenes.go).
+	Scene *SkinScene `json:"scene,omitempty"`
+	// CodeHash, CodeAllowed and SceneURL are the forge's: the scene code's
+	// hash, whether the user allows it as it is, and where its frame loads
+	// (empty unless allowed and scenes are on).
+	CodeHash    string `json:"codeHash,omitempty"`
+	CodeAllowed bool   `json:"codeAllowed,omitempty"`
+	SceneURL    string `json:"sceneUrl,omitempty"`
 }
 
 // SkinTerminal is a skin's terminal palettes, one per mode (xterm ITheme
@@ -100,7 +109,7 @@ func ReadSkin(fsys fs.FS) (Skin, error) {
 	if _, ok := keys["mode"]; ok {
 		return Skin{}, errors.New("skin.json: skins draw both light and dark; remove mode")
 	}
-	for _, k := range []string{"builtin", "source"} {
+	for _, k := range []string{"builtin", "source", "codeHash", "codeAllowed", "sceneUrl"} {
 		if _, ok := keys[k]; ok {
 			return Skin{}, fmt.Errorf("skin.json: %s is the forge's to set; remove it", k)
 		}
@@ -159,8 +168,13 @@ func ReadSkin(fsys fs.FS) (Skin, error) {
 		if strings.HasPrefix(d.Name(), ".") {
 			return nil // .DS_Store and the like are left out
 		}
-		if _, ok := skinFileTypes[strings.ToLower(path.Ext(p))]; !ok {
-			return fmt.Errorf("%s: a skin carries stylesheets, fonts and images only", p)
+		ext := strings.ToLower(path.Ext(p))
+		if sceneCode[ext] {
+			if sk.Scene == nil || !strings.HasPrefix(p, "scene/") {
+				return fmt.Errorf("%s: code only under scene/, in a skin that declares a scene", p)
+			}
+		} else if _, ok := skinFileTypes[ext]; !ok {
+			return fmt.Errorf("%s: a skin carries stylesheets, fonts and images only (and a scene's code)", p)
 		}
 		info, err := d.Info()
 		if err != nil {
@@ -174,6 +188,11 @@ func ReadSkin(fsys fs.FS) (Skin, error) {
 	}
 	if total > maxSkinBytes {
 		return Skin{}, fmt.Errorf("the skin is %d MB; at most %d", total>>20, maxSkinBytes>>20)
+	}
+	if sk.Scene != nil {
+		if err := checkScene(fsys, sk.Scene); err != nil {
+			return Skin{}, err
+		}
 	}
 	for _, c := range sk.CSS {
 		if !fs.ValidPath(c) || path.Ext(c) != ".css" {
@@ -244,7 +263,9 @@ func (s *Server) listSkins(w http.ResponseWriter, r *http.Request) {
 	all := s.skins()
 	list := make([]Skin, 0, len(all))
 	for _, src := range all {
-		list = append(list, src.skin)
+		sk := src.skin
+		s.sceneState(&sk, src.fsys)
+		list = append(list, sk)
 	}
 	sort.Slice(list, func(i, j int) bool {
 		if list[i].Builtin != list[j].Builtin {
@@ -256,7 +277,7 @@ func (s *Server) listSkins(w http.ResponseWriter, r *http.Request) {
 	if _, ok := all[def]; !ok {
 		def = "classic"
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"default": def, "skins": list})
+	writeJSON(w, http.StatusOK, map[string]any{"default": def, "skins": list, "scenes": ScenesOn(s.opts.Home)})
 }
 
 // setDefaultSkin is PUT /api/skins/default {name}.
@@ -387,6 +408,16 @@ func installSkin(home, dir string, rec *SourceRecord) (Skin, error) {
 		sk.Source = r.Source
 	}
 	dest := filepath.Join(root, sk.Name)
+	if sk.Scene != nil {
+		// an allowance carries over only while the code is the same
+		sk.CodeHash = SceneCodeHash(os.DirFS(tmp))
+		if prev := readAllowance(dest); prev != "" && prev == sk.CodeHash {
+			if raw, err := os.ReadFile(filepath.Join(dest, codeFile)); err == nil {
+				_ = os.WriteFile(filepath.Join(tmp, codeFile), raw, 0o600)
+				sk.CodeAllowed = true
+			}
+		}
+	}
 	old := dest + ".old"
 	_ = os.RemoveAll(old)
 	if _, err := os.Stat(dest); err == nil {
