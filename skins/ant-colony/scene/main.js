@@ -19,8 +19,8 @@ const PAL = {
     grit: [[0xc79a5e, 0.35], [0xc79a5e, 0.28], [0x5b4a3a, 0.6]],
     stone: 0x5b4a3a, root: 0x6b4f33, rootAlpha: 0.55,
     tunnel: 0x0d0804, rim: 0x4e3520, tunnelAlpha: 0.6, // drawn solid, faded as one layer
-        ant: { working: 0xf2a93b, blocked: 0xe0604a, error: 0xe0604a, done: 0x9dbb5a, idle: 0xb08a62, forager: 0xb87a46, queen: 0xffcf6e },
-    crumb: 0xffcf6e, seed: 0xd9c08a, pile: [0xffcf6e, 0xf2a93b, 0xd9c08a, 0xc79a5e],
+        ant: { working: 0xf2a93b, blocked: 0xe0604a, error: 0xe0604a, done: 0x9dbb5a, idle: 0xd8b98e, forager: 0xc98d55, crew: 0xe0b07a, queen: 0xffcf6e },
+    crumb: 0xffcf6e, seed: 0xd9c08a, soil: 0x9a6a3e, pile: [0xffcf6e, 0xf2a93b, 0xd9c08a, 0xc79a5e],
     trail: { working: 0xffc76a, blocked: 0xff6a50, error: 0xff6a50, done: 0xb6d77a }, trailBlend: 'add',
   },
   light: {
@@ -28,8 +28,8 @@ const PAL = {
     grit: [[0xac7c3c, 0.35], [0xac7c3c, 0.28], [0xa8998b, 0.6]],
     stone: 0xc2b3a5, root: 0x8a6a4a, rootAlpha: 0.45,
     tunnel: 0xc9b29a, rim: 0xdcc8b4, tunnelAlpha: 0.7,
-        ant: { working: 0xb8690a, blocked: 0xb8432f, error: 0xb8432f, done: 0x5a7a26, idle: 0x6e4a2a, forager: 0x3a2614, queen: 0x8a5a10 },
-    crumb: 0xe18d0f, seed: 0x8a6a2a, pile: [0xe18d0f, 0xc97a12, 0x8a6a2a, 0xac7c3c],
+        ant: { working: 0xb8690a, blocked: 0xb8432f, error: 0xb8432f, done: 0x5a7a26, idle: 0x6e4a2a, forager: 0x3a2614, crew: 0x4a2f18, queen: 0x8a5a10 },
+    crumb: 0xe18d0f, seed: 0x8a6a2a, soil: 0x9a7a5a, pile: [0xe18d0f, 0xc97a12, 0x8a6a2a, 0xac7c3c],
     trail: { working: 0xe18d0f, blocked: 0xd0553f, error: 0xd0553f, done: 0x6e9030 }, trailBlend: 'normal',
   },
 };
@@ -105,10 +105,14 @@ export default function scene(PIXI, host) {
     g.destroy();
     return t;
   };
-  const antTex = [tex(antShape(1)), tex(antShape(-1))];
-  const queenTex = tex(antShape(0.5, true));
-  const crumbTex = tex(new Graphics().circle(0, 0, 1.4).fill(0xffffff));
-  const seedTex = tex(new Graphics().ellipse(0, 0, 3.1, 2).fill(0xffffff).ellipse(-0.8, -0.6, 1.2, 0.6).fill({ color: 0xffffff, alpha: 0 }));
+  const T = {};
+  function makeTextures() {
+    T.ant = [tex(antShape(1)), tex(antShape(-1))];
+    T.queen = tex(antShape(0.5, true));
+    T.crumb = tex(new Graphics().circle(0, 0, 1.4).fill(0xffffff));
+    T.seed = tex(new Graphics().ellipse(0, 0, 3.1, 2).fill(0xffffff));
+  }
+  makeTextures();
 
   // ---- ants
   const ants = [];
@@ -123,8 +127,8 @@ export default function scene(PIXI, host) {
     a.x = p.x; a.y = p.y; a.heading = R() * 6.28; a.target_a = a.heading;
     a.spr.alpha = reduced() ? 1 : 0;
     a.spr.visible = true;
-    a.spr.scale.set(kind === 'forager' ? 1.1 : 1.2);
-    a.spr.tint = PAL[mode].ant[kind === 'forager' || kind === 'queen' ? kind : statusTint(paneId, kind)];
+    a.spr.scale.set(kind === 'nurse' ? 1.2 : 1.3);
+    a.spr.tint = PAL[mode].ant[tintKey(a)];
     a.script = script(a);
     antLayer.addChild(a.cargoSpr, a.spr);
     ants.push(a);
@@ -134,13 +138,14 @@ export default function scene(PIXI, host) {
     return a;
   }
   function makeAnt() {
-    const spr = new Sprite(antTex[0]);
+    const spr = new Sprite(T.ant[0]);
     spr.anchor.set(0.5);
-    const cargoSpr = new Sprite(crumbTex);
+    const cargoSpr = new Sprite(T.crumb);
     cargoSpr.anchor.set(0.5);
     cargoSpr.visible = false;
     return { spr, cargoSpr };
   }
+  const tintKey = (a) => (a.kind === 'forager' || a.kind === 'crew' || a.kind === 'nurse' ? (a.kind === 'nurse' ? 'crew' : a.kind) : statusTint(a.pane, a.kind));
   function statusTint(paneId, kind) {
     if (kind === 'carrier' || kind === 'rester') return 'done';
     if (kind === 'guard' || kind === 'messenger') return status.get(paneId) === 'error' ? 'error' : 'blocked';
@@ -158,8 +163,8 @@ export default function scene(PIXI, host) {
     a.cargo = what;
     a.cargoSpr.visible = !!what;
     if (what) {
-      a.cargoSpr.texture = what === 'seed' ? seedTex : crumbTex;
-      a.cargoSpr.tint = what === 'seed' ? PAL[mode].seed : PAL[mode].crumb;
+      a.cargoSpr.texture = what === 'seed' ? T.seed : T.crumb;
+      a.cargoSpr.tint = what === 'seed' ? PAL[mode].seed : what === 'soil' ? PAL[mode].soil : PAL[mode].crumb;
     }
   }
 
@@ -228,7 +233,7 @@ export default function scene(PIXI, host) {
       if (a.spr.alpha <= 0) { kill(a); return; }
     } else if (a.spr.alpha < 1) a.spr.alpha = Math.min(1, a.spr.alpha + dt * 2.5);
 
-    const mul = idle ? 0.55 : 1;
+    const mul = idle ? 0.85 : 1;
     if (a.wait > 0) {
       a.wait -= dt;
       a.spr.rotation = a.heading + Math.sin(time * 9 + a.phase) * 0.12; // antennae work
@@ -253,11 +258,15 @@ export default function scene(PIXI, host) {
     a.heading += da * Math.min(1, dt * 16);
     a.spr.rotation = a.heading;
     a.stride += d;
-    if (a.stride > 2.2) { a.stride = 0; a.frame ^= 1; a.spr.texture = antTex[a.frame]; }
+    if (a.stride > 2.2) { a.stride = 0; a.frame ^= 1; a.spr.texture = T.ant[a.frame]; }
   }
 
+  // the host's status words, folded into what the colony knows
+  const BUSY = new Set(['working', 'running']);
+  const kindOf = (st) => (BUSY.has(st) ? 'working' : st === 'blocked' || st === 'error' || st === 'done' ? st : 'idle');
+
   // ---- behaviour, one generator per kind of ant
-  const live = (id, ...want) => want.includes(status.get(id));
+  const live = (id, ...want) => status.has(id) && want.includes(kindOf(status.get(id)));
   const ringNode = (id) => { const g = nest.ringOf.get(id); return g ? pick(g.nodes) : -1; };
   const granaryNode = () => pick(nest.granaryNodes);
 
@@ -299,9 +308,9 @@ export default function scene(PIXI, host) {
     while (live(id, 'done')) yield wait(rnd(2, 5));
   }
   function* ambler(a, id) {
-    while (live(id, 'idle') || (status.has(id) && !['working', 'blocked', 'error', 'done'].includes(status.get(id)))) {
-      yield patrol(id, rnd(2, 5), rnd(9, 15), R() < 0.5 ? 1 : -1);
-      yield wait(rnd(1.5, 4));
+    while (live(id, 'idle')) {
+      yield patrol(id, rnd(3, 7), rnd(14, 24), R() < 0.5 ? 1 : -1);
+      yield wait(rnd(2, 6)); // dozing, in the gutter where it can be seen
     }
   }
   function* forager(a) {
@@ -317,9 +326,34 @@ export default function scene(PIXI, host) {
     }
   }
 
-  const SCRIPTS = { worker, guard, messenger, carrier, rester, ambler, forager };
+  // the nest's own crew: chores in the header band and the gutters, whatever
+  // the panes are doing, so the colony never looks empty
+  const shown = () => nest.nodes.map((p, i) => i).filter((i) => nest.nodes[i].y <= nest.T + 0.5);
+  function* crew(a) {
+    const near = shown();
+    for (let n = 0; n < 6; n++) {
+      if (R() < 0.35 && nest.granary) { // dig: carry soil up and out
+        yield go(pick(near), rnd(34, 48));
+        carry(a, 'soil');
+        yield go(pick(nest.surfaceNodes.length ? nest.surfaceNodes : near), rnd(30, 42));
+        carry(a, null);
+      } else {
+        yield go(R() < 0.75 ? pick(near) : pick([...nest.ringOf.values()].flatMap((g) => g.nodes)), rnd(32, 50));
+      }
+      yield wait(rnd(0.6, 2.5));
+    }
+  }
+  function* nurse(a) { // tends the queen
+    const g = nest.granary;
+    if (!g) return;
+    const spot = nest.nearest(g.x - g.w * 0.22, g.floorY, nest.granaryNodes);
+    yield go(spot, 26);
+    for (let n = 0; n < 8; n++) yield wait(rnd(1.5, 4));
+  }
+
+  const SCRIPTS = { worker, guard, messenger, carrier, rester, ambler, forager, crew, nurse };
   const count = (kind, id) => ants.reduce((n, a) => n + (a.kind === kind && a.pane === id && !a.leaving ? 1 : 0), 0);
-  const offTabWork = () => panes.filter((p) => !nest.ringOf.has(p.id) && p.status === 'working').length;
+  const offTabWork = () => panes.filter((p) => !nest.ringOf.has(p.id) && kindOf(p.status) === 'working').length;
 
   // how many of each kind every pane should have
   function wanted() {
@@ -327,13 +361,16 @@ export default function scene(PIXI, host) {
     const per = Math.max(2, Math.floor((BUDGET - 8) / Math.max(1, shown.length)));
     const out = [];
     for (const p of shown) {
-      if (p.status === 'working') out.push(['worker', p.id, Math.min(6, per)]);
-      else if (p.status === 'blocked') out.push(['guard', p.id, Math.min(6, per)]);
-      else if (p.status === 'error') out.push(['guard', p.id, Math.min(4, per)]);
-      else if (p.status === 'done') out.push(['rester', p.id, 1]);
-      else out.push(['ambler', p.id, 1]);
+      const k = kindOf(p.status);
+      if (k === 'working') out.push(['worker', p.id, Math.min(6, per)]);
+      else if (k === 'blocked') out.push(['guard', p.id, Math.min(6, per)]);
+      else if (k === 'error') out.push(['guard', p.id, Math.min(4, per)]);
+      else if (k === 'done') out.push(['rester', p.id, 1]);
+      else out.push(['ambler', p.id, Math.min(2, per)]);
     }
     if (nest.ends.length) out.push(['forager', null, 2 + Math.min(6, offTabWork() * 2)]);
+    out.push(['crew', null, nest.granary ? 7 : 4]);
+    if (nest.granary) out.push(['nurse', null, 2]);
     return out;
   }
 
@@ -345,6 +382,7 @@ export default function scene(PIXI, host) {
       for (let i = 0; i < add; i++) {
         let at;
         if (kind === 'forager') at = pick(nest.ends);
+        else if (kind === 'crew' || kind === 'nurse') at = all ? pick(shown()) : granaryNode();
         else if (kind === 'worker') at = all ? ringNode(id) : granaryNode();
         else at = all ? ringNode(id) : granaryNode();
         if (at === undefined || at < 0) continue;
@@ -456,7 +494,7 @@ export default function scene(PIXI, host) {
     }
     tunnels.cacheAsTexture({ resolution: Math.min(2, app.renderer.resolution) });
     // the queen holds court at the granary's left end
-    if (!queen) { queen = new Sprite(queenTex); queen.anchor.set(0.5); antLayer.addChildAt(queen, 0); }
+    if (!queen) { queen = new Sprite(T.queen); queen.anchor.set(0.5); antLayer.addChildAt(queen, 0); }
     queen.baseScale = 1.5;
     queen.scale.set(1.5);
     queen.visible = !!g;
@@ -477,7 +515,7 @@ export default function scene(PIXI, host) {
     for (const p of panes) {
       const ring = nest.ringOf.get(p.id);
       if (!ring) continue;
-      const kind = p.status;
+      const kind = kindOf(p.status);
       const color = P.trail[kind];
       if (!color) continue;
       const g = new Graphics();
@@ -528,7 +566,7 @@ export default function scene(PIXI, host) {
     if (!nest) return;
     drawGround(); drawTunnels(); drawTrails(); drawPile();
     for (const a of ants) {
-      a.spr.tint = PAL[mode].ant[a.kind === 'forager' ? 'forager' : statusTint(a.pane, a.kind)];
+      a.spr.tint = PAL[mode].ant[tintKey(a)];
       if (a.cargo) carry(a, a.cargo);
     }
   });
@@ -546,13 +584,40 @@ export default function scene(PIXI, host) {
     for (const p of panes) {
       const was = before.get(p.id);
       if (!was || was === p.status || !nest.ringOf.has(p.id)) continue;
-      if (p.status === 'done') {
+      const k = kindOf(p.status);
+      if (kindOf(was) === k) continue;
+      if (k === 'done') {
         for (let i = 0; i < 2; i++) spawn('carrier', p.id, (a) => carrier(a, p.id, i * 0.35), nest.ringOf.get(p.id).topMid);
-      } else if (p.status === 'blocked' || p.status === 'error') {
+      } else if (k === 'blocked' || k === 'error') {
         spawn('messenger', p.id, (a) => messenger(a, p.id), nest.ringOf.get(p.id).topMid);
       }
     }
   });
+
+  // A lost WebGL context (a GPU switch on a Mac) loses generated textures.
+  // When it comes back, make them again and redraw.
+  app.canvas.addEventListener('webglcontextlost', (e) => e.preventDefault());
+  app.canvas.addEventListener('webglcontextrestored', () => {
+    setTimeout(() => {
+      makeTextures();
+      for (const a of [...ants, ...pool]) {
+        a.spr.texture = T.ant[a.frame || 0];
+        if (a.cargo) carry(a, a.cargo); else a.cargoSpr.texture = T.crumb;
+      }
+      if (queen) queen.texture = T.queen;
+      if (nest) { drawGround(); drawTunnels(); drawTrails(); drawPile(); }
+      app.ticker.update();
+    }, 0);
+  });
+
+  // for tests over CDP: what the colony is doing (stays inside the sandbox)
+  globalThis.__antColony = () => {
+    const hidden = (a) => panes.some((p) => p.rect && a.x > p.rect.x && a.x < p.rect.x + p.rect.w && a.y > p.rect.y && a.y < p.rect.y + p.rect.h);
+    const kinds = {};
+    for (const a of ants) kinds[a.kind] = (kinds[a.kind] || 0) + 1;
+    return { t: Math.round(time), n: ants.length, shown: ants.filter((a) => !hidden(a) && a.spr.alpha > 0.5).length, kinds,
+      statuses: panes.map((p) => p.status).join(','), started: app.ticker.started, fps: Math.round(app.ticker.FPS), lost: !!app.renderer.gl?.isContextLost?.() };
+  };
 
   // first layout before any event, so the frame is never empty
   rebuild(true);
@@ -560,11 +625,11 @@ export default function scene(PIXI, host) {
   let pulseClock = 0;
   app.ticker.add((tk) => {
     if (reduced()) return; // the host renders one still frame per event
-    const dt = Math.min(0.05, tk.deltaMS / 1000);
+    const dt = Math.min(0.12, tk.deltaMS / 1000);
     time += dt;
     for (let i = ants.length - 1; i >= 0; i--) step(ants[i], dt);
     spawnClock -= dt;
-    if (spawnClock <= 0) { spawnClock = idle ? 0.9 : 0.45; reconcile(false); }
+    if (spawnClock <= 0) { spawnClock = 0.45; reconcile(false); }
     pulseClock += dt;
     for (const t of trails.values()) {
       if (t.kind === 'working') t.g.alpha = 0.7 + 0.3 * Math.sin(pulseClock * 2.2);
