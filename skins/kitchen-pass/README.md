@@ -1,6 +1,6 @@
 # Kitchen Pass
 
-The line on a busy night, for the classic layout in light mode. The top bar is
+The line on a busy night, drawn for the spaces on top, in light mode (it styles the rail too). The top bar is
 the ticket rail: brushed steel, with every tab an order ticket clipped to it,
 tilted a little, with a torn edge and a coloured band for its state. Panes are
 stainless stations with paper-white bodies on a white tile wall. A station

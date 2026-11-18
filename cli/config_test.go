@@ -124,3 +124,37 @@ func TestConfigGoesThroughTheRunningForge(t *testing.T) {
 		t.Error("cwd not saved in the home")
 	}
 }
+
+// la config spaces: top, rail or auto (the skin suggests); unset clears it.
+func TestConfigSpaces(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("LAFORGE_HOME", home)
+	if _, out, _ := run(t, "", "config", "get", "spaces"); strings.TrimSpace(out) != "auto" {
+		t.Errorf("default %q", out)
+	}
+	if code, out, errs := run(t, "", "config", "set", "spaces", "rail"); code != 0 || !strings.Contains(out, "spaces = rail") {
+		t.Fatalf("%d %s %s", code, out, errs)
+	}
+	if set, _ := forge.ReadSettings(home); set.Spaces != "rail" {
+		t.Fatalf("%+v", set)
+	}
+	if _, out, _ := run(t, "", "config"); !strings.Contains(out, "spaces") || !strings.Contains(out, "rail") {
+		t.Errorf("list:\n%s", out)
+	}
+	if code, _, errs := run(t, "", "config", "set", "spaces", "sideways"); code != 1 || !strings.Contains(errs, "top, rail or auto") {
+		t.Errorf("bad value: %d %q", code, errs)
+	}
+	if code, out, _ := run(t, "", "config", "unset", "spaces"); code != 0 || !strings.Contains(out, "auto") {
+		t.Errorf("unset: %d %s", code, out)
+	}
+	if set, _ := forge.ReadSettings(home); set.Spaces != "" {
+		t.Fatalf("after unset: %+v", set)
+	}
+	run(t, "", "config", "set", "spaces", "top")
+	if code, out, _ := run(t, "", "config", "set", "spaces", "auto"); code != 0 || !strings.Contains(out, "auto") {
+		t.Errorf("auto: %d %s", code, out)
+	}
+	if _, out, _ := run(t, "", "config", "get", "spaces"); strings.TrimSpace(out) != "auto" {
+		t.Errorf("after auto %q", out)
+	}
+}

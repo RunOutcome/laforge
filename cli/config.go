@@ -19,7 +19,7 @@ import (
 	"github.com/RunOutcome/laforge/forge"
 )
 
-const configUsage = "config [--json] | config get KEY | config set KEY VALUE | config unset cwd | config profile [list] | config profile add [--label L] [--description D] [--agent] [--env K=V]… NAME COMMAND [ARGS…] | config profile remove NAME"
+const configUsage = "config [--json] | config get KEY | config set KEY VALUE | config unset cwd|spaces | config profile [list] | config profile add [--label L] [--description D] [--agent] [--env K=V]… NAME COMMAND [ARGS…] | config profile remove NAME"
 
 // config is `la config`: the forge's settings, the same keys as GET and PUT
 // /api/config. It goes through the running forge, else reads and writes the
@@ -41,10 +41,10 @@ func (c *cmd) config(args []string) error {
 		}
 		return c.configSet(args[1], args[2])
 	case "unset":
-		if len(args) != 2 || args[1] != "cwd" {
-			return c.usage("config unset cwd (the other settings are set, not unset)")
+		if len(args) != 2 || (args[1] != "cwd" && args[1] != "spaces") {
+			return c.usage("config unset cwd|spaces (the other settings are set, not unset)")
 		}
-		return c.configSet("cwd", "")
+		return c.configSet(args[1], "")
 	case "profile", "profiles":
 		return c.configProfile(args[1:])
 	}
@@ -88,6 +88,11 @@ func configValue(cfg forge.ForgeConfig, key string) (string, bool) {
 		return cfg.Skin, true
 	case "scenes":
 		return onOff(cfg.Scenes), true
+	case "spaces":
+		if cfg.Spaces == "" {
+			return "auto", true
+		}
+		return cfg.Spaces, true
 	case "version":
 		return cfg.Version, true
 	case "host":
@@ -131,6 +136,9 @@ func (c *cmd) configList(asJSON bool) error {
 			default:
 				v, note = "-", "not saved: where la up runs"
 			}
+		}
+		if k == "spaces" && cfg.Spaces == "" {
+			note = "the skin suggests top or rail"
 		}
 		fmt.Fprintf(tw, "%s\t%s\t%s\n", k, v, note)
 	}
@@ -216,6 +224,16 @@ func patchFor(key, value string) (forge.ConfigPatch, error) {
 			return p, errors.New("scenes is on or off")
 		}
 		p.Scenes = &on
+	case "spaces":
+		v := strings.ToLower(strings.TrimSpace(value))
+		switch v {
+		case "top", "rail":
+		case "auto", "", "skin":
+			v = ""
+		default:
+			return p, errors.New("spaces is top, rail or auto (the skin suggests)")
+		}
+		p.Spaces = &v
 	case "profiles":
 		return p, errors.New("profiles change with: la config profile add|remove")
 	default:
@@ -250,6 +268,10 @@ func (c *cmd) configSet(key, value string) error {
 	v, _ := configValue(cfg, key)
 	if key == "cwd" && value == "" {
 		fmt.Fprintln(c.cfg.Stdout, "cwd is not saved: new panes start where la up runs")
+		return nil
+	}
+	if key == "spaces" && cfg.Spaces == "" {
+		fmt.Fprintln(c.cfg.Stdout, "spaces = auto (the skin suggests top or rail)")
 		return nil
 	}
 	fmt.Fprintf(c.cfg.Stdout, "%s = %s\n", key, v)

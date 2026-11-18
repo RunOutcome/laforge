@@ -248,15 +248,15 @@
   color: var(--tx-2);
 }
 
-/* ---------- header: bezel strip with a sonar sweep ---------- */
-[data-skin='bridge'] .rail-header {
+/* ---------- the title line: bezel strip with a sonar sweep ---------- */
+[data-skin='bridge'] .topbar {
   position: relative;
-  overflow: hidden;
+  height: 46px;
   background: linear-gradient(180deg, #0f1b23, #0a1319);
   border-bottom: 2px solid var(--b-steel-hi);
 }
 
-[data-skin='bridge'] .rail-header::before {
+[data-skin='bridge'] .topbar::before {
   content: '';
   position: absolute;
   inset: 0;
@@ -267,7 +267,7 @@
   pointer-events: none;
 }
 
-[data-skin='bridge'] .rail-header::after {
+[data-skin='bridge'] .topbar::after {
   content: '';
   position: absolute;
   left: 0;
@@ -291,24 +291,20 @@
 }
 
 [data-skin='bridge'] .rail-time {
-  font: 600 20px/1.1 var(--font-mono);
+  font: 600 14px/1.1 var(--font-mono);
   color: var(--b-cyan);
   text-shadow: 0 0 8px var(--b-cyan-glow);
 }
 
 [data-skin='bridge'] .rail-space-title {
-  font: 600 34px/1 var(--font-display);
+  border-left-color: var(--b-steel-hi);
+  font: 600 22px/1 var(--font-display);
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--tx);
 }
 
 /* ---------- tabs: stations on a steel strip ---------- */
-[data-skin='bridge'] .topbar {
-  background: #0a1319;
-  border-bottom: 1px solid var(--line);
-}
-
 [data-skin='bridge'] .tab {
   position: relative;
   height: 30px;
@@ -636,15 +632,14 @@
   border-color: rgba(208, 40, 59, 0.55);
   animation-name: bridge-alert-day;
 }
-[data-skin='bridge'][data-mode='light'] .rail-header {
+[data-skin='bridge'][data-mode='light'] .topbar {
   background: linear-gradient(180deg, #edf2f5, #e0e8ed);
 }
-[data-skin='bridge'][data-mode='light'] .rail-header::before {
+[data-skin='bridge'][data-mode='light'] .topbar::before {
   background: linear-gradient(90deg, transparent, rgba(0, 128, 156, 0.08) 48%, rgba(0, 128, 156, 0.2) 50%, transparent 51%);
   background-size: 50% 100%;
   background-repeat: no-repeat;
 }
-[data-skin='bridge'][data-mode='light'] .topbar { background: #e0e8ed; }
 [data-skin='bridge'][data-mode='light'] .tab.is-active {
   background: linear-gradient(180deg, #1597b4, var(--b-cyan));
 }
@@ -724,7 +719,7 @@
 
 @media (max-width: 640px) {
   [data-skin='bridge'] .rail-space-title {
-    font-size: 24px;
+    font-size: 17px;
   }
   [data-skin='bridge'] .rail-when {
     display: none;

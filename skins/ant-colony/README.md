@@ -1,6 +1,6 @@
 # Ant Colony
 
-The forge as a cross-section of a nest. Grass runs along the top of the rail and header, and soil strata darken below. Panes are chambers dug out of the earth and spaces are side chambers off the main shaft. Every member of the crew is an ant. Whatever is busy leaves an amber scent trail, and the footer's honey bar stands for the colony's stores. Rail layout, dark.
+The forge as a cross-section of a nest. Grass runs along the title line, and soil strata darken below. Panes are chambers dug out of the earth and spaces are side chambers off the main shaft. Every member of the crew is an ant. Whatever is busy leaves an amber scent trail, and the footer's honey bar stands for the colony's stores. It suggests the spaces in the rail and styles them on top too. Dark.
 
 Both modes: dark is the nest underground; light is a sunlit, sandy formicarium (same chambers, ants and scent trail).
 

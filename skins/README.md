@@ -17,7 +17,7 @@ Every skin draws both light and dark (the viewer picks; each preview shows
 the mode it was first drawn in), and the same four states its own way:
 **working**, **blocked** (needs you), **done** and **idle**.
 
-| Skin | Layout | First drawn in | The idea |
+| Skin | Suggests | First drawn in | The idea |
 | --- | --- | --- | --- |
 | [Ant Colony](ant-colony/) | rail | dark | A cross-section of the nest: soil strata, chambers for panes, the crew as ants and a glowing scent trail on whatever is busy. |
 | [Bridge](bridge/) | rail | dark | A ship's bridge: cold steel bezels, cyan readouts, crew at their stations, red alert when someone needs you. |

@@ -11,17 +11,21 @@ JavaScript, HTML or anything else that runs; install refuses it. Every theme
 draws **both light and dark**.
 
 The full reference is `docs/skins.md` in the LaForge repository (every
-custom property, every hook, both layouts, packs, collections). Read it, and
-read one finished skin before designing: `forge/skins/console/` (built in,
-rail layout) or any folder in `skins/` (the official ones). Outside the
+custom property, every hook, both arrangements, packs, collections). Read
+it, and read one finished skin before designing: `forge/skins/console/`
+(built in, suggests the rail) or any folder in `skins/` (the official
+ones). Outside the
 repository: https://github.com/RunOutcome/laforge/blob/main/docs/skins.md
 
 ## Steps
 
 1. **Agree the look first.** Ask, or infer from the request: the mood, two to
-   four colours, layout (`classic`: tabs above panes; `rail`: a left rail of
-   spaces and agents with a status footer), and a font if any. Write it in
-   one line; it becomes `description`.
+   four colours, which arrangement it suggests (`layout` in `skin.json`:
+   `classic` for the spaces as tabs on the title line, `rail` for a left
+   rail of spaces and agents), and a font if any. Write it in one line; it
+   becomes `description`. The user picks the arrangement (Settings, `la
+   config set spaces top|rail`); `layout` is only the default, so **the
+   skin must look right in both**.
 
 2. **Scaffold:** `la skin new <name> [dir]`. The name is lower-case letters,
    digits and dashes; `dir` is the skin folder itself (default `./<name>`).
@@ -42,10 +46,15 @@ repository: https://github.com/RunOutcome/laforge/blob/main/docs/skins.md
    - the light mode is a design of its own, not the dark one inverted: the
      same identity (accents, shapes, type) on a light ground.
 
-4. **Go deeper with hooks** only when tokens are not enough:
-   `.tab[data-status]`, `.pane[data-status][data-active]`,
-   `.pane-head`, the agents panel, and in the rail layout `.rail`, the
-   spaces and crew rows, `.rail-when`, the footer counts. Scope every rule
+4. **Go deeper with hooks** only when tokens are not enough. There is one
+   title line (`.topbar`: `.brand`, then `.tabs` and `.tab[data-status]`
+   on top, or `.rail-space-title` in the rail; then `.new-pane-btn` next to
+   `.agents-btn` in `.tools`), `.pane[data-status][data-active]`,
+   `.pane-head`, the agents panel, `.rail` with its spaces
+   (`.rail-space[data-status]`: the same tabs, listed) and crew rows, and
+   the footer (`.statusbar`, its counts). Restyle the pieces; do not move
+   them, and style `.tab` and `.rail-space` alike so a space looks the same
+   in either place. Scope every rule
    with `[data-skin='<name>']` so it never leaks into other skins. A pane's
    status colours its border; make the focused pane show on top of that
    with a ring, e.g.
@@ -100,8 +109,11 @@ repository: https://github.com/RunOutcome/laforge/blob/main/docs/skins.md
    drive Chrome over the DevTools protocol: set the window size (1400x875,
    and 390x844 for a phone), set the key, reload, click the tab with real
    mouse events (a script's `.click()` is not enough), and capture.
+   Look at **both arrangements**: set the `laforge.spaces` key to `top`
+   and to `rail` (this browser's own choice) and reload.
    Check: text readable, blocked, working and done tell apart, the active
-   pane stands out, nothing a skin draws overflows at 390px. Then
+   pane stands out, the title line fits, nothing a skin draws overflows at
+   390px. Then
    `la down` (it stops only this forge) and delete the home.
 
 9. **Share it.** A GitHub repository holding the skin at its root, or many

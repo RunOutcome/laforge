@@ -24,8 +24,8 @@ import (
 // skin.json and its files: stylesheets, fonts and images, nothing that
 // runs. Built-in skins ship in the binary (forge/skins); installed ones live
 // in <home>/skins/<name> (la skin install). The forge serves a skin's files
-// at /skins/<name>/<file>; the client loads its stylesheet and, by its
-// layout, arranges the screen. The forge's default skin is <home>/skin;
+// at /skins/<name>/<file>; the client loads its stylesheet. Its layout only
+// suggests where the spaces show; the user's spaces setting decides. The forge's default skin is <home>/skin;
 // each browser may choose its own.
 
 //go:embed all:skins
@@ -39,8 +39,9 @@ type Skin struct {
 	Version     string `json:"version,omitempty"`
 	Author      string `json:"author,omitempty"`
 	License     string `json:"license,omitempty"`
-	// Layout arranges the screen: "classic" (tabs above panes) or "rail"
-	// (a fixed rail of spaces and agents at the left, a status footer).
+	// Layout is where the skin suggests the spaces show, used while the user
+	// has not chosen (the spaces setting): "classic" (tabs on the title
+	// line) or "rail" (a rail of spaces and agents at the left).
 	Layout string `json:"layout,omitempty"`
 	// CSS are the skin's stylesheets, in order, relative to its folder.
 	CSS []string `json:"css,omitempty"`

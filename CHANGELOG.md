@@ -11,6 +11,22 @@ Agents you can see, keep and hand work to.
 
 ### Added
 
+- **One title line, one place for the spaces.** A space is a tab, and the
+  spaces show in exactly one place: **top** (tabs on the title line, after
+  the brand; they scroll, with a menu of every tab when they overflow, and
+  middle-click closes one) or **rail** (a list at the left with the crew
+  below it, the active space's name on the title line, no tab strip). It
+  is your choice, not the skin's: **Settings → Forge → Spaces**, `la config
+  set spaces top|rail|auto` (`spaces` in `/api/config`), ⌘K **Spaces: top /
+  rail**, or **Spaces here** for one browser. A skin's `layout` now only
+  suggests one until you choose. **New pane** is a button with the word,
+  next to the bell (its caret starts a profile); the tab size sits beside
+  it. The rail's folder groups and its **All** entry are gone: each tab is
+  a space, a pane with a `space` label joins the tab of that name, and the
+  footer is the same in both arrangements. Every official skin, classic
+  and console are restyled for both; skin hooks changed (`.rail-header` is
+  `.topbar`, see docs/skins.md).
+
 - **Settings, in the browser and in `la config`.** One settings model behind
   `GET`/`PUT /api/config` (a partial update; refused whole on a bad key or
   value): the new-pane folder (now saved in `config.json`, so it survives a

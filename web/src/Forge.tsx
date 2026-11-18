@@ -68,19 +68,29 @@ export function Forge({ api: given, embedded = false }: Props) {
   viewingRef.current = who?.mode === 'view';
   const [skinList, setSkinList] = useState<K.SkinList | null>(null);
   const [skin, setSkin] = useState<K.Skin>(K.classic);
-  const [railSpace, setRailSpace] = useState<string | null>(null);
   const [railOpen, setRailOpen] = useState(false);
-  const [newSpace, setNewSpace] = useState<{ name: string; cwd: string; error: string } | null>(null);
+  const [browserSpaces, setBrowserSpaces] = useState<R.Arrangement | null>(R.loadBrowserSpaces);
+  const [tabsMenu, setTabsMenu] = useState(false);
+  const [tabsOver, setTabsOver] = useState(false);
+  const tabsRef = useRef<HTMLDivElement | null>(null);
   const terms = useRef(new Map<string, TerminalHandle>());
   // every skin draws both modes: the viewer's choice decides, always
   const mode: Mode = resolveMode(pref, sysMode);
   const termTheme = useMemo(() => K.terminalOf(skin, terminalTheme(mode), mode), [skin, mode]);
-  const layoutKind = K.layoutOf(skin);
+  // where the spaces (tabs) show: this browser's choice, else the forge's,
+  // else what the skin suggests
+  const spacesAt: R.Arrangement = R.arrangement({ browser: browserSpaces, forge: config?.spaces, skin: K.layoutOf(skin) });
+  const layoutKind = R.layoutName(spacesAt);
 
   // the root's data-mode is the resolved mode, set before the page paints
   useLayoutEffect(() => {
     document.documentElement.dataset.mode = mode;
   }, [mode]);
+  useLayoutEffect(() => {
+    const root = document.documentElement;
+    root.dataset.spaces = spacesAt;
+    root.dataset.layout = layoutKind;
+  }, [spacesAt, layoutKind]);
 
   // skins: the browser's choice if the forge still has it, else the forge's
   // default; one that fails to load falls back to classic
@@ -242,13 +252,9 @@ export function Forge({ api: given, embedded = false }: Props) {
           return { ...t, root };
         }),
       };
+      // panes no tab holds: a space label joins its tab, the rest go to Found
       const orphans = (list ?? []).filter((s) => !placed.has(s.id) && live(s));
-      if (orphans.length) {
-        const tab = { ...L.newTab('Found', orphans[0].id), custom: true };
-        let root: L.Node = tab.root;
-        for (const s of orphans.slice(1)) root = L.split(root, L.panes(root).at(-1)!.id, 'row', L.newPane(s.id));
-        next = { ...next, tabs: [...next.tabs, { ...tab, root: L.tiled(root) }] };
-      }
+      if (orphans.length) next = { ...next, tabs: R.placeOrphans(next.tabs, orphans, (name, id) => L.newTab(name, id)) };
       if (!next.tabs.some((t) => t.id === next.active)) next = { ...next, active: next.tabs[0].id };
       setLayout(next);
     })();
@@ -595,14 +601,67 @@ export function Forge({ api: given, embedded = false }: Props) {
     [api, updateTab],
   );
 
-  // openUnplaced shows a pane no tab holds (one an agent started) in a new tab.
+  // openUnplaced shows a pane no tab holds (one an agent started): in the
+  // tab its space label names, else in a new tab.
   const openUnplaced = useCallback((id: string) => {
+    const s = sessionsRef.current.get(id);
     setLayout((l) => {
       if (!l) return l;
+      if (s?.labels?.space?.trim()) {
+        const tabs = R.placeOrphans(l.tabs, [s], (name, sid) => L.newTab(name, sid));
+        return { ...l, tabs, active: R.tabOf(tabs, id) ?? l.active };
+      }
       const t = L.newTab('', id);
       return { ...l, tabs: [...l.tabs, t], active: t.id };
     });
   }, []);
+
+  // setSpaces: where the spaces show, for the forge (every browser, la
+  // config) or for this browser only (null follows the forge again)
+  const setSpaces = useCallback(
+    async (where: R.Arrangement | '', scope: 'forge' | 'browser') => {
+      if (scope === 'browser') {
+        const v = where || null;
+        R.saveBrowserSpaces(v);
+        setBrowserSpaces(v);
+        return;
+      }
+      const c = await api.setConfig({ spaces: where });
+      setConfig(c);
+    },
+    [api],
+  );
+  // the palette's Spaces: changes what decides now (this browser's own choice when it has one)
+  const pickSpaces = useCallback(
+    (where: R.Arrangement) => {
+      setRailOpen(false);
+      if (browserSpaces) setSpaces(where, 'browser');
+      else setSpaces(where, 'forge').catch(() => setSpaces(where, 'browser'));
+    },
+    [browserSpaces, setSpaces],
+  );
+
+  // the tab strip: does it overflow (then a menu lists every tab), and keep
+  // the active tab in view
+  useEffect(() => {
+    const el = tabsRef.current;
+    const over = !!el && el.scrollWidth > el.clientWidth + 1;
+    if (over !== tabsOver) setTabsOver(over);
+  });
+  useEffect(() => {
+    const el = tabsRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(() => {
+      setTabsOver(el.scrollWidth > el.clientWidth + 1);
+      el.querySelector('.tab.is-active')?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [spacesAt, layout === null]);
+  useEffect(() => {
+    const sel = spacesAt === 'rail' ? '.rail-space.is-active' : '.tabs .tab.is-active';
+    document.querySelector(sel)?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+  }, [layout?.active, spacesAt]);
 
   const toggleAgents = useCallback(() => {
     setAgentsOpen((o) => {
@@ -653,6 +712,7 @@ export function Forge({ api: given, embedded = false }: Props) {
       { id: 'close', group: 'Pane', label: 'Close the pane', hint: '^b x', run: () => tab && setConfirm(tab.focus) },
       { id: 'new-tab', group: 'Tab', label: 'New tab', hint: '^b c', run: newTabAction },
       { id: 'rename-tab', group: 'Tab', label: 'Rename the tab', hint: '^b ,', run: () => tab && setRenaming(tab.id) },
+      { id: 'close-tab', group: 'Tab', label: 'Close the tab', run: () => tab && setClosingTab(tab.id) },
       { id: 'next-tab', group: 'Tab', label: 'Next tab', hint: '^b n', run: () => stepTab(1) },
       { id: 'prev-tab', group: 'Tab', label: 'Previous tab', hint: '^b p', run: () => stepTab(-1) },
       { id: 'tiled', group: 'Layout', label: 'Tiled', hint: '^b space', run: () => preset('tiled') },
@@ -665,6 +725,8 @@ export function Forge({ api: given, embedded = false }: Props) {
       { id: 'mode', group: 'View', label: `Toggle light/dark (now ${pref === 'system' ? `system, ${mode}` : pref})`, run: cycleMode },
       { id: 'themes', group: 'View', label: 'Themes…', run: () => (setSettingsOpen(false), setThemesOpen(true)) },
       { id: 'settings', group: 'View', label: 'Settings…', run: openSettings },
+      { id: 'spaces-top', group: 'View', label: `Spaces: top (tabs on the title line)${spacesAt === 'top' ? ' (now)' : ''}`, run: () => pickSpaces('top') },
+      { id: 'spaces-rail', group: 'View', label: `Spaces: rail (a list at the left)${spacesAt === 'rail' ? ' (now)' : ''}`, run: () => pickSpaces('rail') },
       { id: 'bigger', group: 'View', label: 'Bigger text', hint: '^b +', run: () => setFontSize((f) => Math.min(f + 1, 22)) },
       { id: 'smaller', group: 'View', label: 'Smaller text', hint: '^b _', run: () => setFontSize((f) => Math.max(f - 1, 9)) },
       { id: 'help', group: 'Help', label: 'Keys', hint: '^b ?', run: () => setHelp(true) },
@@ -689,7 +751,7 @@ export function Forge({ api: given, embedded = false }: Props) {
       });
     }
     return list;
-  }, [profiles, tab, pref, mode, config, agentsOpen, skinList, skin, chooseSkin, makeDefaultSkin, splitPane, toggleZoom, newTabAction, stepTab, preset, cycleMode, toggleAgents, startIn, updateTab, openSettings, setTabSize]);
+  }, [profiles, tab, pref, mode, config, agentsOpen, skinList, skin, chooseSkin, makeDefaultSkin, splitPane, toggleZoom, newTabAction, stepTab, preset, cycleMode, toggleAgents, startIn, updateTab, openSettings, setTabSize, spacesAt, pickSpaces]);
 
   // keys: the prefix (Ctrl-b) then one key, as in tmux
   const keys = useRef<(e: KeyboardEvent) => boolean>(() => false);
@@ -705,8 +767,9 @@ export function Forge({ api: given, embedded = false }: Props) {
       setSettingsOpen(false);
       return true;
     }
-    if (paneMenu && e.key === 'Escape') {
+    if ((paneMenu || tabsMenu) && e.key === 'Escape') {
       setPaneMenu(false);
+      setTabsMenu(false);
       return true;
     }
     if (confirm) {
@@ -1161,94 +1224,198 @@ export function Forge({ api: given, embedded = false }: Props) {
   const ModeIcon = pref === 'dark' ? I.Moon : pref === 'light' ? I.Sun : I.Monitor;
   const modeTitle = modeLabel(pref, sysMode);
 
-  // the pieces both layouts draw
-  const tabBar = (shownTabs: Set<string> | null) => (
-    <div className="tabs" role="tablist">
-      {layout.tabs.map((t, i) => {
-        if (shownTabs && !shownTabs.has(t.id)) return null;
-        const count = L.panes(t.root).length;
-        const liveCount = L.panes(t.root).filter((p) => p.session && live(sessions.get(p.session))).length;
-        return (
-          <div
-            key={t.id}
-            role="tab"
-            aria-selected={t.id === layout.active}
-            className={`tab ${t.id === layout.active ? 'is-active' : ''}`}
-            data-status={S.tabStatus(tabSessions(t)) ?? tabState(t)}
-            title={`Tab ${i + 1} · double-click to rename`}
-            onMouseDown={() => setLayout((l) => (l ? { ...l, active: t.id } : l))}
-            onDoubleClick={() => setRenaming(t.id)}
-          >
-            {(() => {
-              const w = S.tabStatus(tabSessions(t));
-              return w ? <span className={`dot st-${w}`} title={`Most urgent: ${w}`} /> : <span className={`dot dot-${tabState(t)}`} />;
-            })()}
-            {renaming === t.id ? (
-              <input
-                className="tab-rename"
-                autoFocus
-                defaultValue={L.autoNamed(t) ? '' : t.name}
-                placeholder={tabLabel(t)}
-                onFocus={(e) => e.target.select()}
-                onBlur={(e) => {
-                  const name = e.target.value.trim();
-                  updateTab(t.id, (x) => (name ? { ...x, name, custom: true } : { ...x, name: '', custom: false }));
-                  setRenaming(null);
-                }}
-                onKeyDown={(e) => {
-                  e.stopPropagation();
-                  if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
-                  if (e.key === 'Escape') setRenaming(null);
-                }}
-              />
-            ) : (
-              <span className={`tab-name ${L.autoNamed(t) ? 'is-auto' : ''}`}>{tabLabel(t)}</span>
-            )}
-            {count > 1 && (
+  const activate = (id: string) => setLayout((l) => (l ? { ...l, active: id } : l));
+  const tabWord = (t: L.Tab) => S.tabStatus(tabSessions(t));
+
+  // A space is a tab: the same item drawn on the title line (.tab) or in the
+  // rail (.rail-space), with the same name, status, count and actions.
+  const spaceItem = (t: L.Tab, i: number, where: R.Arrangement) => {
+    const top = where === 'top';
+    const count = L.panes(t.root).length;
+    const liveCount = L.panes(t.root).filter((p) => p.session && live(sessions.get(p.session))).length;
+    const w = tabWord(t);
+    const name = tabLabel(t);
+    const folder = top ? '' : R.tabFolder(t, sessions);
+    const active = t.id === layout.active;
+    return (
+      <div
+        key={t.id}
+        role="tab"
+        tabIndex={active ? 0 : -1}
+        aria-selected={active}
+        className={`${top ? 'tab' : 'rail-space'} ${active ? 'is-active' : ''}`}
+        data-status={w ?? tabState(t)}
+        data-space={top ? undefined : name}
+        data-index={top ? undefined : i % 8}
+        title={`${top ? 'Tab' : 'Space'} ${i + 1}${folder ? ` · ${folder}` : ''} · double-click to rename`}
+        onMouseDown={() => {
+          activate(t.id);
+          if (!top) setRailOpen(false);
+        }}
+        onKeyDown={(e) => {
+          if (e.target !== e.currentTarget) return;
+          if (e.key === 'Enter' || e.key === ' ') activate(t.id);
+          if (e.key === 'F2') setRenaming(t.id);
+        }}
+        onDoubleClick={() => setRenaming(t.id)}
+        onAuxClick={(e) => {
+          if (e.button !== 1) return;
+          e.preventDefault();
+          if (liveCount) {
+            activate(t.id);
+            setClosingTab(t.id);
+          } else closeTab(t.id);
+        }}
+      >
+        {w ? <span className={`dot st-${w}`} title={`Most urgent: ${w}`} /> : <span className={`dot dot-${tabState(t)}`} />}
+        {renaming === t.id ? (
+          <input
+            className="tab-rename"
+            autoFocus
+            defaultValue={L.autoNamed(t) ? '' : t.name}
+            placeholder={name}
+            onFocus={(e) => e.target.select()}
+            onMouseDown={(e) => e.stopPropagation()}
+            onBlur={(e) => {
+              const v = e.target.value.trim();
+              updateTab(t.id, (x) => (v ? { ...x, name: v, custom: true } : { ...x, name: '', custom: false }));
+              setRenaming(null);
+            }}
+            onKeyDown={(e) => {
+              e.stopPropagation();
+              if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+              if (e.key === 'Escape') setRenaming(null);
+            }}
+          />
+        ) : top ? (
+          <span className={`tab-name ${L.autoNamed(t) ? 'is-auto' : ''}`}>{name}</span>
+        ) : (
+          <span className={`rail-space-name ${L.autoNamed(t) ? 'is-auto' : ''}`}>{name}</span>
+        )}
+        {!top && folder && folder !== name && renaming !== t.id && <span className="rail-space-folder">{folder}</span>}
+        {top
+          ? count > 1 && (
               <span className="tab-count" title={`${count} panes`}>
                 {count}
               </span>
-            )}
-            {closingTab === t.id ? (
-              <span className="tab-confirm" onMouseDown={(e) => e.stopPropagation()}>
-                Close{liveCount ? ` ${liveCount} running` : ''}?
-                <button onClick={() => closeTab(t.id)}>Yes</button>
-                <button onClick={() => setClosingTab(null)}>No</button>
+            )
+          : renaming !== t.id && (
+              <span className="rail-count" data-padded={R.pad2(count)} title={`${count} pane${count === 1 ? '' : 's'}`}>
+                {count}
               </span>
-            ) : (
-              renaming !== t.id && (
-                <span className="tab-actions">
-                  <button
-                    title="Rename tab (^b ,)"
-                    onMouseDown={(e) => e.stopPropagation()}
-                    onClick={() => {
-                      setLayout((l) => (l ? { ...l, active: t.id } : l));
-                      setRenaming(t.id);
-                    }}
-                  >
-                    <I.Pencil />
-                  </button>
-                  <button title="Close tab" onMouseDown={(e) => e.stopPropagation()} onClick={() => (liveCount ? setClosingTab(t.id) : closeTab(t.id))}>
-                    <I.SmallClose />
-                  </button>
-                </span>
-              )
             )}
-          </div>
-        );
-      })}
-      <button className="icon-btn" title="New tab (^b c)" onClick={newTabAction}>
+        {closingTab === t.id ? (
+          <span className="tab-confirm" onMouseDown={(e) => e.stopPropagation()}>
+            Close{liveCount ? ` ${liveCount} running` : ''}?
+            <button onClick={() => closeTab(t.id)}>Yes</button>
+            <button onClick={() => setClosingTab(null)}>No</button>
+          </span>
+        ) : (
+          renaming !== t.id && (
+            <span className="tab-actions">
+              <button
+                title={`Rename the ${top ? 'tab' : 'space'} (^b ,)`}
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={() => {
+                  activate(t.id);
+                  setRenaming(t.id);
+                }}
+              >
+                <I.Pencil />
+              </button>
+              <button title={`Close the ${top ? 'tab' : 'space'}`} onMouseDown={(e) => e.stopPropagation()} onClick={() => (liveCount ? setClosingTab(t.id) : closeTab(t.id))}>
+                <I.SmallClose />
+              </button>
+            </span>
+          )
+        )}
+      </div>
+    );
+  };
+
+  // Top: the spaces as tabs on the title line; they scroll, and a menu lists
+  // them all when they overflow
+  const tabStrip = () => (
+    <>
+      <div
+        className="tabs"
+        role="tablist"
+        aria-label="Spaces"
+        ref={tabsRef}
+        onWheel={(e) => {
+          const el = e.currentTarget;
+          if (Math.abs(e.deltaY) > Math.abs(e.deltaX) && el.scrollWidth > el.clientWidth) el.scrollLeft += e.deltaY;
+        }}
+      >
+        {layout.tabs.map((t, i) => spaceItem(t, i, 'top'))}
+      </div>
+      {tabsOver && (
+        <div className="tabs-more-wrap">
+          <button className={`icon-btn tabs-more ${tabsMenu ? 'is-open' : ''}`} title="Every tab" aria-label="Every tab" aria-expanded={tabsMenu} onClick={() => setTabsMenu((o) => !o)}>
+            <I.Chevron />
+          </button>
+          {tabsMenu && (
+            <>
+              <div className="menu-scrim" onMouseDown={() => setTabsMenu(false)} />
+              <div className="menu tabs-menu" role="menu">
+                <div className="menu-label">Tabs</div>
+                {layout.tabs.map((t, i) => {
+                  const w = tabWord(t);
+                  return (
+                    <button
+                      key={t.id}
+                      role="menuitem"
+                      className={`menu-item ${t.id === layout.active ? 'is-active' : ''}`}
+                      data-status={w ?? tabState(t)}
+                      onClick={() => {
+                        activate(t.id);
+                        setTabsMenu(false);
+                      }}
+                    >
+                      {w ? <span className={`dot st-${w}`} /> : <span className={`dot dot-${tabState(t)}`} />}
+                      <span className="menu-text">{tabLabel(t)}</span>
+                      {i < 9 && <kbd>^b {i + 1}</kbd>}
+                    </button>
+                  );
+                })}
+                <div className="menu-sep" />
+                <button
+                  role="menuitem"
+                  className="menu-item tabs-menu-new"
+                  onClick={() => {
+                    newTabAction();
+                    setTabsMenu(false);
+                  }}
+                >
+                  <span className="menu-mono">
+                    <I.Plus />
+                  </span>
+                  <span className="menu-text">New tab</span>
+                  <kbd>^b c</kbd>
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+      <button className="icon-btn new-tab-btn" title="New tab (^b c)" aria-label="New tab" onClick={newTabAction}>
         <I.Plus />
       </button>
-    </div>
+    </>
   );
+  // New pane: the word, splitting the focused pane to the right; the caret
+  // starts a profile there, or splits below
   const paneMenuButton = () => (
     <div className="pane-menu-wrap">
-      <button className={`new-pane-btn ${paneMenu ? 'is-open' : ''}`} title="Add a pane to this tab" onClick={() => setPaneMenu((o) => !o)}>
-        <I.SplitRight />
-        <span>New pane</span>
-        <I.Chevron />
-      </button>
+      <div className={`new-pane-btn ${paneMenu ? 'is-open' : ''}`} role="group" aria-label="New pane">
+        <button className="new-pane-main" title="New pane: split the focused pane to the right (^b %)" onClick={() => startNewPane(null, 'row')}>
+          <I.SplitRight />
+          <span className="new-pane-word">New pane</span>
+        </button>
+        <button className="new-pane-caret" title="Start a profile in a new pane" aria-label="Start a profile in a new pane" aria-haspopup="menu" aria-expanded={paneMenu} onClick={() => setPaneMenu((o) => !o)}>
+          <I.Chevron />
+        </button>
+      </div>
       {paneMenu && (
         <>
           <div className="menu-scrim" onMouseDown={() => setPaneMenu(false)} />
@@ -1282,8 +1449,10 @@ export function Forge({ api: given, embedded = false }: Props) {
       )}
     </div>
   );
+  // the title line's right-hand group: New pane next to the bell, then the rest
   const toolButtons = () => (
     <div className="tools">
+      {paneMenuButton()}
       <button className={`icon-btn agents-btn ${agentsOpen ? 'is-open' : ''}`} title="Agents (^b a)" onClick={toggleAgents}>
         <I.Bell />
         {blocked > 0 && <span className="agents-btn-count">{blocked}</span>}
@@ -1379,6 +1548,8 @@ export function Forge({ api: given, embedded = false }: Props) {
           fontSize={fontSize}
           onFontSize={(n) => setFontSize(G.clampFont(n))}
           now={clock.getTime()}
+          spaces={{ now: spacesAt, suggested: R.arrangement({ skin: K.layoutOf(skin) }), browser: browserSpaces }}
+          onSpaces={setSpaces}
           onClose={() => setSettingsOpen(false)}
         />
       )}
@@ -1401,25 +1572,15 @@ export function Forge({ api: given, embedded = false }: Props) {
     </>
   );
 
-  // the rail layout's model: spaces, crew and counts
+  // the rail's model: the crew and the footer's counts
   const pool = [...sessions.values()].filter((x) => placedSessions.has(x.id) || live(x));
-  const spaceList = R.spaces(pool);
   const crewList = R.crew(pool, profiles);
   const c = R.counts(pool);
   const stamp = R.dateStamp(clock);
-  const tabPanes = layout!.tabs.map((t) => ({ id: t.id, sessions: L.panes(t.root).map((p) => p.session).filter(Boolean) as string[] }));
-  const shown = railSpace === null ? null : R.tabsIn(tabPanes, sessions, railSpace).add(layout!.active);
-  const focusedPane = focusedSession ? sessions.get(focusedSession) : undefined;
-  const spaceName = railSpace ?? (focusedPane ? R.spaceOf(focusedPane) : 'All spaces');
-  const pickSpace = (name: string | null) => {
-    setRailSpace(name);
-    setRailOpen(false);
-    if (name === null) return;
-    const ids = R.tabsIn(tabPanes, sessions, name);
-    const first = layout!.tabs.find((t) => ids.has(t.id));
-    if (!first || first.id === layout!.active) return;
-    const pane = L.panes(first.root).find((p) => p.session && sessions.get(p.session) && R.spaceOf(sessions.get(p.session)!) === name);
-    goTo(first.id, pane?.id ?? first.focus);
+  const tabName = new Map(layout.tabs.map((t) => [t.id, tabLabel(t)]));
+  const spaceOfSession = (s: Session) => {
+    const id = R.tabOf(layout.tabs, s.id);
+    return id ? tabName.get(id)! : R.spaceOf(s);
   };
   const goToSession = (s: Session) => {
     const at = locate(s.id);
@@ -1428,166 +1589,116 @@ export function Forge({ api: given, embedded = false }: Props) {
     markSeen(s);
     setRailOpen(false);
   };
-  const startSpace = async () => {
-    if (!newSpace) return;
-    const name = newSpace.name.trim();
-    if (!name) return setNewSpace({ ...newSpace, error: 'Name the space.' });
-    const shell = profiles.find((p) => !p.agent && p.available)?.name ?? 'shell';
-    try {
-      const s = await api.start({ profile: shell, cwd: newSpace.cwd.trim() || undefined, labels: { space: name }, cols: 100, rows: 30 });
-      setSessions((m) => new Map(m).set(s.id, s));
-      setLayout((l) => {
-        if (!l) return l;
-        const t = { ...L.newTab(name, s.id), custom: true };
-        return { ...l, tabs: [...l.tabs, t], active: t.id };
-      });
-      setNewSpace(null);
-      setRailSpace(name);
-      setRailOpen(false);
-    } catch (err) {
-      setNewSpace({ ...newSpace, error: (err as Error).message });
-    }
-  };
 
-  const rail = layoutKind === 'rail';
+  const rail = spacesAt === 'rail';
 
-  // Both layouts share one tree: the panes sit at the same place in each, so
-  // switching skins never remounts a terminal. In classic the rail parts are
-  // absent and .forge-main is display: contents.
+  // One title line: the brand, the spaces (top) or the active space's name
+  // (rail), then New pane, the bell and the other tools at the right. Below
+  // it the rail (rail only) and the panes. Both arrangements share one tree,
+  // so switching never remounts a terminal.
   return (
-    <div className={`forge ${embedded ? 'is-embedded' : ''} ${rail ? 'layout-rail' : ''} ${rail && railOpen ? 'is-rail-open' : ''}`} data-layout={layoutKind}>
+    <div className={`forge ${embedded ? 'is-embedded' : ''} ${rail ? 'layout-rail' : 'layout-top'} ${rail && railOpen ? 'is-rail-open' : ''}`} data-layout={layoutKind} data-spaces={spacesAt}>
       {skin.sceneUrl && !embedded && <Scene url={api.base + skin.sceneUrl} mode={mode} layout={layoutKind} covered={!!tab?.zoom} />}
-      {rail ? (
-        <aside className="rail" aria-label="Spaces and crew">
-          <div className="rail-machine">
-            <span className="rail-label">Machine</span>
-            <span className="rail-host">{config?.host?.replace(/\.local(domain)?$/, '') ?? 'forge'}</span>
-          </div>
-          <section className="rail-section rail-spaces">
-            <div className="rail-title">
-              Spaces <span className="rail-count" data-padded={R.pad2(spaceList.length)}>{spaceList.length}</span>
-            </div>
-            <button className={`rail-space ${railSpace === null ? 'is-active' : ''}`} data-space="" onClick={() => pickSpace(null)}>
-              <span className="rail-space-name">All</span>
-              <span className="rail-count" data-padded={R.pad2(pool.length)}>
-                {pool.length}
-              </span>
-            </button>
-            {spaceList.map((sp, i) => (
-              <button key={sp.name} className={`rail-space ${railSpace === sp.name ? 'is-active' : ''}`} data-space={sp.name} data-index={i % 8} onClick={() => pickSpace(sp.name)} title={sp.name}>
-                <span className="rail-space-name">{sp.name}</span>
-                <span className="rail-count" data-padded={R.pad2(sp.count)}>
-                  {sp.count}
-                </span>
-              </button>
-            ))}
-            {newSpace ? (
-              <form
-                className="rail-new-space"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  startSpace();
-                }}
-              >
-                <input autoFocus placeholder="Space name" value={newSpace.name} onChange={(e) => setNewSpace({ ...newSpace, name: e.target.value, error: '' })} onKeyDown={(e) => e.key === 'Escape' && setNewSpace(null)} />
-                <input placeholder="Folder" value={newSpace.cwd} spellCheck={false} onChange={(e) => setNewSpace({ ...newSpace, cwd: e.target.value, error: '' })} onKeyDown={(e) => e.key === 'Escape' && setNewSpace(null)} />
-                <span className="rail-form-actions">
-                  <button type="submit">Start a shell</button>
-                  <button type="button" onClick={() => setNewSpace(null)}>
-                    Cancel
-                  </button>
-                </span>
-                {newSpace.error && <span className="rail-error">{newSpace.error}</span>}
-              </form>
-            ) : (
-              <button className="rail-add" onClick={() => setNewSpace({ name: '', cwd: config?.cwd ?? '', error: '' })}>
-                + New space
-              </button>
-            )}
-          </section>
-          <section className="rail-section rail-crew">
-            <div className="rail-title">
-              Crew <span className="rail-count" data-padded={R.pad2(crewList.length)}>{crewList.length}</span>
-            </div>
-            {crewList.map((s) => {
-              const word = S.shown(s);
-              const prof = profiles.find((p) => p.name === s.profile);
-              const msg = s.status?.msg || (word === 'blocked' && s.status?.kind ? `waiting for ${s.status.kind}` : '');
-              const current = s.id === focusedSession;
-              return (
-                <div
-                  key={s.id}
-                  role="button"
-                  tabIndex={0}
-                  className={`crew-row ${current ? 'is-current' : ''}`}
-                  data-status={word ?? s.state}
-                  title={msg || undefined}
-                  onClick={() => goToSession(s)}
-                  onKeyDown={(e) => e.key === 'Enter' && e.target === e.currentTarget && goToSession(s)}
-                >
-                  <span className="crew-bar" />
-                  <span className="crew-body">
-                    <span className="crew-name">
-                      {s.status?.app || prof?.label || s.profile} · {s.title}
-                    </span>
-                    <span className="crew-sub">
-                      <span className="crew-word" data-status={word ?? s.state}>
-                        {word ?? s.state}
-                      </span>{' '}
-                      · <span className="crew-space">{R.spaceOf(s)}</span>
-                    </span>
-                    {msg && <span className="crew-msg">{msg}</span>}
-                    <AskButtons asking={!!s.asking && !askHidden.has(`${s.id}|${s.asking.since}`)} note={askNotes[s.id]} onAnswer={(d) => answer(s, d)} />
-                  </span>
-                </div>
-              );
-            })}
-            {crewList.length === 0 && <p className="rail-empty">No agents yet.</p>}
-          </section>
-          <div className="rail-link" data-state={connected ? 'online' : 'offline'}>
-            <span className="rail-link-name">Forge</span> <span className="rail-link-state">{connected ? 'online' : 'offline'}</span>
-          </div>
-          <button className="rail-menu" title="Commands (⌘K)" onClick={() => setPalette(true)}>
-            <I.Gear />
-            <span>Menu</span>
+      <header className="topbar">
+        {rail && (
+          <button className="icon-btn rail-toggle" title="Spaces and crew" aria-label="Spaces and crew" aria-expanded={railOpen} onClick={() => setRailOpen((o) => !o)}>
+            <I.Menu />
           </button>
-        </aside>
-      ) : null}
-      {rail ? <div className="rail-scrim" onMouseDown={() => setRailOpen(false)} /> : null}
-      <div className={rail ? 'rail-main' : 'forge-main'}>
+        )}
+        {!embedded && (
+          <div className="brand">
+            <I.Mark />
+            <span className="brand-name">
+              La<b>Forge</b>
+            </span>
+          </div>
+        )}
         {rail ? (
-          <header className="rail-header">
-            <button className="icon-btn rail-toggle" title="Spaces and crew" onClick={() => setRailOpen((o) => !o)}>
-              <I.Menu />
-            </button>
+          <>
+            <span className="rail-space-title" title={tabLabel(tab)}>
+              {tabLabel(tab)}
+            </span>
             <span className="rail-when" data-year={stamp.year} data-day={stamp.day} data-tenth={stamp.tenth}>
               <span className="rail-date">{clock.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })}</span>
               <span className="rail-time">{clock.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
             </span>
-            <span className="rail-space-title">{spaceName}</span>
-            <span className="grow" />
-            {toolButtons()}
-          </header>
-        ) : null}
-        <nav className={rail ? 'topbar rail-tabs' : 'topbar'}>
-          {!rail && !embedded && (
-            <div className="brand">
-              <I.Mark />
-              <span className="brand-name">
-                La<b>Forge</b>
-              </span>
+          </>
+        ) : (
+          tabStrip()
+        )}
+        <span className="grow" />
+        {tab && <SizeControl size={L.tabSize(tab)} onSize={setTabSize} />}
+        {toolButtons()}
+      </header>
+      <div className="forge-body">
+        {rail && (
+          <aside className="rail" aria-label="Spaces and crew">
+            <div className="rail-machine">
+              <span className="rail-label">Machine</span>
+              <span className="rail-host">{config?.host?.replace(/\.local(domain)?$/, '') ?? 'forge'}</span>
             </div>
-          )}
-          {tabBar(rail ? shown : null)}
-          {paneMenuButton()}
-          {tab && <SizeControl size={L.tabSize(tab)} onSize={setTabSize} />}
-          {!rail && <span className="grow" />}
-          {!rail && toolButtons()}
-        </nav>
-
-        {workArea()}
-
-        {rail ? (
+            <section className="rail-section rail-spaces">
+              <div className="rail-title">
+                Spaces <span className="rail-count" data-padded={R.pad2(layout.tabs.length)}>{layout.tabs.length}</span>
+              </div>
+              <div className="rail-space-list" role="tablist" aria-label="Spaces" aria-orientation="vertical">
+                {layout.tabs.map((t, i) => spaceItem(t, i, 'rail'))}
+              </div>
+              <button className="rail-add" title="New space (^b c)" onClick={() => (newTabAction(), setRailOpen(false))}>
+                + New space
+              </button>
+            </section>
+            <section className="rail-section rail-crew">
+              <div className="rail-title">
+                Crew <span className="rail-count" data-padded={R.pad2(crewList.length)}>{crewList.length}</span>
+              </div>
+              {crewList.map((s) => {
+                const word = S.shown(s);
+                const prof = profiles.find((p) => p.name === s.profile);
+                const msg = s.status?.msg || (word === 'blocked' && s.status?.kind ? `waiting for ${s.status.kind}` : '');
+                const current = s.id === focusedSession;
+                return (
+                  <div
+                    key={s.id}
+                    role="button"
+                    tabIndex={0}
+                    className={`crew-row ${current ? 'is-current' : ''}`}
+                    data-status={word ?? s.state}
+                    title={msg || undefined}
+                    onClick={() => goToSession(s)}
+                    onKeyDown={(e) => e.key === 'Enter' && e.target === e.currentTarget && goToSession(s)}
+                  >
+                    <span className="crew-bar" />
+                    <span className="crew-body">
+                      <span className="crew-name">
+                        {s.status?.app || prof?.label || s.profile} · {s.title}
+                      </span>
+                      <span className="crew-sub">
+                        <span className="crew-word" data-status={word ?? s.state}>
+                          {word ?? s.state}
+                        </span>{' '}
+                        · <span className="crew-space">{spaceOfSession(s)}</span>
+                      </span>
+                      {msg && <span className="crew-msg">{msg}</span>}
+                      <AskButtons asking={!!s.asking && !askHidden.has(`${s.id}|${s.asking.since}`)} note={askNotes[s.id]} onAnswer={(d) => answer(s, d)} />
+                    </span>
+                  </div>
+                );
+              })}
+              {crewList.length === 0 && <p className="rail-empty">No agents yet.</p>}
+            </section>
+            <div className="rail-link" data-state={connected ? 'online' : 'offline'}>
+              <span className="rail-link-name">Forge</span> <span className="rail-link-state">{connected ? 'online' : 'offline'}</span>
+            </div>
+            <button className="rail-menu" title="Commands (⌘K)" onClick={() => setPalette(true)}>
+              <I.Gear />
+              <span>Menu</span>
+            </button>
+          </aside>
+        )}
+        {rail && <div className="rail-scrim" onMouseDown={() => setRailOpen(false)} />}
+        <div className={`forge-main ${rail ? 'rail-main' : ''}`}>
+          {workArea()}
           <footer className="statusbar rail-footer">
             <span className="rf-counts">
               <span className="rf-count" data-status="working" data-kind="working">
@@ -1621,37 +1732,8 @@ export function Forge({ api: given, embedded = false }: Props) {
             <span className="grow" />
             {prefix && <span className="sb-prefix">PREFIX</span>}
             {!connected && !authLost && <span className="sb-down">disconnected — retrying</span>}
-            <button className="sb-help" onClick={() => setHelp(true)}>
-              ^b ? keys
-            </button>
-            <span className="sb-clock">{clock.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-          </footer>
-        ) : (
-          <footer className="statusbar">
-            <span className="sb-session">forge</span>
-            {layout.tabs.map((t, i) => (
-              <span key={t.id} className={`sb-tab ${t.id === layout.active ? 'is-active' : ''}`}>
-                {i + 1}:{tabLabel(t)}
-                {t.id === layout.active ? '*' : ''}
-                {t.zoom ? 'Z' : ''}
-              </span>
-            ))}
-            <span className="grow" />
-            {prefix && <span className="sb-prefix">PREFIX</span>}
-            {!connected && !authLost && <span className="sb-down">disconnected — retrying</span>}
-            <span className="sb-counts">
-              {blocked > 0 && (
-                <>
-                  <span className="dot st-blocked" /> {blocked} blocked{' '}
-                </>
-              )}
-              <span className="dot dot-running" /> {counts.running} running <span className="dot dot-idle" /> {counts.idle} idle
-              {counts.ended ? (
-                <>
-                  {' '}
-                  <span className="dot dot-complete" /> {counts.ended} ended
-                </>
-              ) : null}
+            <span className="sb-panes" title={`${counts.running} running, ${counts.idle} idle${counts.ended ? `, ${counts.ended} ended` : ''}`}>
+              {counts.running + counts.idle} pane{counts.running + counts.idle === 1 ? '' : 's'}
             </span>
             <button className="sb-help" onClick={() => setHelp(true)}>
               ^b ? keys
@@ -1663,7 +1745,7 @@ export function Forge({ api: given, embedded = false }: Props) {
             )}
             <span className="sb-clock">{clock.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
           </footer>
-        )}
+        </div>
       </div>
       {overlays()}
     </div>

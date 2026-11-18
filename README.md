@@ -212,10 +212,13 @@ command line. In the browser, open **Settings** with the gear in the header
 (or ⌘K, **Settings…**):
 
 - **Forge**: the folder new panes start in, the default skin, animated scenes
-  on or off, and the profiles (add, edit, remove; a command that is not
+  on or off, where the spaces show (**Spaces**: on top, as tabs on the
+  title line, or in a rail at the left; by default where the skin
+  suggests), and the profiles (add, edit, remove; a command that is not
   installed is kept, marked "not installed"). Saved in the forge, so every
   browser and `la config` see them.
-- **This browser**: light/dark, notifications, sound and terminal text size,
+- **This browser**: light/dark, where the spaces show here (or as the
+  forge says), notifications, sound and terminal text size,
   kept in this browser only (the same switches as the header and the agents
   panel).
 - **Shares**: the read-only links (`la share`), each with its time left and a
@@ -232,6 +235,7 @@ la config set cwd ~/projects    # saved: new panes start there, after restarts t
 la config unset cwd             # back to the folder la up runs in
 la config set skin console
 la config set scenes off
+la config set spaces rail       # spaces (tabs) in a rail at the left; top, or auto (the skin suggests)
 la config profile add --label Aider --agent aider aider --model sonnet
 la config profile remove aider  # on a built-in you changed: gives it back
 la config --json

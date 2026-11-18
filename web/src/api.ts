@@ -111,6 +111,8 @@ export interface Config {
   cwdSaved?: boolean;
   skin?: string;
   scenes?: boolean;
+  /** spaces: where the spaces show, "top" or "rail"; "" (or absent, from an older forge) lets the skin suggest. */
+  spaces?: string;
   profiles?: Profile[];
   port?: number;
   home?: string;
@@ -122,6 +124,7 @@ export interface ConfigPatch {
   cwd?: string;
   skin?: string;
   scenes?: boolean;
+  spaces?: '' | 'top' | 'rail';
 }
 
 /** Share is one read-only link to a pane. */

@@ -467,18 +467,18 @@
   font-style: italic;
 }
 
-/* the header: the surface, grass along the top */
-[data-skin='ant-colony'] .rail-header {
+/* the title line: the surface, grass along the top, in both arrangements */
+[data-skin='ant-colony'] .topbar {
   position: relative;
-  height: 76px;
-  padding: 14px 18px 0 22px;
+  height: 50px;
+  padding: 6px 14px 0 16px;
   border-bottom: 0;
   background:
     linear-gradient(180deg, var(--m-15) 0, var(--a-grass) 10px, var(--a-grass-dark) 16px, transparent 17px),
     linear-gradient(180deg, var(--a-topsoil), var(--m-36));
 }
 
-[data-skin='ant-colony'] .rail-header::before {
+[data-skin='ant-colony'] .topbar::before {
   /* blades of grass */
   content: '';
   position: absolute;
@@ -493,19 +493,20 @@
 }
 
 [data-skin='ant-colony'] .rail-when {
-  font: 600 12px/1.2 var(--font-display);
+  font: 600 11px/1.2 var(--font-display);
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--a-sand);
 }
 
 [data-skin='ant-colony'] .rail-time {
-  font-size: 18px;
+  font-size: 13px;
   color: var(--tx);
 }
 
 [data-skin='ant-colony'] .rail-space-title {
-  font: 700 34px/1 var(--font-display);
+  border-left: 0;
+  font: 700 24px/1 var(--font-display);
   letter-spacing: 0.02em;
   color: var(--tx);
   text-shadow: 0 2px 0 var(--m-38);
@@ -513,7 +514,7 @@
 
 [data-skin='ant-colony'] .rail-space-title::after {
   content: ' chamber';
-  font: 500 14px/1 var(--font-ui);
+  font: 500 12px/1 var(--font-ui);
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--a-sand);
@@ -521,11 +522,6 @@
 }
 
 /* tabs: tunnel mouths, lit by what is inside */
-[data-skin='ant-colony'] .topbar {
-  background: transparent;
-  border-bottom: 0;
-}
-
 [data-skin='ant-colony'] .tab {
   height: 30px;
   padding: 0 16px;
@@ -812,12 +808,13 @@
 }
 
 @media (max-width: 640px) {
-  [data-skin='ant-colony'] .rail-header {
-    height: 62px;
-    padding-left: 14px;
+  [data-skin='ant-colony'] .topbar {
+    height: 46px;
+    padding-left: 8px;
+    padding-right: 6px;
   }
   [data-skin='ant-colony'] .rail-space-title {
-    font-size: 24px;
+    font-size: 18px;
   }
   [data-skin='ant-colony'] .rail-space-title::after,
   [data-skin='ant-colony'] .rail-when {

@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import type { Session, StatusWord } from './api';
 import * as R from './rail';
 import * as K from './skins';
+import * as L from './layout';
 import { darkTerminal, lightTerminal } from './theme';
 
 const skin = (name: string, more: Partial<K.Skin> = {}): K.Skin => ({ name, label: name, builtin: false, ...more });
@@ -70,7 +71,8 @@ describe('skin loader', () => {
     doc.links()[0].onload!(new Event('load'));
     await pending;
     expect(doc.documentElement.dataset.skin).toBe('ok');
-    expect(doc.documentElement.dataset.layout).toBe('rail');
+    // where the spaces show is the client's (rail.ts arrangement), not the skin's
+    expect(doc.documentElement.dataset.layout).toBeUndefined();
     expect(doc.links().map((l) => l.href)).toEqual(['/skins/ok/a.css']);
     const failing = K.apply(skin('bad', { css: ['b.css'] }), '', doc);
     doc.links()[1].onerror!(new Event('error'));
@@ -113,29 +115,72 @@ const pane = (id: string, cwd: string, more: { space?: string; word?: StatusWord
 });
 
 describe('rail', () => {
-  it('groups panes into spaces by label, else by folder', () => {
+  it('names a pane by its space label, else its folder', () => {
     const list = [pane('a', '/Users/me/src/billing'), pane('b', '/Users/me/src/billing/'), pane('c', '/srv/site', { space: 'website' }), pane('d', '/'), pane('e', 'C:\\work\\billing')];
-    expect(R.spaceOf(list[2])).toBe('website');
-    expect(R.spaceOf(list[3])).toBe('/');
-    expect(R.spaces(list)).toEqual([
-      { name: '/', count: 1 },
-      { name: 'billing', count: 3 },
-      { name: 'website', count: 1 },
-    ]);
+    expect(list.map(R.spaceOf)).toEqual(['billing', 'billing', 'website', '/', 'billing']);
+    expect(R.folderOf(undefined)).toBe('/');
   });
 
-  it('filters tabs to the ones holding a space', () => {
+  it('gives a tab its folder from its focused pane, else its first live one', () => {
     const sessions = new Map([
       ['a', pane('a', '/x/billing')],
-      ['c', pane('c', '/y', { space: 'website' })],
+      ['c', pane('c', '/y/site')],
     ]);
-    const tabs = [
-      { id: 't1', sessions: ['a'] },
-      { id: 't2', sessions: ['c', 'gone'] },
-      { id: 't3', sessions: [] },
-    ];
-    expect([...R.tabsIn(tabs, sessions, 'website')]).toEqual(['t2']);
-    expect([...R.tabsIn(tabs, sessions, null)]).toEqual(['t1', 't2', 't3']);
+    const t = L.newTab('', 'a');
+    const right = L.newPane('c');
+    const two = { ...t, root: L.split(t.root, t.focus, 'row', right) };
+    expect(R.tabFolder(two, sessions)).toBe('billing');
+    expect(R.tabFolder({ ...two, focus: right.id }, sessions)).toBe('site');
+    expect(R.tabFolder(L.newTab('', 'gone'), sessions)).toBe('');
+    expect(R.tabOf([t, { ...L.newTab(), id: 'x' }], 'a')).toBe(t.id);
+    expect(R.tabOf([t], 'nope')).toBeUndefined();
+  });
+});
+
+describe('spaces are tabs, shown top or in the rail', () => {
+  it('lets this browser decide, then the forge, then the skin, then the top', () => {
+    expect(R.arrangement({})).toBe('top');
+    expect(R.arrangement({ skin: 'classic' })).toBe('top');
+    expect(R.arrangement({ skin: 'rail' })).toBe('rail');
+    expect(R.arrangement({ skin: 'rail', forge: 'top' })).toBe('top');
+    expect(R.arrangement({ skin: 'classic', forge: 'rail' })).toBe('rail');
+    expect(R.arrangement({ skin: 'classic', forge: 'rail', browser: 'top' })).toBe('top');
+    expect(R.arrangement({ skin: 'rail', forge: 'top', browser: 'rail' })).toBe('rail');
+    // no choice, or one this client does not know, falls through
+    expect(R.arrangement({ skin: 'rail', forge: '' })).toBe('rail');
+    expect(R.arrangement({ skin: 'rail', forge: 'sideways', browser: null })).toBe('rail');
+    expect(R.arrangement({ skin: 'sideways' })).toBe('top');
+    expect(R.layoutName('top')).toBe('classic');
+    expect(R.layoutName('rail')).toBe('rail');
+  });
+
+  it("follows a skin's layout through layoutOf", () => {
+    expect(R.arrangement({ skin: K.layoutOf(skin('a', { layout: 'rail' })) })).toBe('rail');
+    expect(R.arrangement({ skin: K.layoutOf(K.classic) })).toBe('top');
+  });
+
+  it('keeps existing tabs and puts a pane with a space label in the tab of that name', () => {
+    const work = { ...L.newTab('work', 'w'), custom: true };
+    const auto = L.newTab('', 'x');
+    const make = (name: string, s: string) => L.newTab(name, s);
+    const out = R.placeOrphans([work, auto], [{ id: 'a', labels: { space: 'work' } }, { id: 'b', labels: { space: 'billing ' } }, { id: 'c' }, { id: 'd', labels: { space: 'billing' } }, { id: 'e', labels: {} }], make);
+    expect(out.slice(0, 2).map((t) => t.id)).toEqual([work.id, auto.id]);
+    expect(L.panes(out[0].root).map((p) => p.session)).toEqual(['w', 'a']);
+    expect(L.panes(out[1].root).map((p) => p.session)).toEqual(['x']);
+    const billing = out.find((t) => t.name === 'billing')!;
+    expect(billing.custom).toBe(true);
+    expect(L.panes(billing.root).map((p) => p.session)).toEqual(['b', 'd']);
+    const found = out.find((t) => t.name === 'Found')!;
+    expect(L.panes(found.root).map((p) => p.session)).toEqual(['c', 'e']);
+    expect(out).toHaveLength(4);
+  });
+
+  it('fills an empty pane of the named tab before splitting it', () => {
+    const empty = { ...L.newTab('ops'), custom: true };
+    const out = R.placeOrphans([empty], [{ id: 'a', labels: { space: 'ops' } }], (n, s) => L.newTab(n, s));
+    expect(out).toHaveLength(1);
+    expect(L.panes(out[0].root).map((p) => p.session)).toEqual(['a']);
+    expect(R.placeOrphans([empty], [], (n, s) => L.newTab(n, s))).toEqual([empty]);
   });
 
   it('puts every agent pane in the crew, most urgent first', () => {

@@ -128,12 +128,13 @@ components:
         custom: { type: boolean, readOnly: true }
     Config:
       type: object
-      description: 'The settings (cwd, skin, scenes, profiles) and, read-only, what the forge is (version, host, user, port, home). Each setting keeps its own file in the home: cwd in config.json, skin in skin, scenes in scenes-off, profiles in profiles.json.'
+      description: 'The settings (cwd, skin, scenes, spaces, profiles) and, read-only, what the forge is (version, host, user, port, home). Each setting keeps its own file in the home: cwd and spaces in config.json, skin in skin, scenes in scenes-off, profiles in profiles.json.'
       properties:
         cwd: { type: string, description: the folder new panes start in }
         cwdSaved: { type: boolean, description: 'cwd is saved (survives a restart); false: it is where la up ran' }
         skin: { type: string, description: the forge's default skin }
         scenes: { type: boolean, description: animated scenes may run in this forge }
+        spaces: { type: string, enum: ['', top, rail], description: 'where the client shows the spaces (its tabs): top (on the title line) or rail (a list at the left); empty: the skin''s layout suggests' }
         profiles: { type: array, items: { $ref: '#/components/schemas/Profile' } }
         version: { type: string }
         host: { type: string }
@@ -148,6 +149,7 @@ components:
         cwd: { type: string, description: 'a folder (~ allowed) to save; empty clears the saved one' }
         skin: { type: string }
         scenes: { type: boolean }
+        spaces: { type: string, enum: ['', top, rail], description: 'empty clears the choice (the skin suggests)' }
         save: { type: boolean, description: 'false: cwd is this run''s only and a saved folder wins over it (la up in a folder); default true' }
     Share:
       type: object

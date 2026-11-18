@@ -256,6 +256,79 @@
   font-family: var(--font-mono);
 }
 
+/* the rail (when the spaces show there): the sections index, in small
+   capitals between hairlines */
+[data-skin='newsroom'] .rail {
+  background: transparent;
+  border-right: 4px double var(--n-rule);
+}
+
+[data-skin='newsroom'] .rail-label,
+[data-skin='newsroom'] .rail-title {
+  font: 600 9.5px/1 var(--font-ui);
+  letter-spacing: 0.28em;
+  color: var(--n-ink-3);
+}
+
+[data-skin='newsroom'] .rail-host {
+  font: italic 400 20px/1.1 var(--font-display);
+  color: var(--n-ink);
+}
+
+[data-skin='newsroom'] .rail-space {
+  min-height: 30px;
+  border-radius: 0;
+  border-bottom: 1px solid var(--n-hair);
+  color: var(--n-ink-2);
+  font: 600 13px/1 var(--font-ui);
+  font-variant: small-caps;
+  letter-spacing: 0.08em;
+  text-transform: lowercase;
+}
+
+[data-skin='newsroom'] .rail-space:hover {
+  background: var(--m-3);
+  color: var(--n-ink);
+}
+
+[data-skin='newsroom'] .rail-space.is-active {
+  background: transparent;
+  color: var(--n-ink);
+  box-shadow: inset 4px 0 0 var(--n-ink);
+}
+
+[data-skin='newsroom'] .rail-space .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 0;
+  transform: rotate(45deg);
+}
+
+[data-skin='newsroom'] .rail-space-folder {
+  font: italic 400 11px/1 var(--font-ui);
+  font-variant: normal;
+  text-transform: none;
+}
+
+[data-skin='newsroom'] .crew-row {
+  border-radius: 0;
+}
+
+[data-skin='newsroom'] .crew-name {
+  font-family: var(--font-display);
+  font-size: 14px;
+}
+
+[data-skin='newsroom'] .rail-space-title {
+  border-left-color: var(--n-rule);
+  font: 700 20px/1 var(--font-display);
+  color: var(--n-ink);
+}
+
+[data-skin='newsroom'] .rail-when {
+  font: italic 400 12px/1 var(--font-ui);
+}
+
 [data-skin='newsroom'] .new-pane-btn,
 [data-skin='newsroom'] .cmd-btn {
   height: 30px;

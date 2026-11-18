@@ -1,6 +1,6 @@
 # Bridge
 
-A ship's bridge at night, for the rail layout. Every pane is an instrument
+A ship's bridge at night, drawn for the spaces in the rail (it styles them on top too). Every pane is an instrument
 screen with steel corner brackets. The rail is the station console: the
 vessel's name, the **Decks** (spaces) and the **Stations** (crew). A sonar
 sweep crosses the header, which also carries the log date. The footer reads

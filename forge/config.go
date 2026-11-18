@@ -8,6 +8,7 @@ package forge
 // so older clients and la skin keep working:
 //
 //	cwd       <home>/config.json  {"cwd": ...}
+//	spaces    <home>/config.json  {"spaces": "top"|"rail"} (absent: the skin suggests)
 //	skin      <home>/skin
 //	scenes    <home>/scenes-off   (present: off)
 //	profiles  <home>/profiles.json (the user's own, over the built-ins)
@@ -31,7 +32,7 @@ const configFile = "config.json"
 
 // SettingKeys are the settings a client may change, in the order la config
 // lists them.
-var SettingKeys = []string{"cwd", "skin", "scenes"}
+var SettingKeys = []string{"cwd", "skin", "scenes", "spaces"}
 
 // ReadOnlyKeys are what GET /api/config also says about the forge; no client
 // changes them.
@@ -39,7 +40,26 @@ var ReadOnlyKeys = []string{"version", "host", "user", "port", "home"}
 
 // savedConfig is <home>/config.json.
 type savedConfig struct {
-	Cwd string `json:"cwd,omitempty"`
+	Cwd    string `json:"cwd,omitempty"`
+	Spaces string `json:"spaces,omitempty"`
+}
+
+// Spaces are where the client shows the spaces (its tabs): on the title
+// line ("top") or in a rail at the left ("rail"). "" is no choice: the
+// skin's layout suggests one.
+const (
+	SpacesTop  = "top"
+	SpacesRail = "rail"
+)
+
+// SavedSpaces is the saved spaces arrangement, or "" when none is (or the
+// file holds one this forge does not know).
+func SavedSpaces(home string) string {
+	switch v := readSaved(home).Spaces; v {
+	case SpacesTop, SpacesRail:
+		return v
+	}
+	return ""
 }
 
 func readSaved(home string) savedConfig {
@@ -95,10 +115,13 @@ func SavedCwd(home string) string {
 type Settings struct {
 	// Cwd is the folder new panes start in; CwdSaved says it is the saved
 	// one, not only where la up ran.
-	Cwd      string    `json:"cwd"`
-	CwdSaved bool      `json:"cwdSaved"`
-	Skin     string    `json:"skin"`
-	Scenes   bool      `json:"scenes"`
+	Cwd      string `json:"cwd"`
+	CwdSaved bool   `json:"cwdSaved"`
+	Skin     string `json:"skin"`
+	Scenes   bool   `json:"scenes"`
+	// Spaces is where the client shows the spaces: "top" (tabs on the
+	// title line), "rail" (a rail at the left) or "" (the skin suggests).
+	Spaces   string    `json:"spaces"`
 	Profiles []Profile `json:"profiles"`
 }
 
@@ -110,7 +133,7 @@ func ReadSettings(home string) (Settings, error) {
 		return Settings{}, err
 	}
 	cwd := SavedCwd(home)
-	return Settings{Cwd: cwd, CwdSaved: cwd != "", Skin: homeServer(home).currentSkin(), Scenes: ScenesOn(home), Profiles: profiles}, nil
+	return Settings{Cwd: cwd, CwdSaved: cwd != "", Skin: homeServer(home).currentSkin(), Scenes: ScenesOn(home), Spaces: SavedSpaces(home), Profiles: profiles}, nil
 }
 
 // homeServer is a server of a home only, for what reads the home's skins.
@@ -130,6 +153,8 @@ type ConfigPatch struct {
 	Cwd    *string `json:"cwd,omitempty"`
 	Skin   *string `json:"skin,omitempty"`
 	Scenes *bool   `json:"scenes,omitempty"`
+	// Spaces is "top", "rail" or "" (no choice: the skin suggests).
+	Spaces *string `json:"spaces,omitempty"`
 	// Save false makes Cwd this run's only (la up in a folder); a saved
 	// folder still wins over it. Absent or true saves it.
 	Save *bool `json:"save,omitempty"`
@@ -161,6 +186,8 @@ func ParseConfigPatch(raw []byte) (ConfigPatch, error) {
 			err = json.Unmarshal(v, &p.Skin)
 		case "scenes":
 			err = json.Unmarshal(v, &p.Scenes)
+		case "spaces":
+			err = json.Unmarshal(v, &p.Spaces)
 		case "save":
 			err = json.Unmarshal(v, &p.Save)
 		case "profiles":
@@ -194,6 +221,14 @@ func checkPatch(home string, p ConfigPatch) (ConfigPatch, error) {
 		}
 		p.Cwd = &dir
 	}
+	if p.Spaces != nil {
+		switch v := strings.ToLower(strings.TrimSpace(*p.Spaces)); v {
+		case SpacesTop, SpacesRail, "":
+			p.Spaces = &v
+		default:
+			return p, refuse("input", "spaces is top, rail or empty (the skin suggests): %q is not.", *p.Spaces)
+		}
+	}
 	if p.Skin != nil {
 		if _, ok := homeServer(home).skins()[*p.Skin]; !ok {
 			return p, refuse("no_skin", "There is no skin %s.", *p.Skin)
@@ -210,9 +245,14 @@ func ApplyConfig(home string, p ConfigPatch) error {
 	if err != nil {
 		return err
 	}
-	if p.Cwd != nil && (p.Save == nil || *p.Save) {
+	if (p.Cwd != nil && (p.Save == nil || *p.Save)) || p.Spaces != nil {
 		c := readSaved(home)
-		c.Cwd = *p.Cwd
+		if p.Cwd != nil && (p.Save == nil || *p.Save) {
+			c.Cwd = *p.Cwd
+		}
+		if p.Spaces != nil {
+			c.Spaces = *p.Spaces
+		}
 		if err := writeSaved(home, c); err != nil {
 			return err
 		}
@@ -255,7 +295,7 @@ func (s *Server) config(r *http.Request) (ForgeConfig, error) {
 	}
 	saved := SavedCwd(s.opts.Home)
 	return ForgeConfig{
-		Settings: Settings{Cwd: s.defaultCwd(), CwdSaved: saved != "", Skin: s.currentSkin(), Scenes: ScenesOn(s.opts.Home), Profiles: profiles},
+		Settings: Settings{Cwd: s.defaultCwd(), CwdSaved: saved != "", Skin: s.currentSkin(), Scenes: ScenesOn(s.opts.Home), Spaces: SavedSpaces(s.opts.Home), Profiles: profiles},
 		Version:  s.opts.Version, Host: host, User: os.Getenv("USER"), Port: port, Home: s.opts.Home, ReadOnly: ReadOnlyKeys,
 	}, nil
 }

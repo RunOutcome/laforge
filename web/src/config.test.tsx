@@ -104,6 +104,20 @@ describe('the settings panel', () => {
     expect(html).toMatch(/<input type="checkbox"\/>Animated scenes/);
   });
 
+  it('offers Spaces: top, rail or as the skin suggests, for the forge and for this browser', () => {
+    const none = renderToStaticMarkup(<Settings {...props({ spaces: { now: 'rail', suggested: 'rail', browser: null }, onSpaces: () => undefined })} />);
+    expect(none).toContain('>Spaces</legend>');
+    expect(none).toMatch(/<input[^>]*checked=""[^>]*value="skin"\/>As the skin suggests/);
+    expect(none).toContain('now rail');
+    expect(none).toMatch(/aria-pressed="true"[^>]*>As the forge</);
+    const chosen = renderToStaticMarkup(<Settings {...props({ config: { ...config, spaces: 'top' }, spaces: { now: 'rail', suggested: 'rail', browser: 'rail' }, onSpaces: () => undefined })} />);
+    expect(chosen).toMatch(/checked=""[^>]*value="top"\/>Top/);
+    expect(chosen).toContain('This browser shows them in the rail');
+    expect(chosen).toMatch(/aria-pressed="true"[^>]*>Rail</);
+    // without the hook (an older host) there is no choice to draw
+    expect(renderToStaticMarkup(<Settings {...props()} />)).not.toContain('settings-spaces');
+  });
+
   it('says so when the forge is older than the panel', () => {
     const html = renderToStaticMarkup(<Settings {...props({ config: { cwd: '/x', host: 'h', user: 'u', version: '0.1' } })} />);
     expect(html).toContain('older than the Settings panel');

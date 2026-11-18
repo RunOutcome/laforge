@@ -143,16 +143,33 @@ kbd {
   color: var(--tx-3);
 }
 
-/* top bar */
+/* the title line: the brand, the spaces as tabs (top) or the active
+   space's name (rail), then New pane, the bell and the other tools */
 .topbar {
   height: var(--topbar-height);
   flex: none;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   padding: 0 10px 0 12px;
   border-bottom: 1px solid var(--line);
   background: var(--side);
+  min-width: 0;
+}
+
+/* below the title line: the rail (rail only) and the panes */
+.forge-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  position: relative;
+}
+
+.forge-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .brand {
@@ -160,6 +177,7 @@ kbd {
   align-items: center;
   gap: 8px;
   padding-right: 6px;
+  flex: none;
 }
 
 .brand-name {
@@ -177,9 +195,48 @@ kbd {
   display: flex;
   align-items: center;
   gap: 4px;
+  flex: 0 1 auto;
   min-width: 0;
+  align-self: stretch;
   overflow-x: auto;
+  overflow-y: hidden;
   scrollbar-width: none;
+}
+
+.tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.tabs .tab {
+  flex: none;
+}
+
+.new-tab-btn,
+.tabs-more-wrap {
+  flex: none;
+}
+
+.tabs-more-wrap {
+  position: relative;
+}
+
+.tabs-more.is-open {
+  background: var(--hover);
+  color: var(--tx);
+}
+
+.tabs-menu {
+  left: 0;
+  max-height: min(70vh, 480px);
+  overflow-y: auto;
+}
+
+.tabs-menu .menu-item.is-active {
+  background: var(--press);
+}
+
+.tabs-menu .dot {
+  flex: none;
 }
 
 .tab {
@@ -207,7 +264,6 @@ kbd {
   box-shadow: var(--shadow-tab);
 }
 
-
 .tab-name {
   font-weight: 500;
   max-width: 180px;
@@ -223,7 +279,12 @@ kbd {
   transition: opacity 0.12s;
 }
 
-.tab:hover .tab-actions,
+/* on the title line only the active tab carries its actions, so the
+   others stay their own width (middle-click closes any tab) */
+.tab:not(.is-active) .tab-actions {
+  display: none;
+}
+
 .tab.is-active .tab-actions {
   opacity: 1;
 }
@@ -266,33 +327,65 @@ kbd {
   border-color: var(--red);
 }
 
-/* new pane */
+/* new pane: a split button, the word and a caret for the profiles */
 .pane-menu-wrap {
   position: relative;
   flex: none;
-  margin-left: 4px;
-  padding-left: 10px;
-  border-left: 1px solid var(--line);
+  margin-right: 2px;
 }
 
 .new-pane-btn {
   display: flex;
-  align-items: center;
-  gap: 6px;
+  align-items: stretch;
   height: 28px;
-  padding: 0 8px 0 9px;
+  box-sizing: border-box;
   border-radius: var(--radius-control);
   border: 1px solid color-mix(in oklab, var(--acc) 45%, var(--line));
   background: color-mix(in oklab, var(--acc) 10%, var(--card));
   color: var(--acc);
   font-weight: 500;
   white-space: nowrap;
+  overflow: hidden;
 }
 
 .new-pane-btn:hover,
 .new-pane-btn.is-open {
   background: color-mix(in oklab, var(--acc) 18%, var(--card));
   border-color: var(--acc);
+}
+
+.new-pane-main,
+.new-pane-caret {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  margin: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+}
+
+.new-pane-main {
+  padding: 0 8px 0 9px;
+}
+
+.new-pane-caret {
+  padding: 0 6px;
+  border-left: 1px solid color-mix(in oklab, currentColor 30%, transparent);
+}
+
+.new-pane-main:hover,
+.new-pane-caret:hover,
+.new-pane-btn.is-open .new-pane-caret {
+  background: color-mix(in oklab, currentColor 12%, transparent);
+}
+
+.pane-menu-wrap > .menu {
+  left: auto;
+  right: 0;
 }
 
 .menu-scrim {
@@ -392,6 +485,7 @@ kbd {
   display: flex;
   align-items: center;
   gap: 4px;
+  flex: none;
 }
 
 .icon-btn {
@@ -1458,16 +1552,8 @@ kbd {
   width: max-content;
 }
 
-/* the two layouts share one tree; in classic, .forge-main adds no box */
-.forge-main {
-  display: contents;
-}
-
-/* the rail layout (a skin with layout: rail); a skin styles it */
-.forge.layout-rail {
-  flex-direction: row;
-}
-
+/* the rail: the spaces (the tabs) and the crew at the left, when the user
+   shows the spaces in the rail; a skin styles it */
 .rail {
   width: var(--rail-width);
   flex: none;
@@ -1478,13 +1564,6 @@ kbd {
   border-right: 1px solid var(--line);
   background: var(--side);
   overflow-y: auto;
-}
-
-.rail-main {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
 }
 
 .rail-machine {
@@ -1523,6 +1602,12 @@ kbd {
   gap: 1px;
 }
 
+.rail-space-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
 .rail-space,
 .rail-add {
   display: flex;
@@ -1535,6 +1620,65 @@ kbd {
   background: transparent;
   color: var(--tx-2);
   text-align: left;
+  font: inherit;
+}
+
+.rail-space {
+  cursor: default;
+  user-select: none;
+}
+
+.rail-space .dot {
+  flex: none;
+}
+
+.rail-space-folder {
+  flex: 0 8 auto;
+  min-width: 0;
+  max-width: 45%;
+  font: 11px var(--font-mono);
+  color: var(--tx-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rail-space .tab-actions {
+  margin-left: auto;
+  margin-right: -4px;
+  opacity: 1;
+}
+
+/* a skin may fill the active space: its parts follow the text colour */
+.rail-space .tab-actions button {
+  color: inherit;
+  opacity: 0.72;
+}
+
+.rail-space .tab-actions button:hover {
+  opacity: 1;
+}
+
+/* the actions take the place of the folder and the count */
+.rail-space:hover .rail-count,
+.rail-space.is-active .rail-count,
+.rail-space:hover .rail-space-folder,
+.rail-space.is-active .rail-space-folder {
+  display: none;
+}
+
+.rail-space:not(:hover):not(.is-active) .tab-actions {
+  display: none;
+}
+
+.rail-space .tab-rename {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+}
+
+.rail-space .tab-confirm {
+  margin-left: auto;
 }
 
 .rail-space:hover,
@@ -1549,7 +1693,7 @@ kbd {
 }
 
 .rail-space-name {
-  flex: 1;
+  flex: 1 0.2 auto;
   min-width: 0;
   white-space: nowrap;
   overflow: hidden;
@@ -1563,28 +1707,6 @@ kbd {
 
 .rail-add {
   color: var(--tx-3);
-}
-
-.rail-new-space {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 6px 8px;
-}
-
-.rail-new-space input {
-  height: 28px;
-  padding: 0 8px;
-  border-radius: var(--radius-button);
-  border: 1px solid var(--line);
-  background: var(--card);
-  color: var(--tx);
-  font: 12px var(--font-mono);
-  outline: none;
-}
-
-.rail-new-space input:focus {
-  border-color: var(--acc);
 }
 
 .rail-form-actions {
@@ -1729,22 +1851,12 @@ kbd {
   display: none;
 }
 
-.rail-header {
-  height: 52px;
-  flex: none;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 0 10px 0 16px;
-  border-bottom: 1px solid var(--line);
-  background: var(--side);
-  min-width: 0;
-}
-
+/* rail: the title line names the active space */
 .rail-when {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: baseline;
+  gap: 6px;
+  flex: none;
   font: 11px/1.1 var(--font-mono);
   color: var(--tx-3);
   white-space: nowrap;
@@ -1755,7 +1867,10 @@ kbd {
 }
 
 .rail-space-title {
-  font: 600 22px/1 var(--font-display);
+  flex: 0 1 auto;
+  padding-left: 6px;
+  border-left: 1px solid var(--line);
+  font: 600 15px/1.2 var(--font-display);
   color: var(--tx);
   white-space: nowrap;
   overflow: hidden;
@@ -1766,20 +1881,6 @@ kbd {
 .rail-toggle,
 .rail-scrim {
   display: none;
-}
-
-.layout-rail .tab[data-status='blocked'],
-.layout-rail .tab[data-status='error'],
-.layout-rail .tab[data-status='failed'] {
-  box-shadow: inset 0 -2px 0 var(--red);
-}
-
-.layout-rail .tab[data-status='working'] {
-  box-shadow: inset 0 -2px 0 var(--amber);
-}
-
-.layout-rail .tab[data-status='done'] {
-  box-shadow: inset 0 -2px 0 var(--acc);
 }
 
 .rf-counts {
@@ -2235,16 +2336,8 @@ body.dragging-pane * {
   overflow: hidden;
 }
 
-.sb-session {
-  color: var(--on-acc);
-  background: var(--acc-fill);
-  padding: 1px 7px;
-  border-radius: var(--radius-chip);
-  font-weight: 600;
-}
-
-.sb-tab.is-active {
-  color: var(--tx);
+.sb-panes {
+  color: var(--tx-3);
 }
 
 .sb-prefix {
@@ -2257,20 +2350,6 @@ body.dragging-pane * {
 
 .sb-down {
   color: var(--red);
-}
-
-.sb-counts {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.sb-counts .dot {
-  width: 6px;
-  height: 6px;
-  margin-left: 4px;
-  animation: none;
-  box-shadow: none;
 }
 
 .sb-help {
@@ -2412,7 +2491,7 @@ body.dragging-pane * {
 
 @media (max-width: 640px) {
   .layout-rail .rail {
-    position: fixed;
+    position: absolute;
     left: 0;
     top: 0;
     bottom: 0;
@@ -2427,32 +2506,69 @@ body.dragging-pane * {
   }
   .layout-rail.is-rail-open .rail-scrim {
     display: block;
-    position: fixed;
+    position: absolute;
     inset: 0;
     z-index: 19;
     background: var(--scrim);
   }
   .layout-rail .rail-toggle {
     display: grid;
+    flex: none;
   }
-  .layout-rail .rail-header {
-    gap: 10px;
-    padding-left: 8px;
+  .topbar {
+    gap: 4px;
+    padding: 0 6px 0 8px;
   }
-  .layout-rail .rail-space-title {
-    font-size: 17px;
+  .topbar .tools {
+    gap: 1px;
   }
+  .brand {
+    padding-right: 0;
+  }
+  .brand-name,
+  .rail-when,
   .layout-btn,
-  .layout-rail .rf-sep,
-  .layout-rail .sb-clock {
+  .mode-btn,
+  .themes-btn,
+  .rf-sep,
+  .sb-clock,
+  .sb-panes {
     display: none;
   }
+  .tabs {
+    flex: 1 1 0;
+  }
+  .tab-name {
+    max-width: 110px;
+  }
+  .rail-space-title {
+    font-size: 14px;
+    border-left: 0;
+    padding-left: 0;
+  }
+  .cmd-btn {
+    margin-left: 0;
+  }
+  /* at phone width New pane does not fit with its word: the icon and the caret */
   .cmd-btn span,
   .cmd-btn kbd,
-  .new-pane-btn span,
+  .new-pane-word,
   .sb-host,
   .sb-help {
     display: none;
+  }
+  /* room for the tabs: sizes and tab actions are in the palette (⌘K) */
+  .topbar .tab-size,
+  .tabs .tab-actions,
+  .tabs .tab-count,
+  .tabs-more-wrap ~ .new-tab-btn {
+    display: none;
+  }
+  .new-pane-main {
+    padding: 0 6px;
+  }
+  .new-pane-caret {
+    padding: 0 3px;
   }
   .themes {
     position: absolute;
@@ -2673,6 +2789,23 @@ body.dragging-pane * {
 .settings-check input {
   margin: 2px 0 0;
   accent-color: var(--acc-fill);
+}
+
+.settings-radios {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.settings-radios legend {
+  padding: 0;
+  margin-bottom: 5px;
+  color: var(--tx);
+}
+
+.settings-radio .settings-hint {
+  margin-left: 2px;
 }
 
 .settings-btn {

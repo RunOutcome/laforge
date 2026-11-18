@@ -1,6 +1,6 @@
 # Heist Crew
 
-The job, drawn on a blueprint, for the classic layout. A blue ground carries a
+The job, drawn on a blueprint, drawn for the spaces on top (it styles the rail too). A blue ground carries a
 fine and a coarse grid. Panes are drawings framed in white line work, with
 registration ticks at the corners and a dimension rule under each header.
 Every tab is a numbered step of the plan (`STEP 01`, `STEP 02`, …), and the

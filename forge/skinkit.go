@@ -220,7 +220,9 @@ const starterManifest = `{
 
 const starterCSS = `/* {{label}}: a LaForge skin. Change the colours below, then
    la skin check . && la skin install .   and reload the page.
-   Every token, hook and layout: docs/skins.md in LaForge. */
+   Every token and hook: docs/skins.md in LaForge. "layout" in skin.json
+   only suggests where the spaces show (classic: tabs on the title line;
+   rail: a list at the left); the user decides, so style both. */
 
 /* Shapes and faces: the same in both modes. */
 :root[data-skin='{{name}}'] {

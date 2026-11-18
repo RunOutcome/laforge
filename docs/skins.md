@@ -3,8 +3,8 @@
 
 # Skins: a guide for skin authors
 
-A skin changes how the forge looks: colours, faces, shapes, and where
-things sit on the screen. It is a folder holding a `skin.json` manifest
+A skin changes how the forge looks: colours, faces and shapes. It restyles
+the pieces of the screen; it does not move them. It is a folder holding a `skin.json` manifest
 and the files that manifest names: stylesheets, fonts and images.
 
 **A skin holds no code.** The forge accepts `.css`, `.json`, `.woff2`,
@@ -16,7 +16,7 @@ cannot run script. Anything a skin draws, it draws with CSS.
 
 LaForge ships two skins: **classic** (its own look, light and dark) and
 **console** (forge steel: graphite or light steel, square frames on a rule
-grid, in the rail layout). Both draw light and dark. A skin you
+grid; it suggests the spaces in the rail). Both draw light and dark. A skin you
 install is used in the browser that picks it. The forge's default skin is
 what other browsers see until they pick their own.
 
@@ -83,7 +83,7 @@ whose stylesheet fails to load falls back to classic.
 | `name` | The skin's id: lower-case letters, digits and dashes, at most 40. It must match the folder's name once installed. |
 | `label` | What people see in the palette. Defaults to `name`. |
 | `description`, `version`, `author`, `license` | Shown in `la skin list`; say what licence your files are under. |
-| `layout` | `classic` (tabs above panes) or `rail` (spaces and crew in a rail at the left). Defaults to `classic`. |
+| `layout` | Where the skin **suggests** the spaces show, used until the user chooses (Settings, `la config set spaces`): `classic` (tabs on the title line) or `rail` (a rail at the left). Defaults to `classic`. Style both: the user may pick either. |
 | `css` | The stylesheets, in order, relative to the folder. Optional: a skin may change only the terminal palette. |
 | `terminal` | The terminal's colours, one palette per mode: `{"dark": {…}, "light": {…}}`. Either may be left out, and that mode keeps the client's own palette. Keys: `background`, `foreground`, `cursor`, `cursorAccent`, `selectionBackground`, `selectionForeground`, `black`, `red`, `green`, `yellow`, `blue`, `magenta`, `cyan`, `white` and `brightBlack` … `brightWhite`. Values are `#hex` or `rgb()`/`rgba()`. Keys left out keep the mode's own colours. |
 
@@ -99,10 +99,12 @@ palette for that mode.
 ## How a skin is applied
 
 The client adds one `<link rel="stylesheet">` per `css` entry, from
-`/skins/<name>/<file>`, and sets attributes on the root element (`data-mode` follows the viewer):
+`/skins/<name>/<file>`, and sets attributes on the root element
+(`data-mode` follows the viewer; `data-spaces` and `data-layout` follow
+where the spaces show, which is the user's choice):
 
 ```html
-<html data-skin="harbour" data-layout="classic" data-mode="dark">
+<html data-skin="harbour" data-spaces="top" data-layout="classic" data-mode="dark">
 ```
 
 Scope every rule to your skin, so nothing leaks while a switch is under way.
@@ -139,7 +141,7 @@ rest on `:root[data-skin='<name>']`. Classic sets them on `:root` (light) and
 | Property | Used for |
 | --- | --- |
 | `--canvas` | the page behind everything |
-| `--side` | the top bar, footer, rail and chrome |
+| `--side` | the title line, footer, rail and chrome |
 | `--sunken` | recessed areas |
 | `--card` | panels, pane headers, menus, inputs |
 | `--term` | the pane body behind the terminal |
@@ -163,7 +165,7 @@ rest on `:root[data-skin='<name>']`. Classic sets them on `:root` (light) and
 | --- | --- |
 | `--font-ui` | all interface text |
 | `--font-mono` | paths, keys, counts, messages |
-| `--font-display` | big titles (the rail's machine and space names); defaults to `--font-ui` |
+| `--font-display` | titles (the rail's machine name, the active space's name on the title line); defaults to `--font-ui` |
 
 The terminal keeps its own monospace face.
 
@@ -180,38 +182,54 @@ The terminal keeps its own monospace face.
 | `--radius-button-sm` | 5px | small buttons |
 | `--radius-chip` | 4px | badges, chips |
 | `--radius-pill` | 999px | counts |
-| `--topbar-height` | 40px | the tab bar |
+| `--topbar-height` | 40px | the title line |
 | `--statusbar-height` | 26px | the footer |
 | `--pane-head-height` | 30px | a pane's header |
 | `--work-gap` | 6px | space around the panes |
 | `--pane-gap` | 3px | space between panes |
-| `--rail-width` | 248px | the rail (rail layout) |
+| `--rail-width` | 248px | the rail |
 
 ## Hooks
 
 Every region has a class, and the ones that change with state carry data
 attributes. These are stable: a skin may rely on them.
 
-**Root and layout**
+**Root and arrangement**
 
 | Hook | What |
 | --- | --- |
-| `html[data-skin]`, `html[data-layout]`, `html[data-mode]` | the skin, `classic` or `rail`, `light` or `dark` |
-| `.forge[data-layout]` | the whole client; `.layout-rail` in the rail layout, `.is-rail-open` while the phone drawer is open |
+| `html[data-skin]`, `html[data-mode]` | the skin, `light` or `dark` |
+| `html[data-spaces]`, `.forge[data-spaces]` | where the spaces show: `top` or `rail` |
+| `html[data-layout]`, `.forge[data-layout]` | the same in the older words: `classic` (top) or `rail` |
+| `.forge.layout-top`, `.forge.layout-rail` | the same, as classes; `.is-rail-open` while the phone drawer is open |
 | `.forge.is-embedded` | mounted inside a host page |
-| `.forge-main` (classic, adds no box), `.rail-main` (rail) | the part right of the rail |
+| `.forge-body` | everything below the title line: the rail (rail only) and `.forge-main` |
+| `.forge-main` | the panes and the footer (also `.rail-main` in the rail) |
 
-**Tab bar**
+**The title line**
+
+One line at the top, in both arrangements. From the left: the brand, then
+the spaces as tabs (top) or the active space's name (rail), a gap, the tab
+size, New pane next to the bell, and the other tools.
 
 | Hook | What |
 | --- | --- |
-| `.topbar` | the tab bar (`.topbar.rail-tabs` in the rail layout) |
-| `.brand`, `.brand-name` | the LaForge mark (classic) |
-| `.tabs` | the tab list |
-| `.tab[data-status]`, `.tab.is-active` | a tab; `data-status` is its most urgent pane: `blocked`, `error`, `done`, `working`, `idle`, or, with no reports, `running`, `failed`, `complete`, `empty` |
-| `.tab-name`, `.tab-count`, `.tab-actions`, `.tab-rename`, `.tab-confirm` | parts of a tab |
-| `.new-pane-btn`, `.menu`, `.menu-item` | the New pane button and its menu |
-| `.tools`, `.icon-btn`, `.agents-btn`, `.cmd-btn` | the buttons at the right |
+| `.topbar` | the title line |
+| `.brand`, `.brand-name` | the LaForge mark (hidden when embedded) |
+| `.tabs` | top: the spaces, as tabs; they scroll sideways when there are many |
+| `.tab[data-status]`, `.tab.is-active` | a space on the title line; `data-status` is its most urgent pane: `blocked`, `error`, `done`, `working`, `idle`, or, with no reports, `running`, `failed`, `complete`, `empty` |
+| `.tab-name`, `.tab-count`, `.tab-actions`, `.tab-rename`, `.tab-confirm` | parts of a tab (`.tab-actions` shows on the active tab only) |
+| `.tabs-more`, `.tabs-menu` | top: the button and menu listing every tab, shown when they overflow |
+| `.new-tab-btn` | top: New tab (+) |
+| `.rail-space-title` | rail: the active space's name |
+| `.rail-when`, `.rail-date`, `.rail-time` | rail: the date and time, after the name |
+| `.rail-when[data-year][data-day][data-tenth]` | a numeric date for skins: the year, the day of the year in three digits and the tenth of the day (`2026`, `320`, `9`) |
+| `.rail-toggle` | rail, phone width: opens the rail as a drawer |
+| `.tab-size` | the tab's size, 1x to 4x screens tall |
+| `.tools` | the right-hand group |
+| `.pane-menu-wrap`, `.new-pane-btn`, `.new-pane-main`, `.new-pane-word`, `.new-pane-caret` | New pane, first in `.tools`: a split button (the word splits the focused pane; the caret opens `.menu`); style `.new-pane-btn` as one button |
+| `.menu`, `.menu-item`, `.menu-label`, `.menu-sep` | its menu (and the tabs menu) |
+| `.icon-btn`, `.agents-btn`, `.layout-btn`, `.mode-btn`, `.themes-btn`, `.settings-btn-open`, `.cmd-btn` | the other buttons; `.agents-btn` is the bell |
 
 **Panes**
 
@@ -238,44 +256,67 @@ attributes. These are stable: a skin may rely on them.
 | `.palette`, `.palette li.is-active`, `.pal-group`, `.pal-label` | the ⌘K palette |
 | `.scrim`, `.help` | dialogs and their backdrop |
 | `.view-banner` | the read-only share banner |
-| `.statusbar`, `.sb-*` | the classic footer |
 
-**Rail layout**
+**The footer**
+
+The same footer in both arrangements.
 
 | Hook | What |
 | --- | --- |
-| `.rail` | the rail at the left (a drawer below 640px) |
+| `.statusbar` | the footer (it also carries `.rail-footer`, the older name) |
+| `.rf-counts`, `.rf-count[data-status]` | its counts (`working`, `blocked` for need you, `done`) |
+| `.rf-count[data-kind]`, `.rf-num[data-padded]`, `.rf-word`, `.rf-sep` | each count's kind (`working`, `need-you`, `done`, `machines`), its number and its word; the `machines` count is hidden unless a skin shows it |
+| `.sb-prefix`, `.sb-down`, `.sb-panes`, `.sb-help`, `.sb-host`, `.sb-clock` | after the counts: the prefix key, a lost connection, the panes running, the keys hint, user@host and the clock |
+
+**The rail**
+
+| Hook | What |
+| --- | --- |
+| `.rail` | the rail at the left, when the spaces show there (a drawer below 640px) |
 | `.rail-machine`, `.rail-label`, `.rail-host` | the machine's name |
 | `.rail-section.rail-spaces`, `.rail-title`, `.rail-count[data-padded]` | the Spaces section; its title carries the number of spaces |
-| `.rail-space[data-space][data-index]`, `.rail-space.is-active` | a space; `data-space` is its name (`""` for All), `data-index` its position modulo 8, for colour blocks |
-| `.rail-add`, `.rail-new-space` | New space and its form |
+| `.rail-space-list` | the spaces |
+| `.rail-space[data-status][data-space][data-index]`, `.rail-space.is-active` | a space: the same tab as on the title line, with the same `data-status`; `data-space` is its name, `data-index` its position modulo 8, for colour blocks |
+| `.rail-space-name`, `.rail-space-folder`, `.rail-count` | its name, its folder (when it differs) and its number of panes; `.tab-actions`, `.tab-rename` and `.tab-confirm` as on a tab |
+| `.rail-add` | New space (a new tab) |
 | `.rail-section.rail-crew`, `.crew-row[data-status]`, `.crew-row.is-current` | the Crew and its rows |
 | `.crew-bar`, `.crew-name`, `.crew-sub`, `.crew-msg` | a crew row's parts |
-| `.crew-word[data-status]`, `.crew-space` | inside `.crew-sub`: the status word and the space, to restyle or reword |
+| `.crew-word[data-status]`, `.crew-space` | inside `.crew-sub`: the status word and the pane's space (its tab), to restyle or reword |
 | `.rail-link[data-state]`, `.rail-link-name`, `.rail-link-state` | below the crew: the link to the forge, `online` or `offline` |
 | `.rail-menu` | the rail's last item, opening the command palette |
-| `.rail-header`, `.rail-when`, `.rail-date`, `.rail-time`, `.rail-space-title`, `.rail-toggle` | the header |
-| `.rail-when[data-year][data-day][data-tenth]` | a numeric date for skins: the year, the day of the year in three digits and the tenth of the day (`2026`, `320`, `9`) |
-| `.rail-footer`, `.rf-counts`, `.rf-count[data-status]` | the footer and its counts (`working`, `blocked` for need you, `done`) |
-| `.rf-count[data-kind]`, `.rf-num[data-padded]`, `.rf-word` | each count's kind (`working`, `need-you`, `done`, `machines`), its number and its word; the `machines` count is hidden unless a skin shows it |
 | `.rail-scrim` | behind the open drawer on a phone |
 
-## The two layouts
+Gone since the title line became one: `.rail-header` (style `.topbar`),
+`.topbar.rail-tabs` (the rail has no tab strip), the rail's **All** space
+(`.rail-space[data-space='']`), `.rail-new-space` (New space opens a new
+tab), and the classic footer's tab list and counts (`.sb-session`, `.sb-tab`,
+`.sb-counts`).
 
-**classic**: the tab bar at the top, the panes, a footer with the tabs and
-counts. Light and dark.
+## Where the spaces show
 
-**rail**: a rail at the left with the machine, the **Spaces** and the
-**Crew**; at the right a header (date, time and the space, large), the tabs,
-the panes and a footer (`N working · N need you · N done`, the keys hint and
-the clock).
+A **space** is a tab: a set of panes, with a name. There is one list of
+them, shown in one place at a time:
 
-- A pane's *space* is its `space` label (`la run --label space=billing …`, or
-  **+ New space**), else the last part of its folder. Clicking a space shows
-  only the tabs that hold its panes; **All** shows every tab.
+- **top**: as tabs on the title line, after the brand;
+- **rail**: as a list in a rail at the left, with the **Crew** below, and
+  the active space's name on the title line. There is no tab strip.
+
+The user chooses: **Settings → Forge → Spaces** (or `la config set spaces
+top|rail|auto`, or ⌘K **Spaces: top / rail**), and **Settings → This
+browser → Spaces here** for one browser. Until they do, the skin's `layout`
+suggests one: `rail` for the rail, anything else for the top. A skin
+restyles the same pieces in both, so it must look right in both: style
+`.tab` and `.rail-space` alike (a space is the same thing in either place),
+and `.topbar` as the title line whatever it holds.
+
+- A space is named as a tab is: what you called it, else its focused pane.
+  A pane started from the command line with a `space` label (`la run
+  --label space=billing …`) joins the space of that name, made if there is
+  none; other panes no tab holds go to one named **Found**.
 - The *crew* is every pane that reports a status or runs an agent profile,
   most urgent first, with Allow and Deny inline.
-- Below 640px the rail becomes a drawer, opened with `.rail-toggle`.
+- Below 640px the rail becomes a drawer, opened with `.rail-toggle`; on top
+  the tabs scroll and New pane shows its icon only.
 
 **Counts and labels.** Every count in the rail (`.rail-count`, `.rf-num`) has
 `data-padded`, the number with at least two digits (`05`). Skins that number
@@ -290,11 +331,12 @@ things or relabel them do it in CSS, without new markup:
 [data-skin='x'] .crew-word[data-status='blocked']::before { content: 'Needs you'; font-size: 11px; }
 ```
 
-The client draws the rail's structure plainly; a rail skin gives it its
-look. `forge/skins/console/skin.css` is a full example in both modes: a thin
-rule grid on the ground (two `linear-gradient`s on `.forge`), square frames
-with a chamfered corner (`clip-path` on `.pane` and a diagonal edge in
-`.pane::after`), numbered spaces from a CSS counter on `.rail-space`, status
+The client draws the structure plainly; a skin gives it its look.
+`forge/skins/console/skin.css` is a full example in both modes and both
+arrangements: a thin rule grid on the ground (two `linear-gradient`s on
+`.forge`), a steel title line (`.topbar`), square frames with a chamfered
+corner (`clip-path` on `.pane` and a diagonal edge in `.pane::after`),
+numbered spaces from a CSS counter on `.rail-space` and on `.tab`, status
 squares from `.crew-row[data-status] .crew-bar` and `.rf-count[data-kind]`,
 and tabs with a status stripe from `.tab[data-status]`.
 
@@ -453,7 +495,8 @@ just as shut in when someone opens its URL directly. It cannot reach:
 - storage, the page or its terminals;
 - the network. It can fetch only its own skin's files (images, JSON).
 
-It is told the mode, the layout and each visible pane's status, focus and
+It is told the mode, the layout (`classic` or `rail`: where the spaces
+show) and each visible pane's status, focus and
 position, under ids that mean nothing outside the scene. It is never told
 titles, output or paths.
 
@@ -496,7 +539,8 @@ forge's own page backgrounds turn transparent. Clear your skin's own
 backdrops the same way, so the scene shows through the gutters:
 
 ```css
-:root[data-scene='on'][data-skin='my-skin'] .forge-main { background: transparent; }
+:root[data-scene='on'][data-skin='my-skin'] .forge-main,
+:root[data-scene='on'][data-skin='my-skin'] .topbar { background: transparent; }
 ```
 
 ## Rules

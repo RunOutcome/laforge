@@ -4,8 +4,9 @@
 // Skins: how the forge looks, installable (docs/skins.md). A skin is a
 // manifest, stylesheets, fonts and images; never code. The client picks the
 // browser's own choice if the forge still has it, else the forge's default,
-// adds the skin's stylesheets, marks the root with data-skin and
-// data-layout, and gives the terminals the skin's palette.
+// adds the skin's stylesheets, marks the root with data-skin, and gives the
+// terminals the skin's palette. A skin's layout only suggests where the
+// spaces show; the user decides (rail.ts arrangement).
 import type { ITheme } from '@xterm/xterm';
 import { terminalTheme, type Mode } from './theme';
 
@@ -84,7 +85,7 @@ export function pick(list: SkinList | null, choice: string | null): Skin {
   return find(choice) ?? find(list?.default) ?? find('classic') ?? classic;
 }
 
-/** layoutOf is the skin's layout; anything unknown is classic. */
+/** layoutOf is the skin's layout, the arrangement it suggests; anything unknown is classic (the top). */
 export const layoutOf = (skin: Skin): SkinLayout => (skin.layout === 'rail' ? 'rail' : 'classic');
 
 /** terminalFor is a skin's own terminal colours for a mode, if it has any. */
@@ -113,8 +114,9 @@ export function cssUrls(skin: Skin, base = ''): string[] {
 
 /**
  * apply puts a skin on the page: its stylesheets (the new ones load before
- * the old ones go, so a switch does not flash) and the root's data-skin and
- * data-layout. It rejects when a stylesheet fails to load; the caller then
+ * the old ones go, so a switch does not flash) and the root's data-skin.
+ * Where the spaces show (data-layout, data-spaces) is the client's to set:
+ * a skin's layout only suggests it (rail.ts arrangement). It rejects when a stylesheet fails to load; the caller then
  * applies classic.
  */
 export async function apply(skin: Skin, base = '', doc: Document = document): Promise<void> {
@@ -145,7 +147,6 @@ export async function apply(skin: Skin, base = '', doc: Document = document): Pr
   }
   for (const l of old) l.remove();
   root.dataset.skin = skin.name;
-  root.dataset.layout = layoutOf(skin);
 }
 
 export interface Swatch {

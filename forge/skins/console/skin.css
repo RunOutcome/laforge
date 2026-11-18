@@ -131,7 +131,7 @@
   --radius-chip: 0px;
   --radius-pill: 0px;
   --rail-width: 252px;
-  --topbar-height: 34px;
+  --topbar-height: 42px;
   --statusbar-height: 26px;
   --work-gap: 8px;
   --pane-gap: 6px;
@@ -221,14 +221,6 @@
   color: var(--f-ink-3);
 }
 
-[data-skin='console'] .rail-space[data-space=''] {
-  counter-increment: none;
-}
-
-[data-skin='console'] .rail-space[data-space='']::before {
-  content: '**';
-}
-
 [data-skin='console'] .rail-space .rail-count {
   margin-left: auto;
   color: var(--f-ink-3);
@@ -265,13 +257,6 @@
   border-style: solid;
   color: var(--f-ink);
   background: var(--hover);
-}
-
-[data-skin='console'] .rail-new-space input {
-  border-radius: 0;
-  border: 1px solid var(--f-steel);
-  background: var(--sunken);
-  font-family: var(--font-display);
 }
 
 [data-skin='console'] .rail-crew {
@@ -389,23 +374,23 @@
   text-transform: uppercase;
 }
 
-/* ---- the header: path-like title over a steel rule ---- */
-[data-skin='console'] .rail-header {
-  height: 48px;
-  gap: 12px;
-  padding: 0 10px 0 16px;
+/* ---- the title line: a steel plate over a steel rule; the tabs are
+   cells on it (top), or a path-like title names the space (rail) ---- */
+[data-skin='console'] .topbar {
+  gap: 10px;
+  padding: 0 10px 0 12px;
   border-bottom: 1px solid var(--f-steel);
   background: var(--f-plate);
 }
 
 [data-skin='console'] .rail-when {
-  order: 3;
-  margin-left: auto;
   font: 400 11px/1 var(--font-display);
   color: var(--f-ink-3);
 }
 
 [data-skin='console'] .rail-space-title {
+  border-left: 0;
+  padding-left: 0;
   font: 600 16px/1 var(--font-display);
   letter-spacing: 0;
   text-transform: none;
@@ -416,14 +401,6 @@
   content: 'forge / ';
   font-weight: 400;
   color: var(--f-ink-3);
-}
-
-[data-skin='console'] .rail-header > .grow {
-  display: none;
-}
-
-[data-skin='console'] .rail-header .tools {
-  order: 4;
 }
 
 [data-skin='console'] .icon-btn {
@@ -448,17 +425,11 @@
   font-family: var(--font-display);
 }
 
-/* ---- tabs: square cells on a rule, a status stripe on top ---- */
-[data-skin='console'] .topbar {
-  gap: 0;
-  padding: 0 0 0 10px;
-  border-bottom: 1px solid var(--f-line);
-  background: transparent;
-}
-
+/* ---- tabs: square cells on the plate, a status stripe on top ---- */
 [data-skin='console'] .tabs {
   gap: 0;
   align-self: stretch;
+  border-left: 1px solid var(--f-line);
   counter-reset: tab;
 }
 
@@ -507,7 +478,6 @@
   border-top-color: var(--f-brass);
 }
 
-[data-skin='console'] .layout-rail .tab[data-status],
 [data-skin='console'] .tab[data-status] {
   box-shadow: none;
 }
@@ -614,7 +584,7 @@
 }
 
 /* ---- the footer: counts as square markers on a steel rule ---- */
-[data-skin='console'] .rail-footer {
+[data-skin='console'] .statusbar {
   gap: 14px;
   padding: 0 12px 0 16px;
   border-top: 1px solid var(--f-steel);
@@ -651,8 +621,10 @@
   background: var(--f-brass);
 }
 
-[data-skin='console'] .rail-footer .sb-help,
-[data-skin='console'] .rail-footer .sb-clock {
+[data-skin='console'] .statusbar .sb-help,
+[data-skin='console'] .statusbar .sb-host,
+[data-skin='console'] .statusbar .sb-panes,
+[data-skin='console'] .statusbar .sb-clock {
   font: 400 11px/1 var(--font-display);
   color: var(--f-ink-3);
 }
@@ -711,7 +683,7 @@
   [data-skin='console'] .rail-space-title::before {
     content: '';
   }
-  [data-skin='console'] .rail-footer {
+  [data-skin='console'] .statusbar {
     gap: 10px;
     padding-left: 10px;
   }

@@ -1,6 +1,6 @@
 # Dungeon Party
 
-The forge as a candlelit tavern table. The rail is a parchment roster pinned to dark wood. It holds a tavern sign with the machine's name, a quest log of spaces with wax seals, and the party: every agent, marked by what it is doing. Panes are iron-bound slates, and the open space is lettered in gold as the current quest. Rail layout, dark.
+The forge as a candlelit tavern table. The rail is a parchment roster pinned to dark wood. It holds a tavern sign with the machine's name, a quest log of spaces with wax seals, and the party: every agent, marked by what it is doing. Panes are iron-bound slates, and the open space is lettered in gold as the current quest. It suggests the spaces in the rail and styles them on top too. Dark.
 
 Both modes: dark is the candlelit tavern table; light is a daylight parchment map on pale oak (the roster, seals and d20 are unchanged).
 

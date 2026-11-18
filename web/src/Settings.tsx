@@ -11,6 +11,7 @@ import type { Mode, ModePref } from './theme';
 import * as K from './skins';
 import * as G from './config';
 import * as I from './icons';
+import * as R from './rail';
 
 export interface SettingsProps {
   api: ForgeApi;
@@ -30,6 +31,10 @@ export interface SettingsProps {
   fontSize: number;
   onFontSize: (n: number) => void;
   now: number;
+  /** spaces: where the spaces show now, and what the skin in use suggests. */
+  spaces?: { now: R.Arrangement; suggested: R.Arrangement; browser: R.Arrangement | null };
+  /** onSpaces sets where the spaces show, for the forge or for this browser ('' follows the next one down). */
+  onSpaces?: (where: R.Arrangement | '', scope: 'forge' | 'browser') => Promise<unknown> | void;
   onClose: () => void;
   /** shares: a starting list, for tests and screenshots (else it is fetched). */
   shares?: Share[];
@@ -98,7 +103,13 @@ function useSave() {
   return { busy, error, run, clear: () => setError(null) };
 }
 
-function ForgeSection({ api, config, skins, onChanged }: SettingsProps & { config: Config }) {
+const spaceChoices: { value: '' | R.Arrangement; label: string; hint: string }[] = [
+  { value: 'top', label: 'Top', hint: 'tabs on the title line' },
+  { value: 'rail', label: 'Rail', hint: 'a list at the left, with the crew' },
+  { value: '', label: 'As the skin suggests', hint: '' },
+];
+
+function ForgeSection({ api, config, skins, onChanged, spaces, onSpaces }: SettingsProps & { config: Config }) {
   const [folder, setFolder] = useState(config.cwd);
   const save = useSave();
   useEffect(() => setFolder(config.cwd), [config.cwd]);
@@ -157,6 +168,27 @@ function ForgeSection({ api, config, skins, onChanged }: SettingsProps & { confi
             Animated scenes in this forge
           </label>
           {err('scenes')}
+          {onSpaces && (
+            <fieldset className="settings-field settings-radios" role="radiogroup" aria-labelledby="settings-spaces">
+              <legend id="settings-spaces">Spaces</legend>
+              {spaceChoices.map((ch) => (
+                <label key={ch.value || 'skin'} className="settings-check settings-radio">
+                  <input
+                    type="radio"
+                    name="settings-spaces"
+                    value={ch.value || 'skin'}
+                    checked={(config.spaces ?? '') === ch.value}
+                    disabled={save.busy === 'spaces'}
+                    onChange={() => save.run('spaces', async () => onSpaces(ch.value, 'forge'))}
+                  />
+                  {ch.label}
+                  <span className="settings-hint">{ch.value ? ch.hint : spaces ? `now ${spaces.suggested}` : ''}</span>
+                </label>
+              ))}
+              {spaces?.browser && <span className="settings-hint">This browser shows them {spaces.browser === 'top' ? 'on top' : 'in the rail'} (below).</span>}
+            </fieldset>
+          )}
+          {err('spaces')}
         </>
       )}
       {older && <p className="settings-note">This forge is older than the Settings panel: update LaForge to change its skin, scenes and profiles here.</p>}
@@ -337,7 +369,7 @@ const prefs: { value: ModePref; label: string; icon: () => ReactElement }[] = [
   { value: 'dark', label: 'Dark', icon: I.Moon },
 ];
 
-function BrowserSection({ pref, sysMode, onPref, notify, sound, permission, onNotify, onSound, fontSize, onFontSize }: SettingsProps) {
+function BrowserSection({ pref, sysMode, onPref, notify, sound, permission, onNotify, onSound, fontSize, onFontSize, spaces, onSpaces }: SettingsProps) {
   return (
     <section className="settings-section" aria-labelledby="settings-browser">
       <h3 className="agents-sub" id="settings-browser">
@@ -354,6 +386,24 @@ function BrowserSection({ pref, sysMode, onPref, notify, sound, permission, onNo
           ))}
         </span>
       </div>
+      {spaces && onSpaces && (
+        <div className="settings-field settings-inline">
+          <span id="settings-browser-spaces">Spaces here</span>
+          <span className="settings-seg" role="group" aria-labelledby="settings-browser-spaces">
+            {(
+              [
+                [null, 'As the forge'],
+                ['top', 'Top'],
+                ['rail', 'Rail'],
+              ] as const
+            ).map(([v, label]) => (
+              <button key={label} className={`settings-seg-btn ${spaces.browser === v ? 'is-on' : ''}`} aria-pressed={spaces.browser === v} onClick={() => onSpaces(v ?? '', 'browser')}>
+                {label}
+              </button>
+            ))}
+          </span>
+        </div>
+      )}
       <label className="settings-check">
         <input type="checkbox" checked={notify} disabled={permission === 'unsupported'} onChange={(e) => onNotify(e.target.checked)} />
         Notify me when an agent needs me or finishes

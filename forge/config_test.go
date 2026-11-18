@@ -229,3 +229,51 @@ func TestBadProfilesAreRefused(t *testing.T) {
 		}
 	}
 }
+
+// spaces is the user's choice of where the spaces show: top, rail, or none
+// (the skin suggests). It lives in config.json beside cwd and keeps it.
+func TestSpacesIsSavedBesideCwdAndClears(t *testing.T) {
+	home := t.TempDir()
+	dir := t.TempDir()
+	ts := configServer(t, home)
+	var c ForgeConfig
+	if code := configCall(t, ts, "GET", "/api/config", nil, &c); code != 200 || c.Spaces != "" {
+		t.Fatalf("no choice yet: %d %+v", code, c)
+	}
+	configCall(t, ts, "PUT", "/api/config", map[string]any{"cwd": dir}, &c)
+	if code := configCall(t, ts, "PUT", "/api/config", map[string]any{"spaces": "Rail"}, &c); code != 200 || c.Spaces != "rail" || c.Cwd != dir {
+		t.Fatalf("%d %+v", code, c)
+	}
+	next := configServer(t, home)
+	if configCall(t, next, "GET", "/api/config", nil, &c); c.Spaces != "rail" || c.Cwd != dir || !c.CwdSaved {
+		t.Fatalf("after a restart: %+v", c)
+	}
+	// clearing cwd keeps spaces, and clearing spaces keeps cwd
+	configCall(t, next, "PUT", "/api/config", map[string]any{"cwd": ""}, &c)
+	if c.Spaces != "rail" || c.CwdSaved {
+		t.Fatalf("cwd cleared: %+v", c)
+	}
+	configCall(t, next, "PUT", "/api/config", map[string]any{"cwd": dir, "spaces": ""}, &c)
+	if c.Spaces != "" || c.Cwd != dir {
+		t.Fatalf("spaces cleared: %+v", c)
+	}
+	if set, err := ReadSettings(home); err != nil || set.Spaces != "" || set.Cwd != dir {
+		t.Fatalf("ReadSettings: %+v %v", set, err)
+	}
+	for _, bad := range []any{"left", 1, nil, true} {
+		var e struct{ Error string }
+		if code := configCall(t, next, "PUT", "/api/config", map[string]any{"spaces": bad}, &e); code != 400 || e.Error != "input" {
+			t.Errorf("spaces %v: %d %+v", bad, code, e)
+		}
+	}
+	// a value written by hand that this forge does not know is no choice
+	os.WriteFile(filepath.Join(home, configFile), []byte(`{"spaces":"diagonal"}`), 0o600)
+	if SavedSpaces(home) != "" {
+		t.Error("an unknown saved value was used")
+	}
+	if err := ApplyConfig(home, ConfigPatch{Spaces: ptr("top")}); err != nil || SavedSpaces(home) != "top" {
+		t.Fatalf("ApplyConfig: %v %q", err, SavedSpaces(home))
+	}
+}
+
+func ptr[T any](v T) *T { return &v }

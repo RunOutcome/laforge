@@ -1,6 +1,6 @@
 # Mission Control 1969
 
-A flight control room, for the rail layout. The rail is a beige console with
+A flight control room, drawn for the spaces in the rail (it styles them on top too). The rail is a beige console with
 round indicator lamps, one per space and one per station of the crew. Panes
 are green phosphor screens set deep in beige bezels, with scanlines, a soft
 bloom and darkened corners. Tabs are push-button keys that stay pressed while

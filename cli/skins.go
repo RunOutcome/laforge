@@ -100,7 +100,7 @@ func (c *cmd) skin(args []string) error {
 		if err != nil {
 			return fmt.Errorf("%s would not install: %v", dirs[0], err)
 		}
-		fmt.Fprintf(c.cfg.Stdout, "%s (%s, %s layout) installs\n", res.Skin.Name, res.Skin.Label, res.Skin.Layout)
+		fmt.Fprintf(c.cfg.Stdout, "%s (%s, suggests %s) installs\n", res.Skin.Name, res.Skin.Label, spacesWord(res.Skin.Layout))
 		for _, w := range res.Warnings {
 			fmt.Fprintf(c.cfg.Stdout, "  warning: %s\n", w)
 		}
@@ -201,7 +201,7 @@ func (c *cmd) skinInstall(arg string) error {
 		return err
 	}
 	for _, sk := range res.Installed {
-		fmt.Fprintf(c.cfg.Stdout, "installed %s (%s, %s layout)\n", sk.Name, sk.Label, sk.Layout)
+		fmt.Fprintf(c.cfg.Stdout, "installed %s (%s, suggests %s)\n", sk.Name, sk.Label, spacesWord(sk.Layout))
 	}
 	c.consentScenes(res.Installed)
 	if len(res.Installed) == 1 {
@@ -442,4 +442,13 @@ func (c *cmd) setSkinCode(name string, allow bool) error {
 func isTerminal(r io.Reader) bool {
 	f, ok := r.(*os.File)
 	return ok && ttyFile(f)
+}
+
+// spacesWord is where a skin's layout suggests the spaces show, in the
+// words of la config's spaces setting.
+func spacesWord(layout string) string {
+	if layout == "rail" {
+		return "spaces in the rail"
+	}
+	return "spaces on top"
 }
