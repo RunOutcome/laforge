@@ -838,7 +838,7 @@
   background: transparent;
 }
 
-[data-skin='ant-colony'][data-scene='on'] .rail-header {
+[data-skin='ant-colony'][data-scene='on'] .topbar {
   background: linear-gradient(180deg, var(--m-15) 0, var(--a-grass) 10px, var(--a-grass-dark) 16px, transparent 17px);
 }
 

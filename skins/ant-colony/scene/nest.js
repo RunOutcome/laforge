@@ -75,7 +75,7 @@ export function buildNest(panes, chrome, size, radius = 26) {
   }));
   const L = Math.min(...rings.map((g) => g.x0)), R = Math.max(...rings.map((g) => g.x1));
   const T = Math.min(...rings.map((g) => g.y0)), B = Math.max(...rings.map((g) => g.y1));
-  const surfaceY = Math.min(26, Math.max(8, T - 30));
+  const surfaceY = Math.min(22, Math.max(8, T - 30)); // just under the grass
   const band = T - surfaceY;
 
   const segs = []; // {x1,y1,x2,y2}
@@ -91,12 +91,19 @@ export function buildNest(panes, chrome, size, radius = 26) {
   seg(L + rad, T, R - rad, T, 'trunk');
 
   let granary = null;
-  if (band >= 54) {
+  const surface = band >= 30;
+  // The title line holds the spaces or the title at the left and the tools
+  // (about 600px) at the right. The granary digs in the gap between them,
+  // and is left out when there is no gap.
+  const free0 = L + (R - L) * 0.3, free1 = R - 600;
+  if (surface) {
     seg(L, surfaceY, L, T + rad, 'shaft');
     seg(R, surfaceY, R, T + rad, 'shaft');
     seg(L, surfaceY, R, surfaceY, 'surface');
-    const gw = clamp((R - L) * 0.16, 90, 190), gh = clamp(band * 0.34, 22, 34);
-    const gx = Math.round(L + (R - L) * 0.6), gy = Math.round(surfaceY + band * 0.46);
+  }
+  if (surface && free1 - free0 >= 110) {
+    const gw = clamp(free1 - free0 - 30, 90, 170), gh = clamp(band * 0.5, 14, 34);
+    const gx = Math.round((free0 + free1) / 2), gy = Math.round(surfaceY + band * 0.5);
     const floorY = Math.round(gy + gh * 0.22);
     granary = { x: gx, y: gy, w: gw, h: gh, floorY };
     seg(gx - gw * 0.36, floorY, gx + gw * 0.36, floorY, 'granary');
@@ -203,8 +210,8 @@ export function buildNest(panes, chrome, size, radius = 26) {
   const granaryNodes = granary
     ? nodes.map((p, i) => i).filter((i) => Math.abs(nodes[i].y - granary.floorY) < 0.5 && Math.abs(nodes[i].x - granary.x) <= granary.w * 0.37)
     : [nearest(L, T)];
-  const surfaceNodes = granary ? nodes.map((p, i) => i).filter((i) => Math.abs(nodes[i].y - surfaceY) < 0.5) : [];
-  const ends = granary ? [nearest(L, surfaceY), nearest(R, surfaceY)] : [];
+  const surfaceNodes = surface ? nodes.map((p, i) => i).filter((i) => Math.abs(nodes[i].y - surfaceY) < 0.5) : [];
+  const ends = surface ? [nearest(L, surfaceY), nearest(R, surfaceY)] : [];
 
   return { o, rad, L, R, T, B, surfaceY, granary, nodes, edges, ringOf, granaryNodes, surfaceNodes, ends, route, nearest, synthetic: isSynthetic };
 }

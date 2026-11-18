@@ -332,7 +332,7 @@ export default function scene(PIXI, host) {
   function* crew(a) {
     const near = shown();
     for (let n = 0; n < 6; n++) {
-      if (R() < 0.35 && nest.granary) { // dig: carry soil up and out
+      if (R() < 0.35 && nest.surfaceNodes.length) { // dig: carry soil up and out
         yield go(pick(near), rnd(34, 48));
         carry(a, 'soil');
         yield go(pick(nest.surfaceNodes.length ? nest.surfaceNodes : near), rnd(30, 42));
@@ -369,7 +369,7 @@ export default function scene(PIXI, host) {
       else out.push(['ambler', p.id, Math.min(2, per)]);
     }
     if (nest.ends.length) out.push(['forager', null, 2 + Math.min(6, offTabWork() * 2)]);
-    out.push(['crew', null, nest.granary ? 7 : 4]);
+    out.push(['crew', null, nest.surfaceNodes.length ? 7 : 4]);
     if (nest.granary) out.push(['nurse', null, 2]);
     return out;
   }
@@ -443,7 +443,7 @@ export default function scene(PIXI, host) {
       const x = r() * w, y = 40 + r() * (h - 40), rx = 3 + r() * 6;
       ground.ellipse(x, y, rx, rx * (0.55 + r() * 0.3)).fill({ color: P.stone, alpha: 0.35 + r() * 0.25 });
     }
-    if (nest && nest.granary) { // roots hanging from the surface, header band only
+    if (nest && nest.surfaceNodes.length) { // roots hanging from the surface, header band only
       const { L, R: Rx, surfaceY, T } = nest;
       for (let i = 0; i < 7; i++) {
         const x = L + 30 + r() * (Rx - L - 60), len = (T - surfaceY) * (0.35 + r() * 0.5);
