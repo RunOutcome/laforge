@@ -19,6 +19,7 @@ import { Scene } from './Scene';
 import * as K from './skins';
 import * as R from './rail';
 import { usePaneDrag } from './paneDrag';
+import { SizeControl, TabBody, nextSize, pageBy, startGutterDrag } from './TallTab';
 import * as N from './notify';
 import * as S from './status';
 import * as I from './icons';
@@ -415,6 +416,7 @@ export function Forge({ api: given, embedded = false }: Props) {
     updateTab(tab.id, (t) => ({ ...t, focus: list[(i + 1) % list.length].id }));
   }, [tab, updateTab]);
   const toggleZoom = useCallback(() => tab && updateTab(tab.id, (t) => ({ ...t, zoom: t.zoom ? null : t.focus })), [tab, updateTab]);
+  const setTabSize = useCallback((size: L.Size) => tab && updateTab(tab.id, (t) => L.withSize(t, size)), [tab, updateTab]);
   const preset = useCallback(
     (kind: 'tiled' | 'main') => tab && updateTab(tab.id, (t) => ({ ...t, zoom: null, root: kind === 'tiled' ? L.tiled(t.root) : L.mainStack(t.root, t.focus) })),
     [tab, updateTab],
@@ -654,6 +656,10 @@ export function Forge({ api: given, embedded = false }: Props) {
       { id: 'next-tab', group: 'Tab', label: 'Next tab', hint: '^b n', run: () => stepTab(1) },
       { id: 'prev-tab', group: 'Tab', label: 'Previous tab', hint: '^b p', run: () => stepTab(-1) },
       { id: 'tiled', group: 'Layout', label: 'Tiled', hint: '^b space', run: () => preset('tiled') },
+      ...L.SIZES.map((n) => ({ id: `size-${n}`, group: 'Layout', label: `Tab size ${n}x${n === 1 ? ' (one screen)' : ` (${n} screens tall)`}${tab && L.tabSize(tab) === n ? ' (now)' : ''}`, run: () => setTabSize(n) })),
+      { id: 'size-next', group: 'Layout', label: 'Next tab size (1x, 2x, 3x, 4x)', hint: '^b s', run: () => tab && setTabSize(nextSize(L.tabSize(tab))) },
+      { id: 'page-down', group: 'Layout', label: 'Next screen of the tab', hint: '^b PgDn', run: () => pageBy(1) },
+      { id: 'page-up', group: 'Layout', label: 'Previous screen of the tab', hint: '^b PgUp', run: () => pageBy(-1) },
       { id: 'main', group: 'Layout', label: 'Main and stack', hint: '^b m', run: () => preset('main') },
       { id: 'agents', group: 'View', label: agentsOpen ? 'Hide the agents panel' : 'Show the agents panel', hint: '^b a', run: toggleAgents },
       { id: 'mode', group: 'View', label: `Toggle light/dark (now ${pref === 'system' ? `system, ${mode}` : pref})`, run: cycleMode },
@@ -683,7 +689,7 @@ export function Forge({ api: given, embedded = false }: Props) {
       });
     }
     return list;
-  }, [profiles, tab, pref, mode, config, agentsOpen, skinList, skin, chooseSkin, makeDefaultSkin, splitPane, toggleZoom, newTabAction, stepTab, preset, cycleMode, toggleAgents, startIn, updateTab, openSettings]);
+  }, [profiles, tab, pref, mode, config, agentsOpen, skinList, skin, chooseSkin, makeDefaultSkin, splitPane, toggleZoom, newTabAction, stepTab, preset, cycleMode, toggleAgents, startIn, updateTab, openSettings, setTabSize]);
 
   // keys: the prefix (Ctrl-b) then one key, as in tmux
   const keys = useRef<(e: KeyboardEvent) => boolean>(() => false);
@@ -778,6 +784,15 @@ export function Forge({ api: given, embedded = false }: Props) {
         break;
       case 'm':
         preset('main');
+        break;
+      case 's':
+        if (tab) setTabSize(nextSize(L.tabSize(tab)));
+        break;
+      case 'PageDown':
+        pageBy(1);
+        break;
+      case 'PageUp':
+        pageBy(-1);
         break;
       case 'a':
         toggleAgents();
@@ -890,13 +905,13 @@ export function Forge({ api: given, embedded = false }: Props) {
 
   // Every pane of a tab is drawn in one flat layer at the rect the layout
   // gives it, so a split, a zoom or a preset never remounts a terminal.
-  const renderTab = (t: L.Tab): React.ReactNode => {
-    const boxes = L.rects(t.root);
+  const renderTab = (t: L.Tab, lay: L.Tall): React.ReactNode => {
+    const boxes = lay.rects;
     const list = L.panes(t.root);
     return (
       <>
         {list.map((pane) => {
-          const r = t.zoom === pane.id ? { x: 0, y: 0, w: 1, h: 1 } : boxes.get(pane.id)!;
+          const r = t.zoom === pane.id ? { x: 0, y: 0, w: 1, h: 1 / lay.height } : boxes.get(pane.id)!;
           return (
             <div
               key={pane.id}
@@ -908,7 +923,7 @@ export function Forge({ api: given, embedded = false }: Props) {
           );
         })}
         {!t.zoom &&
-          L.gutters(t.root).map((g) => {
+          lay.gutters.map((g) => {
             const row = g.split.dir === 'row';
             const style = row
               ? { left: `calc(${pct(g.rect.x + g.at * g.rect.w)} - 4px)`, top: pct(g.rect.y), height: pct(g.rect.h), width: '8px' }
@@ -918,30 +933,7 @@ export function Forge({ api: given, embedded = false }: Props) {
                 key={`${g.split.id}-${g.index}`}
                 className={`gutter gutter-${g.split.dir}`}
                 style={style}
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  const body = (e.currentTarget as HTMLElement).parentElement!.getBoundingClientRect();
-                  const total = row ? body.width * g.rect.w : body.height * g.rect.h;
-                  const start = row ? e.clientX : e.clientY;
-                  const a = g.split.sizes[g.index - 1];
-                  const b = g.split.sizes[g.index];
-                  document.body.classList.add(`dragging-${g.split.dir}`);
-                  const move = (ev: MouseEvent) => {
-                    const d = ((row ? ev.clientX : ev.clientY) - start) / total;
-                    const na = Math.max(0.08, Math.min(a + b - 0.08, a + d));
-                    const sizes = [...g.split.sizes];
-                    sizes[g.index - 1] = na;
-                    sizes[g.index] = a + b - na;
-                    updateTab(t.id, (x) => ({ ...x, root: L.resize(x.root, g.split.id, sizes) }));
-                  };
-                  const up = () => {
-                    document.body.classList.remove(`dragging-${g.split.dir}`);
-                    window.removeEventListener('mousemove', move);
-                    window.removeEventListener('mouseup', up);
-                  };
-                  window.addEventListener('mousemove', move);
-                  window.addEventListener('mouseup', up);
-                }}
+                onMouseDown={(e) => startGutterDrag(e, g, (fn) => updateTab(t.id, (x) => ({ ...x, root: fn(x.root) })))}
                 onDoubleClick={() => updateTab(t.id, (x) => ({ ...x, root: L.resize(x.root, g.split.id, g.split.sizes.map(() => 1 / g.split.sizes.length)) }))}
               />
             );
@@ -1321,11 +1313,14 @@ export function Forge({ api: given, embedded = false }: Props) {
   const workArea = () => (
     <div className="work">
       <main className="tab-bodies">
-        {layout.tabs.map((t) => (
-          <div key={t.id} className={`tab-body ${t.id === layout.active ? 'is-active' : ''}`}>
-            {renderTab(t)}
-          </div>
-        ))}
+        {layout.tabs.map((t) => {
+          const lay = L.tall(t.root, L.tabSize(t));
+          return (
+            <TabBody key={t.id} tab={t} active={t.id === layout.active} lay={lay}>
+              {renderTab(t, lay)}
+            </TabBody>
+          );
+        })}
       </main>
       {agentsOpen && (
         <Agents
@@ -1585,6 +1580,7 @@ export function Forge({ api: given, embedded = false }: Props) {
           )}
           {tabBar(rail ? shown : null)}
           {paneMenuButton()}
+          {tab && <SizeControl size={L.tabSize(tab)} onSize={setTabSize} />}
           {!rail && <span className="grow" />}
           {!rail && toolButtons()}
         </nav>

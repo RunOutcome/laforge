@@ -8,6 +8,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type React from 'react';
 import * as L from './layout';
+import { edgeScroll } from './TallTab';
 
 /** How far (px) the pointer moves before a press on a header becomes a drag. */
 export const THRESHOLD = 5;
@@ -20,18 +21,18 @@ export function startsDrag(el: Element | null): boolean {
   return !!el && !el.closest(OWN_PRESS);
 }
 
-/** paneAt is the pane at (x, y) in the tab's unit square, or undefined outside it. */
-export function paneAt(root: L.Node, x: number, y: number): string | undefined {
+/** paneAt is the pane at (x, y) in the tab's unit square (laid out as boxes), or undefined outside it. */
+export function paneAt(root: L.Node, x: number, y: number, boxes: Map<string, L.Rect> = L.rects(root)): string | undefined {
   if (x < 0 || y < 0 || x > 1 || y > 1) return undefined;
-  for (const [id, r] of L.rects(root)) {
+  for (const [id, r] of boxes) {
     if (x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) return id;
   }
   return undefined;
 }
 
 /** dropTarget is the pane a drag from source would swap with at (x, y): another pane, or undefined. */
-export function dropTarget(root: L.Node, source: string, x: number, y: number): string | undefined {
-  const id = paneAt(root, x, y);
+export function dropTarget(root: L.Node, source: string, x: number, y: number, boxes?: Map<string, L.Rect>): string | undefined {
+  const id = paneAt(root, x, y, boxes);
   return id === source ? undefined : id;
 }
 
@@ -59,15 +60,27 @@ export function usePaneDrag(onSwap: (tab: string, a: string, b: string) => void)
     const body = (e.currentTarget as HTMLElement).closest('.pane-slot')?.parentElement;
     if (!body) return;
     stopRef.current?.();
-    const box = body.getBoundingClientRect();
     const root = t.root;
+    const boxes = L.tall(root, L.tabSize(t)).rects;
     const x0 = e.clientX;
     const y0 = e.clientY;
     const pointer = e.pointerId;
     let active = false;
     let target: string | undefined;
+    let last = { x: e.clientX, y: e.clientY };
+    // the tall area may scroll under the drag: measure it as it is now
+    const aim = () => {
+      const box = body.getBoundingClientRect();
+      const next = box.width && box.height ? dropTarget(root, paneId, (last.x - box.left) / box.width, (last.y - box.top) / box.height, boxes) : undefined;
+      if (next !== target) {
+        target = next;
+        setDrag({ tab: t.id, source: paneId, target });
+      }
+    };
+    const edges = edgeScroll(body.closest<HTMLElement>('.tab-scroll'), aim);
 
     const stop = () => {
+      edges.stop();
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
       window.removeEventListener('pointercancel', stop);
@@ -87,11 +100,9 @@ export function usePaneDrag(onSwap: (tab: string, a: string, b: string) => void)
         setDrag({ tab: t.id, source: paneId });
       }
       ev.preventDefault();
-      const next = box.width && box.height ? dropTarget(root, paneId, (ev.clientX - box.left) / box.width, (ev.clientY - box.top) / box.height) : undefined;
-      if (next !== target) {
-        target = next;
-        setDrag({ tab: t.id, source: paneId, target });
-      }
+      last = { x: ev.clientX, y: ev.clientY };
+      edges.at(ev.clientY);
+      aim();
     };
     const up = (ev: PointerEvent) => {
       if (ev.pointerId !== pointer) return;

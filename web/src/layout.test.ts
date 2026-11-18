@@ -116,4 +116,111 @@ describe('layout', () => {
     expect(L.valid(null)).toBe(false);
     expect(L.valid({ version: 2, tabs: [], active: 'x' })).toBe(false);
   });
+
+  describe('tall tabs', () => {
+    const grid = (n: number) => {
+      let root: L.Node = L.newPane();
+      for (let i = 1; i < n; i++) root = L.split(root, L.panes(root).at(-1)!.id, 'row', L.newPane());
+      return L.tiled(root);
+    };
+    const stack = (n: number) => {
+      let root: L.Node = L.newPane();
+      for (let i = 1; i < n; i++) root = L.split(root, L.panes(root).at(-1)!.id, 'col', L.newPane());
+      return root.kind === 'split' ? L.resize(root, root.id, root.sizes.map(() => 1 / n)) : root;
+    };
+    // a box's height in screens, from the tall area's unit square
+    const screens = (t: L.Tall, id: string) => t.rects.get(id)!.h * t.height;
+
+    it('is exactly rects and gutters at 1x', () => {
+      for (const root of [grid(7), stack(4), L.mainStack(grid(6), L.panes(grid(6))[0].id)]) {
+        const t = L.tall(root, 1);
+        expect(t.height).toBe(1);
+        expect(t.rects).toEqual(L.rects(root));
+        expect(t.gutters.map(({ fracs: _, ...g }) => g)).toEqual(L.gutters(root));
+      }
+    });
+
+    it('lays a stack across n screens, each pane one screen at most', () => {
+      const root = stack(8);
+      for (const n of [2, 3, 4] as const) {
+        const t = L.tall(root, n);
+        expect(t.height).toBe(n);
+        const ids = L.panes(root).map((p) => p.id);
+        for (const id of ids) expect(screens(t, id)).toBeCloseTo(n / 8);
+        // still tiles the area: top to bottom with no gap
+        const ys = ids.map((id) => t.rects.get(id)!);
+        ys.forEach((r, i) => expect(r.y).toBeCloseTo(i / 8));
+      }
+    });
+
+    it('caps a pane at one screen and gives the rest to its siblings', () => {
+      const a = L.newPane();
+      const b = L.newPane();
+      const c = L.newPane();
+      let root: L.Node = L.split(a, a.id, 'col', b);
+      root = L.split(root, b.id, 'col', c); // a / b / c at 1/3 each
+      root = L.resize(root, (root as L.SplitNode).id, [0.6, 0.2, 0.2]);
+      const t = L.tall(root, 3);
+      expect(t.height).toBe(3);
+      expect(screens(t, a.id)).toBeCloseTo(1); // 0.6 * 3 = 1.8 capped to 1
+      expect(screens(t, b.id)).toBeCloseTo(1);
+      expect(screens(t, c.id)).toBeCloseTo(1);
+      const g = t.gutters.map((x) => x.at);
+      expect(g[0]).toBeCloseTo(1 / 3);
+      expect(g[1]).toBeCloseTo(2 / 3);
+      expect(t.gutters[0].fracs.map((f) => +f.toFixed(6))).toEqual([0.333333, 0.333333, 0.333333]);
+    });
+
+    it('no pane is ever taller than a screen, at any size', () => {
+      const roots = [grid(2), grid(5), grid(8), stack(3), L.mainStack(stack(7), L.panes(stack(7))[0].id), L.newPane()];
+      for (const root of roots) {
+        for (const n of L.SIZES) {
+          const t = L.tall(root, n);
+          for (const p of L.panes(root)) expect(screens(t, p.id)).toBeLessThanOrEqual(1 + 1e-9);
+          expect(t.height).toBeLessThanOrEqual(n);
+        }
+      }
+    });
+
+    it('is only as tall as the panes can use', () => {
+      expect(L.tall(L.newPane(), 4).height).toBe(1);
+      expect(L.tall(grid(2), 4).height).toBe(1); // side by side: one row
+      expect(L.tall(grid(8), 4).height).toBe(3); // three rows
+      expect(L.tall(stack(2), 4).height).toBe(2);
+    });
+
+    it('keeps a pane beside a taller stack one screen tall, at the top', () => {
+      const s = stack(6);
+      const main = L.panes(s)[0];
+      const root = L.mainStack(s, main.id); // main | five stacked
+      const t = L.tall(root, 4);
+      expect(t.height).toBe(4);
+      expect(t.rects.get(main.id)).toEqual({ x: 0, y: 0, w: 0.6, h: 0.25 });
+      for (const p of L.panes(root).slice(1)) expect(screens(t, p.id)).toBeCloseTo(4 / 5);
+    });
+
+    it('fill caps and redistributes by size', () => {
+      expect(L.fill(1, [0.5, 0.5], [1, 1])).toEqual([0.5, 0.5]);
+      const out = L.fill(3, [0.7, 0.1, 0.2], [1, 2, 2]);
+      expect(out[0]).toBe(1);
+      expect(out[1]).toBeCloseTo(2 / 3);
+      expect(out[2]).toBeCloseTo(4 / 3);
+      expect(out.reduce((a, b) => a + b)).toBeCloseTo(3);
+    });
+
+    it('reads, sets and stores a tab size', () => {
+      const t = L.newTab();
+      expect(L.tabSize(t)).toBe(1);
+      expect(L.tabSize({ ...t, size: 7 as L.Size })).toBe(1);
+      const big = L.withSize(t, 3);
+      expect(L.tabSize(big)).toBe(3);
+      expect('size' in L.withSize(big, 1)).toBe(false); // a 1x tab is stored as before
+      const layout: L.Layout = { version: 1, tabs: [big, t], active: big.id };
+      const back = JSON.parse(JSON.stringify(layout));
+      expect(L.valid(back)).toBe(true);
+      expect(L.tabSize(back.tabs[0])).toBe(3);
+      expect(L.tabSize(back.tabs[1])).toBe(1);
+      expect(back).toEqual(layout);
+    });
+  });
 });

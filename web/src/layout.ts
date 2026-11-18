@@ -30,7 +30,13 @@ export interface Tab {
   root: Node;
   focus: string;
   zoom?: string | null;
+  /** size is how many screens tall the tab's pane area is; absent means 1. */
+  size?: Size;
 }
+
+/** A tab's size: its pane area is that many visible pane-area heights tall. */
+export type Size = 1 | 2 | 3 | 4;
+export const SIZES: readonly Size[] = [1, 2, 3, 4];
 
 export interface Layout {
   version: 1;
@@ -269,4 +275,110 @@ export function gutters(node: Node, r: Rect = { x: 0, y: 0, w: 1, h: 1 }, out: G
 /** autoNamed reports whether a tab takes its name from its panes. */
 export function autoNamed(t: Tab): boolean {
   return !t.custom && (t.name === '' || t.name === 'main' || /^\d+$/.test(t.name));
+}
+
+/** tabSize is a tab's size, 1 for a missing or unknown one. */
+export function tabSize(t: Tab): Size {
+  return SIZES.includes(t.size as Size) ? (t.size as Size) : 1;
+}
+
+/** withSize sets a tab's size; 1x drops the field, so a 1x tab is stored as it always was. */
+export function withSize(t: Tab, size: Size): Tab {
+  const { size: _, ...rest } = t;
+  void _;
+  return size === 1 ? rest : { ...rest, size };
+}
+
+/**
+ * reach is the most height (in screens) node can be given with no pane
+ * taller than one screen: a pane reaches 1, a stack the sum of its children,
+ * side-by-side children the tallest of them (a shorter one sits at the top).
+ */
+export function reach(node: Node): number {
+  if (node.kind === 'pane') return 1;
+  const r = node.children.map(reach);
+  return node.dir === 'col' ? r.reduce((a, b) => a + b, 0) : Math.max(...r);
+}
+
+/**
+ * fill shares height h between stacked children by their sizes, capping
+ * each at its reach and giving what a capped child cannot take to the rest
+ * by their sizes. h is never more than the children's reach together.
+ */
+export function fill(h: number, sizes: number[], caps: number[]): number[] {
+  const eps = 1e-9;
+  const plain = sizes.map((s) => s * h);
+  if (plain.every((v, i) => v <= caps[i] + eps)) return plain; // 1x always lands here: nothing changes
+  const out = sizes.map(() => 0);
+  const capped = new Set<number>();
+  for (;;) {
+    const left = h - [...capped].reduce((a, i) => a + caps[i], 0);
+    const free = sizes.map((_, i) => i).filter((i) => !capped.has(i));
+    const weight = free.reduce((a, i) => a + sizes[i], 0);
+    let changed = false;
+    for (const i of free) {
+      out[i] = weight > 0 ? (left * sizes[i]) / weight : left / free.length;
+      if (out[i] > caps[i] + eps) {
+        capped.add(i);
+        changed = true;
+      }
+    }
+    if (!changed || free.length === 0) break;
+  }
+  for (const i of capped) out[i] = caps[i];
+  return out;
+}
+
+export interface TallGutter extends Gutter {
+  /** fracs are the split's children's shares as drawn (sizes, unless a cap moved them). */
+  fracs: number[];
+}
+
+export interface Tall {
+  /** height is the pane area's height in screens: the size, or less when the panes cannot use it. */
+  height: number;
+  /** rects place the panes in the tall area's unit square. */
+  rects: Map<string, Rect>;
+  gutters: TallGutter[];
+}
+
+/**
+ * tall lays a tab out size screens tall. Stacked splits share the height by
+ * their sizes but no pane is given more than one screen; a pane beside a
+ * taller stack keeps one screen and sits at the top. The area is only as
+ * tall as its panes can use, so two panes side by side stay one screen at
+ * any size. At size 1 this is exactly rects and gutters.
+ */
+export function tall(root: Node, size: number = 1): Tall {
+  const height = Math.max(1, Math.min(size, reach(root)));
+  const rs = new Map<string, Rect>();
+  const gs: TallGutter[] = [];
+  const norm = (r: Rect): Rect => (height === 1 ? r : { x: r.x, y: r.y / height, w: r.w, h: r.h / height });
+  const place = (node: Node, r: Rect) => {
+    if (node.kind === 'pane') {
+      rs.set(node.id, norm(r));
+      return;
+    }
+    if (node.dir === 'row') {
+      let offset = 0;
+      node.children.forEach((child, i) => {
+        if (i > 0) gs.push({ split: node, index: i, rect: norm(r), at: offset, fracs: node.sizes });
+        const s = node.sizes[i];
+        place(child, { x: r.x + offset * r.w, y: r.y, w: s * r.w, h: Math.min(r.h, reach(child)) });
+        offset += s;
+      });
+      return;
+    }
+    const hs = fill(r.h, node.sizes, node.children.map(reach));
+    const moved = hs.some((v, i) => v !== node.sizes[i] * r.h);
+    const fracs = moved ? hs.map((v) => v / r.h) : node.sizes;
+    let offset = 0;
+    node.children.forEach((child, i) => {
+      if (i > 0) gs.push({ split: node, index: i, rect: norm(r), at: offset, fracs });
+      place(child, { x: r.x, y: r.y + offset * r.h, w: r.w, h: fracs[i] * r.h });
+      offset += fracs[i];
+    });
+  };
+  place(root, { x: 0, y: 0, w: 1, h: height });
+  return { height, rects: rs, gutters: gs };
 }

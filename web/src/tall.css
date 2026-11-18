@@ -1,0 +1,103 @@
+/* SPDX-License-Identifier: Apache-2.0 */
+/* SPDX-FileCopyrightText: 2026 COR Holdings, LLC */
+
+/* tall tabs: a tab's pane area may be 1x to 4x screens tall and scroll */
+.tab-scroll {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.tab-scroll.is-tall {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 22px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+
+.tab-canvas {
+  position: relative;
+  width: 100%;
+}
+
+/* page dots: one per screen, in the strip the scrollbar leaves */
+.tab-pages {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 18px;
+}
+
+.tab-pages button {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--tx-3);
+  font: 500 10px/1 var(--font-mono);
+}
+
+.tab-pages button:hover {
+  background: var(--hover);
+  color: var(--tx);
+}
+
+.tab-pages button.is-current {
+  border-color: var(--acc);
+  background: var(--acc-fill);
+  color: var(--on-acc);
+}
+
+/* the size control beside "New pane" */
+.tab-size {
+  display: flex;
+  align-items: center;
+  height: 28px;
+  padding: 2px;
+  gap: 1px;
+  border-radius: var(--radius-control);
+  border: 1px solid var(--line);
+  background: var(--card);
+  flex: none;
+}
+
+.tab-size button {
+  height: 22px;
+  min-width: 24px;
+  padding: 0 4px;
+  border: 0;
+  border-radius: var(--radius-button-sm);
+  background: transparent;
+  color: var(--tx-3);
+  font: 500 11px/1 var(--font-mono);
+}
+
+.tab-size button:hover {
+  background: var(--hover);
+  color: var(--tx);
+}
+
+.tab-size button.is-on {
+  background: var(--acc-fill);
+  color: var(--on-acc);
+}
+
+@media (max-width: 640px) {
+  /* one button that steps through the sizes */
+  .tab-size button:not(.is-on) {
+    display: none;
+  }
+  .tab-scroll.is-tall {
+    padding-right: 20px;
+  }
+}

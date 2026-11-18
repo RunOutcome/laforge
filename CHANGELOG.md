@@ -29,6 +29,13 @@ Agents you can see, keep and hand work to.
   hash of the code, and run in a sandbox with no network, API, token or
   terminal access. `la skin scenes off` turns them all off (docs/skins.md).
 - **Swap panes** by dragging one by its header onto another.
+- **Tall tabs.** A tab can be 1x, 2x, 3x or 4x screens tall, so many panes
+  are not crunched together: the tab scrolls and its panes spread over the
+  taller area, none taller than one screen. Pick the size beside New pane,
+  in the palette or with `^b s`; page with the dots at the edge or
+  `^b PgUp` / `^b PgDn`. The wheel scrolls over headers and gutters and stays
+  the terminal's own inside one; a focused pane scrolls into view. The size is
+  kept with the layout.
 
 - **Agent status.** A program reports what it is doing with OSC 7501, the
   Program Status Protocol herdr-core reads (docs/status-protocol.md), or

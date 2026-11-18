@@ -37,12 +37,20 @@ export const READY_MS = 20_000;
 const ids = new WeakMap<Element, string>();
 let nextId = 1;
 
-/** readPanes reads the visible panes from the page: geometry and status only. */
+/**
+ * readPanes reads the visible panes from the page: geometry and status only.
+ * In a tall tab a pane's box is cut to the part on screen, and a pane
+ * scrolled out of view is left out.
+ */
 export function readPanes(root: ParentNode): { panes: ScenePane[]; chrome: { top: number; left: number } } {
   const panes: ScenePane[] = [];
   root.querySelectorAll<HTMLElement>('.pane[data-status]').forEach((el) => {
-    const r = el.getBoundingClientRect();
-    if (r.width < 1 || r.height < 1) return;
+    const b = el.getBoundingClientRect();
+    const clip = el.closest('.tab-scroll')?.getBoundingClientRect();
+    const r = clip ? { left: Math.max(b.left, clip.left), top: Math.max(b.top, clip.top), right: Math.min(b.right, clip.right), bottom: Math.min(b.bottom, clip.bottom) } : b;
+    const width = r.right - r.left;
+    const height = r.bottom - r.top;
+    if (width < 1 || height < 1) return;
     if (el.checkVisibility && !el.checkVisibility({ visibilityProperty: true } as CheckVisibilityOptions)) return;
     let id = ids.get(el);
     if (!id) {
@@ -54,7 +62,7 @@ export function readPanes(root: ParentNode): { panes: ScenePane[]; chrome: { top
       status: el.dataset.status ?? 'idle',
       active: el.dataset.active === 'true',
       tab: 0,
-      rect: { x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height) },
+      rect: { x: Math.round(r.left), y: Math.round(r.top), w: Math.round(width), h: Math.round(height) },
     });
   });
   const top = panes.length ? Math.min(...panes.map((p) => p.rect.y)) : 0;
@@ -165,6 +173,7 @@ export function Scene({ url, mode, layout, covered = false }: Props) {
     if (forge) observer.observe(forge, { subtree: true, childList: true, attributes: true, attributeFilter: ['data-status', 'data-active', 'style', 'class'] });
     window.addEventListener('message', onMessage);
     window.addEventListener('resize', onResize);
+    document.addEventListener('scroll', soon, true); // a tall tab scrolling moves its panes
     document.addEventListener('visibilitychange', onVisibility);
     return () => {
       dead = true;
@@ -173,6 +182,7 @@ export function Scene({ url, mode, layout, covered = false }: Props) {
       window.clearTimeout(pending);
       window.removeEventListener('message', onMessage);
       window.removeEventListener('resize', onResize);
+      document.removeEventListener('scroll', soon, true);
       document.removeEventListener('visibilitychange', onVisibility);
       delete root.dataset.scene;
       post.current = () => undefined;

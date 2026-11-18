@@ -80,6 +80,8 @@ export const keyHelp: [string, string][] = [
   ['Ctrl-b ,', 'Rename the tab'],
   ['Ctrl-b space', 'Tiled layout'],
   ['Ctrl-b m', 'Main + stack layout'],
+  ['Ctrl-b s', 'Tab size: 1x, 2x, 3x, 4x screens tall'],
+  ['Ctrl-b PgUp / PgDn', 'Previous / next screen of a tall tab'],
   ['Ctrl-b + / _', 'Bigger / smaller text'],
   ['Ctrl-b a', 'Agents panel (show or hide)'],
   ['Ctrl-b :  or  ⌘K', 'Command palette'],
