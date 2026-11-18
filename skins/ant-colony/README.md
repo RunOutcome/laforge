@@ -20,8 +20,10 @@ Ant Colony carries a scene (`scene/`, PixiJS, about 36 KB of code), so the nest 
 | working | workers carry crumbs from the chamber to the granary along a glowing scent trail |
 | blocked / error | ants crowd round the chamber and patrol it under a red alarm ring, and a runner dashes to the granary |
 | done | two ants carry a seed home, then one dozes by the chamber |
-| idle | one ant ambles round the chamber |
+| idle (or any other word) | two ants amble round the chamber and doze in the gutter |
+| running | treated as working |
 | on another tab | foragers bring crumbs in along the surface |
+| always | the nest crew digs and carries soil up through the header, and nurses tend the queen, so the colony never looks empty |
 
 The scene is off until you allow it: **Allow scene…** in the Themes panel, or `la skin install --allow-code`. It runs sandboxed, with no network and no access to your terminals. Under reduced motion it draws a still picture. With the scene off, the stylesheet draws the nest on its own.
 
