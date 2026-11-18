@@ -4,6 +4,7 @@
 package forge
 
 import (
+	"bytes"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -74,11 +75,16 @@ func TestAScenesCodeRunsOnlyOnceAllowed(t *testing.T) {
 			t.Fatalf("install %d", r.StatusCode)
 		}
 	}
+	// get reads the whole body: a large file left unread (the PixiJS
+	// library) holds its connection, and the server's Close waits forever
 	get := func(p string) *http.Response {
 		r, err := http.Get(ts.URL + p)
 		if err != nil {
 			t.Fatal(err)
 		}
+		body, _ := io.ReadAll(r.Body)
+		r.Body.Close()
+		r.Body = io.NopCloser(bytes.NewReader(body))
 		return r
 	}
 
