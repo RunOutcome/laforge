@@ -827,3 +827,26 @@
 
 /* light only: rules the dark look cannot share */
 [data-skin='ant-colony'][data-mode='light'] .tab-count { color: #8a5a10; }
+
+/* with the animated scene on (scene/main.js): the scene draws the ground,
+   the tunnels and the scent trails, so the CSS steps back. The gutters widen
+   so the tunnels between the panes show. With the scene off, none of this
+   applies and the skin looks as it always has. */
+:root[data-skin='ant-colony'][data-scene='on'] {
+  --pane-gap: 9px;
+}
+
+[data-skin='ant-colony'][data-scene='on'] body,
+[data-skin='ant-colony'][data-scene='on'] .forge {
+  background: transparent;
+}
+
+[data-skin='ant-colony'][data-scene='on'] .rail-header {
+  background: linear-gradient(180deg, var(--m-15) 0, var(--a-grass) 10px, var(--a-grass-dark) 16px, transparent 17px);
+}
+
+[data-skin='ant-colony'][data-scene='on'] .pane,
+[data-skin='ant-colony'][data-scene='on'] .pane[data-status='working'],
+[data-skin='ant-colony'][data-scene='on'] .crew-row[data-status='working']::after {
+  animation: none;
+}
