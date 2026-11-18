@@ -19,7 +19,7 @@ the mode it was first drawn in), and the same four states its own way:
 
 | Skin | Suggests | First drawn in | The idea |
 | --- | --- | --- | --- |
-| [Ant Colony](ant-colony/) | rail | dark | A cross-section of the nest: soil strata, chambers for panes, the crew as ants and a glowing scent trail on whatever is busy. |
+| [Ant Colony](ant-colony/) | rail | dark | A cross-section of the nest: soil strata, chambers for panes, the crew as ants and a glowing scent trail on whatever is busy. Animated scene: ants run the tunnels by status. |
 | [Bridge](bridge/) | rail | dark | A ship's bridge: cold steel bezels, cyan readouts, crew at their stations, red alert when someone needs you. |
 | [Dungeon Party](dungeon-party/) | rail | dark | A candlelit tavern table: a parchment roster of adventurers, a quest log of spaces, and a d20 when only you can roll. |
 | [Heist Crew](heist-crew/) | classic | dark | The job on a blueprint: white line work on a blue grid, every tab a step of the plan, red when someone's been made. |
