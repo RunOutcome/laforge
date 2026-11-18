@@ -484,7 +484,7 @@ Events (`host.on(type, fn)` replays the latest one of a type):
 
 **Pacing.** The host paces `host.app.ticker`:
 - stopped while hidden;
-- 12 fps while idle, 60 otherwise;
+- 12 fps while idle, 30 otherwise;
 - under `prefers-reduced-motion` (`host.reducedMotion`), one frame per event,
   so draw a still picture there.
 

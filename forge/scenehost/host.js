@@ -52,7 +52,7 @@ function pace() {
     if (host.reducedMotion && visible) t.update(performance.now());
     return;
   }
-  t.maxFPS = idle ? 12 : 60;
+  t.maxFPS = idle ? 12 : 30;
   if (!t.started) t.start();
 }
 
