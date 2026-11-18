@@ -2050,6 +2050,37 @@ body.dragging-col * {
   user-select: none;
 }
 
+/* swapping panes: drag a header onto another pane */
+.pane-slot[data-swappable] .pane-head {
+  cursor: grab;
+  touch-action: none;
+}
+
+.pane-slot[data-swappable] .pane-head :is(button, kbd, .confirm) {
+  cursor: pointer;
+}
+
+body.dragging-pane,
+body.dragging-pane * {
+  cursor: grabbing !important;
+  user-select: none;
+}
+
+.pane-slot.is-drag-source {
+  opacity: 0.55;
+}
+
+.pane-slot.is-drop-target::after {
+  content: '';
+  position: absolute;
+  inset: var(--pane-gap);
+  border-radius: var(--radius-pane);
+  border: 2px solid var(--acc);
+  background: color-mix(in oklab, var(--acc) 14%, transparent);
+  pointer-events: none;
+  z-index: 4;
+}
+
 /* picker */
 .picker {
   position: absolute;

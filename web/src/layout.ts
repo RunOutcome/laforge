@@ -126,6 +126,25 @@ export function remove(root: Node, paneId: string): Node | null {
   return { ...root, children, sizes: sizes.map((s) => s / total) };
 }
 
+/**
+ * swap exchanges the places of panes a and b in the tree. The panes keep
+ * their ids and sessions, so a view keyed by pane id moves rather than
+ * remounts. Unknown or equal ids leave the tree as it is.
+ */
+export function swap(root: Node, a: string, b: string): Node {
+  if (a === b) return root;
+  const pa = findPane(root, a);
+  const pb = findPane(root, b);
+  if (!pa || !pb) return root;
+  return mapNode(root, (n) => (n.kind !== 'pane' ? n : n.id === a ? pb : n.id === b ? pa : n));
+}
+
+/** swapInTab swaps two panes of a tab; the dragged pane a keeps the focus. */
+export function swapInTab(t: Tab, a: string, b: string): Tab {
+  const root = swap(t.root, a, b);
+  return root === t.root ? t : { ...t, root, focus: a };
+}
+
 /** resize sets the sizes of split splitId. */
 export function resize(root: Node, splitId: string, sizes: number[]): Node {
   return mapNode(root, (n) => (n.kind === 'split' && n.id === splitId ? { ...n, sizes } : n));

@@ -15,6 +15,7 @@ import { loadPref, modeLabel, nextPref, resolveMode, savePref, systemMode, termi
 import { Themes } from './Themes';
 import * as K from './skins';
 import * as R from './rail';
+import { usePaneDrag } from './paneDrag';
 import * as N from './notify';
 import * as S from './status';
 import * as I from './icons';
@@ -254,6 +255,9 @@ export function Forge({ api: given, embedded = false }: Props) {
   const updateTab = useCallback((id: string, fn: (t: L.Tab) => L.Tab) => {
     setLayout((l) => (l ? { ...l, tabs: l.tabs.map((t) => (t.id === id ? fn(t) : t)) } : l));
   }, []);
+
+  // dragging a pane's header onto another pane of the tab swaps the two
+  const paneDrag = usePaneDrag((tabId, a, b) => updateTab(tabId, (t) => L.swapInTab(t, a, b)));
 
   const focusPane = useCallback(
     (tabId: string, paneId: string) => updateTab(tabId, (t) => (t.focus === paneId ? t : { ...t, focus: paneId })),
@@ -839,7 +843,11 @@ export function Forge({ api: given, embedded = false }: Props) {
         {list.map((pane) => {
           const r = t.zoom === pane.id ? { x: 0, y: 0, w: 1, h: 1 } : boxes.get(pane.id)!;
           return (
-            <div key={pane.id} className="pane-slot" style={{ left: pct(r.x), top: pct(r.y), width: pct(r.w), height: pct(r.h), zIndex: t.zoom === pane.id ? 3 : 1, visibility: t.zoom && t.zoom !== pane.id ? 'hidden' : undefined }}>
+            <div
+              key={pane.id}
+              className={`pane-slot${paneDrag.drag?.tab === t.id ? (paneDrag.drag.source === pane.id ? ' is-drag-source' : paneDrag.drag.target === pane.id ? ' is-drop-target' : '') : ''}`}
+              data-swappable={!t.zoom && list.length > 1 ? 'true' : undefined}
+              style={{ left: pct(r.x), top: pct(r.y), width: pct(r.w), height: pct(r.h), zIndex: t.zoom === pane.id ? 3 : 1, visibility: t.zoom && t.zoom !== pane.id ? 'hidden' : undefined }}>
               {PaneView({ t, pane })}
             </div>
           );
@@ -904,7 +912,7 @@ export function Forge({ api: given, embedded = false }: Props) {
         data-active={focused ? 'true' : 'false'}
         onMouseDown={() => focusPane(t.id, pane.id)}
       >
-        <header className="pane-head">
+        <header className="pane-head" onPointerDown={(e) => paneDrag.start(e, t, pane.id)}>
           {!word && <span className={`dot dot-${state}`} title={state} />}
           {s ? (
             <>

@@ -73,6 +73,44 @@ describe('layout', () => {
     expect(ids(m)[0]).toBe(before[2]);
   });
 
+  it('swaps two panes in place, keeping ids, sessions and the tree shape', () => {
+    const a = L.newPane('sa');
+    const b = L.newPane('sb');
+    const c = L.newPane('sc');
+    let root: L.Node = L.split(a, a.id, 'row', b); // a | b
+    root = L.split(root, b.id, 'col', c); // a | (b / c)
+    const before = L.rects(root);
+    const s = L.swap(root, a.id, c.id); // c | (b / a)
+    expect(ids(s)).toEqual([c.id, b.id, a.id]);
+    expect(L.findPane(s, a.id)?.session).toBe('sa');
+    expect(L.findPane(s, c.id)?.session).toBe('sc');
+    const after = L.rects(s);
+    expect(after.get(c.id)).toEqual(before.get(a.id));
+    expect(after.get(a.id)).toEqual(before.get(c.id));
+    expect(after.get(b.id)).toEqual(before.get(b.id));
+    expect((s as L.SplitNode).sizes).toEqual((root as L.SplitNode).sizes);
+    expect(L.swap(s, a.id, c.id)).toEqual(root); // swapping back restores it
+  });
+
+  it('leaves the tree alone for a pane swapped with itself or an unknown pane', () => {
+    const a = L.newPane();
+    const b = L.newPane();
+    const root = L.split(a, a.id, 'row', b);
+    expect(L.swap(root, a.id, a.id)).toBe(root);
+    expect(L.swap(root, a.id, 'nope')).toBe(root);
+  });
+
+  it('swaps in a tab and focuses the dragged pane', () => {
+    const t = L.newTab();
+    const b = L.newPane();
+    const tab = { ...t, root: L.split(t.root, t.focus, 'row', b), focus: b.id };
+    const first = L.panes(tab.root)[0].id;
+    const s = L.swapInTab(tab, first, b.id);
+    expect(ids(s.root)).toEqual([b.id, first]);
+    expect(s.focus).toBe(first);
+    expect(L.swapInTab(tab, first, first)).toBe(tab);
+  });
+
   it('accepts only layouts of its own shape', () => {
     expect(L.valid(L.initialLayout())).toBe(true);
     expect(L.valid(null)).toBe(false);
