@@ -11,6 +11,18 @@ Agents you can see, keep and hand work to.
 
 ### Added
 
+- **Settings, in the browser and in `la config`.** One settings model behind
+  `GET`/`PUT /api/config` (a partial update; refused whole on a bad key or
+  value): the new-pane folder (now saved in `config.json`, so it survives a
+  restart), the default skin, scenes on or off, and profiles (`PUT`/`DELETE
+  /api/profiles/{name}`; a command not on PATH is kept with a warning), with
+  version, host, user, port and home read-only. A **Settings** panel (the
+  gear, or ⌘K) shows them with this browser's own (light/dark,
+  notifications, sound, text size, now remembered), the shares with Revoke,
+  and About with Restart (`POST /api/restart?respawn=1`: the forge starts
+  the next one itself). `la config`, `la config get|set|unset`, `la config
+  profile add|remove` use the same keys, through the running forge or
+  straight into the home.
 - **Animated skins (scenes).** A skin may carry a PixiJS scene that draws
   behind the panes and reacts to their status. It is off until you allow it
   (Themes panel, `la skin allow`, `la skin install --allow-code`), pinned to a

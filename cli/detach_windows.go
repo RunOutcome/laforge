@@ -35,3 +35,14 @@ func processAlive(pid int) bool {
 	p.Release()
 	return true
 }
+
+// respawn starts argv as the next forge, detached, for this one to exit.
+func respawn(exe string, argv, env []string) error {
+	c := exec.Command(exe, argv[1:]...)
+	c.Env = env
+	detach(c)
+	if err := c.Start(); err != nil {
+		return err
+	}
+	return c.Process.Release()
+}

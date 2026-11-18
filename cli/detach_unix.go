@@ -25,3 +25,7 @@ func processAlive(pid int) bool {
 	err := syscall.Kill(pid, 0)
 	return err == nil || err == syscall.EPERM
 }
+
+// respawn replaces this process with argv (a forge restarting itself): the
+// same pid, so a container's or a terminal's forge stays theirs.
+func respawn(exe string, argv, env []string) error { return syscall.Exec(exe, argv, env) }

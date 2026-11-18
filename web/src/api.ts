@@ -12,8 +12,14 @@ export interface Profile {
   description: string;
   command: string;
   agent: boolean;
+  args?: string[];
+  env?: string[];
+  resume?: string[];
   available: boolean;
   reason?: string;
+  /** builtin: every forge offers it; custom: saved in the forge's profiles.json (added, or changing a built-in). */
+  builtin?: boolean;
+  custom?: boolean;
 }
 
 export type PaneState = 'starting' | 'running' | 'idle' | 'complete' | 'failed';
@@ -95,11 +101,35 @@ export interface LostPane {
 /** Who is the viewer: the forge's full token, or a read-only share of one pane. */
 export type Whoami = { mode: 'full' } | { mode: 'view'; pane: string };
 
+/** Config is GET /api/config: the forge's settings and, read-only, what it is. An older forge sends cwd, host, user and version only. */
 export interface Config {
   cwd: string;
   host: string;
   user: string;
   version: string;
+  /** cwdSaved: cwd is saved and survives a restart; false: it is where la up ran. */
+  cwdSaved?: boolean;
+  skin?: string;
+  scenes?: boolean;
+  profiles?: Profile[];
+  port?: number;
+  home?: string;
+  readOnly?: string[];
+}
+
+/** ConfigPatch is a PUT /api/config: each key left out is kept. */
+export interface ConfigPatch {
+  cwd?: string;
+  skin?: string;
+  scenes?: boolean;
+}
+
+/** Share is one read-only link to a pane. */
+export interface Share {
+  token: string;
+  pane: string;
+  created: string;
+  expires: string;
 }
 
 export class ApiError extends Error {
@@ -134,13 +164,21 @@ export class ForgeApi {
       }
       throw new ApiError(res.status, code, reason);
     }
-    if (res.status === 204) return undefined as T;
+    if (res.status === 204 || res.status === 202) return undefined as T;
     return (await res.json()) as T;
   }
 
   profiles = () => this.call<Profile[]>('GET', '/api/profiles');
   sessions = () => this.call<Session[]>('GET', '/api/sessions');
   config = () => this.call<Config>('GET', '/api/config');
+  setConfig = (patch: ConfigPatch) => this.call<Config>('PUT', '/api/config', patch);
+  saveProfile = (p: Profile) => this.call<Profile>('PUT', `/api/profiles/${encodeURIComponent(p.name)}`, p);
+  removeProfile = (name: string) => this.call<void>('DELETE', `/api/profiles/${encodeURIComponent(name)}`);
+  shares = () => this.call<Share[]>('GET', '/api/shares');
+  revokeShare = (token: string) => this.call<void>('DELETE', `/api/shares/${encodeURIComponent(token)}`);
+  /** restart asks the forge to restart itself, panes kept; it answers before it goes. */
+  restart = () => this.call<void>('POST', '/api/restart?respawn=1');
+  health = () => this.call<{ ok: boolean; version: string; pid: number; startedAt: string }>('GET', '/api/health');
   start = (req: { profile: string; cwd?: string; title?: string; cols?: number; rows?: number; resume?: string; labels?: Record<string, string> }) => this.call<Session>('POST', '/api/sessions', req);
   rename = (id: string, title: string) => this.call<Session>('PATCH', `/api/sessions/${encodeURIComponent(id)}`, { title });
   close = (id: string, force = false) => this.call<void>('DELETE', `/api/sessions/${encodeURIComponent(id)}${force ? '?force=1' : ''}`);

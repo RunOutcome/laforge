@@ -110,6 +110,45 @@ components:
         startedAt: { type: string, format: date-time }
         lostAt: { type: string, format: date-time }
         resumable: { type: boolean }
+    Profile:
+      type: object
+      required: [name, command]
+      properties:
+        name: { type: string }
+        label: { type: string }
+        description: { type: string }
+        command: { type: string, description: 'a program on PATH, or a path' }
+        args: { type: array, items: { type: string } }
+        env: { type: array, items: { type: string, description: NAME=value } }
+        agent: { type: boolean }
+        resume: { type: array, items: { type: string }, description: 'arguments after args that continue one of the agent''s sessions; {session} is its id' }
+        available: { type: boolean, readOnly: true }
+        reason: { type: string, readOnly: true }
+        builtin: { type: boolean, readOnly: true }
+        custom: { type: boolean, readOnly: true }
+    Config:
+      type: object
+      description: 'The settings (cwd, skin, scenes, profiles) and, read-only, what the forge is (version, host, user, port, home). Each setting keeps its own file in the home: cwd in config.json, skin in skin, scenes in scenes-off, profiles in profiles.json.'
+      properties:
+        cwd: { type: string, description: the folder new panes start in }
+        cwdSaved: { type: boolean, description: 'cwd is saved (survives a restart); false: it is where la up ran' }
+        skin: { type: string, description: the forge's default skin }
+        scenes: { type: boolean, description: animated scenes may run in this forge }
+        profiles: { type: array, items: { $ref: '#/components/schemas/Profile' } }
+        version: { type: string }
+        host: { type: string }
+        user: { type: string }
+        port: { type: integer }
+        home: { type: string, description: the forge's folder }
+        readOnly: { type: array, items: { type: string }, description: the keys no client changes }
+    ConfigPatch:
+      type: object
+      additionalProperties: false
+      properties:
+        cwd: { type: string, description: 'a folder (~ allowed) to save; empty clears the saved one' }
+        skin: { type: string }
+        scenes: { type: boolean }
+        save: { type: boolean, description: 'false: cwd is this run''s only and a saved folder wins over it (la up in a folder); default true' }
     Share:
       type: object
       properties:
@@ -125,7 +164,21 @@ paths:
   /api/whoami:
     get: { responses: { '200': { description: '{mode: "full"} or, with a share token, {mode: "view", pane}' } } }
   /api/profiles:
-    get: { responses: { '200': { description: profiles, each with available and reason } } }
+    get: { responses: { '200': { description: 'profiles, each with available and reason; builtin marks one every forge offers, custom one saved in profiles.json (added, or changing a built-in)', content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/Profile' } } } } } } }
+  /api/profiles/{name}:
+    parameters: [{ name: name, in: path, required: true, schema: { type: string, pattern: '^[a-z0-9][a-z0-9._-]{0,39}$' } }]
+    put:
+      description: Add a profile, or replace the one of its name (a built-in included), saved in profiles.json. A command that is not installed is kept; the answer says so (available false, reason).
+      requestBody: { content: { application/json: { schema: { $ref: '#/components/schemas/Profile' } } } }
+      responses:
+        '200': { description: the profile as listed, content: { application/json: { schema: { $ref: '#/components/schemas/Profile' } } } }
+        '400': { description: 'input: a bad name, no command, a command, label or description of more than one line, an env entry not NAME=value, or a body naming another profile' }
+    delete:
+      description: Remove a profile of the user's; one that changed a built-in gives the built-in back.
+      responses:
+        '204': { description: removed }
+        '404': { description: 'no_profile: no profile of that name is the user''s' }
+        '409': { description: 'builtin: a built-in nobody changed' }
   /api/sessions:
     get:
       responses:
@@ -240,10 +293,20 @@ paths:
   /api/skins/{name}:
     delete: { responses: { '204': { description: removed }, '409': { description: builtin } } }
   /api/restart:
-    post: { responses: { '202': { description: the forge detaches from its held panes and exits for its host to start the next one } } }
+    post:
+      parameters: [{ name: respawn, in: query, schema: { type: string, enum: ['1'] }, description: 'the forge starts the next one itself (same port and token), for a client no host waits on, such as the Settings panel' }]
+      responses: { '202': { description: the forge detaches from its held panes and exits for its host to start the next one (with respawn=1, starts it itself) } }
   /api/layout:
     get: { responses: { '200': { description: the client's layout, or null } } }
     put: { responses: { '204': { description: saved } } }
   /api/config:
-    get: { responses: { '200': { description: '{cwd, host, user, version}' } } }
-    put: { responses: { '200': { description: 'new panes start in cwd' } } }
+    get:
+      description: Every forge setting, and what the forge is. la config and the Settings panel show this.
+      responses: { '200': { description: the config, content: { application/json: { schema: { $ref: '#/components/schemas/Config' } } } } }
+    put:
+      description: A partial change; each key left out is kept. The whole body is checked before anything is saved. Profiles change through /api/profiles/{name}.
+      requestBody: { content: { application/json: { schema: { $ref: '#/components/schemas/ConfigPatch' } } } }
+      responses:
+        '200': { description: the config after the change, content: { application/json: { schema: { $ref: '#/components/schemas/Config' } } } }
+        '400': { description: 'input (not an object, a wrong type, cwd not a folder, profiles), unknown_key, read_only' }
+        '404': { description: 'no_skin' }

@@ -24,6 +24,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/RunOutcome/laforge/holder"
@@ -41,6 +42,9 @@ type Options struct {
 	Cwd string
 	// Version is reported by /api/health.
 	Version string
+	// Port is the port the host serves the forge on, for GET /api/config
+	// (0: the port the request came to).
+	Port int
 	// Scrollback is each session's replay buffer in bytes (0: 256 KiB).
 	Scrollback int
 	// Web replaces the embedded client (tests, development).
@@ -63,6 +67,7 @@ type Server struct {
 	events   *hub
 	last     map[string]Pane // each pane's last view, for its pane.closed event
 	restart  chan struct{}
+	respawn  atomic.Bool
 	shares   *shares
 	// collCache keeps what skin collections offer for a while.
 	collCache collectionCache
@@ -126,7 +131,17 @@ func (s *Server) SetCwd(dir string) {
 	s.mu.Unlock()
 }
 
+// defaultCwd is the saved new-pane folder, else this run's.
 func (s *Server) defaultCwd() string {
+	if dir := SavedCwd(s.opts.Home); dir != "" {
+		return dir
+	}
+	return s.RunCwd()
+}
+
+// RunCwd is this run's new-pane folder (where la up ran, or SetCwd), what
+// a saved folder overrides.
+func (s *Server) RunCwd() string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.cwd
@@ -150,11 +165,18 @@ func (s *Server) Detach() {
 // restarted with its panes kept; the host does the restart.
 func (s *Server) Restarts() <-chan struct{} { return s.restart }
 
+// RespawnWanted says the restart asked for (POST /api/restart?respawn=1, the
+// Settings panel's Restart) is the forge's to do itself: no la restart waits
+// to start the next one.
+func (s *Server) RespawnWanted() bool { return s.respawn.Load() }
+
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) { s.mux.ServeHTTP(w, r) }
 
 func (s *Server) routes(web fs.FS) {
 	s.mux.HandleFunc("GET /api/health", s.health)
 	s.mux.HandleFunc("GET /api/profiles", s.auth(s.listProfiles))
+	s.mux.HandleFunc("PUT /api/profiles/{name}", s.auth(s.putProfile))
+	s.mux.HandleFunc("DELETE /api/profiles/{name}", s.auth(s.deleteProfile))
 	s.mux.HandleFunc("GET /api/sessions", s.auth(s.listSessions))
 	s.mux.HandleFunc("POST /api/sessions", s.auth(s.startSession))
 	s.mux.HandleFunc("PATCH /api/sessions/{id}", s.auth(s.renameSession))
@@ -308,11 +330,7 @@ func (s *Server) health(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) profiles() ([]Profile, error) {
-	p, err := loadProfiles(s.opts.Home)
-	if err != nil {
-		return nil, err
-	}
-	return withAvailability(p), nil
+	return ListProfiles(s.opts.Home)
 }
 
 func (s *Server) listProfiles(w http.ResponseWriter, r *http.Request) {
@@ -416,6 +434,9 @@ func (s *Server) startCommand(w http.ResponseWriter, req StartRequest) {
 }
 
 func (s *Server) requestRestart(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Query().Get("respawn") == "1" {
+		s.respawn.Store(true)
+	}
 	select {
 	case s.restart <- struct{}{}:
 	default:
@@ -591,30 +612,6 @@ func (s *Server) putLayout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
-}
-
-func (s *Server) getConfig(w http.ResponseWriter, r *http.Request) {
-	host, _ := os.Hostname()
-	user := os.Getenv("USER")
-	writeJSON(w, http.StatusOK, map[string]any{"cwd": s.defaultCwd(), "host": host, "user": user, "version": s.opts.Version})
-}
-
-func (s *Server) putConfig(w http.ResponseWriter, r *http.Request) {
-	var body struct {
-		Cwd string `json:"cwd"`
-	}
-	if err := json.NewDecoder(io.LimitReader(r.Body, 1<<12)).Decode(&body); err != nil {
-		writeError(w, http.StatusBadRequest, "input", "The body is not JSON.")
-		return
-	}
-	if dir := expandHome(body.Cwd); dir != "" {
-		if info, err := os.Stat(dir); err != nil || !info.IsDir() {
-			writeError(w, http.StatusBadRequest, "input", dir+" is not a folder.")
-			return
-		}
-		s.SetCwd(dir)
-	}
-	s.getConfig(w, r)
 }
 
 // Sessions lists the forge's sessions (for status reports).

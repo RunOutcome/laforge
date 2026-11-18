@@ -126,6 +126,8 @@ func Main(cfg Config, args []string) int {
 		err = c.share(args[1:])
 	case "skin", "skins":
 		err = c.skin(args[1:])
+	case "config", "settings":
+		err = c.config(args[1:])
 	case "--skill", "skill":
 		fmt.Fprint(cfg.Stdout, skill(cfg.Prog))
 	case "holder": // started by the forge: one pane's holder process
@@ -165,7 +167,8 @@ func usage(cfg Config) {
 
 Usage:
   %[1]s up [--port N] [--cwd DIR] [--no-open] [--foreground]
-                     start the forge (or find the running one) and open it
+                     start the forge (or find the running one) and open it;
+                     --cwd saves the folder new panes start in
   %[1]s up --container [--image IMG]
                      the same, in a container with agent CLIs bundled,
                      this folder (or --cwd) mounted at /workspace
@@ -194,6 +197,14 @@ Usage:
   %[1]s skin collections [add LINK | remove ID]
                      get skins from collections: official (released with
                      LaForge), library (more), or any you add by link
+  %[1]s config [--json] | config get KEY | config set KEY VALUE | config unset cwd
+                     the forge's settings, also in the browser (Settings, the
+                     gear): cwd (new-pane folder), skin (the forge default),
+                     scenes on|off; read-only: version, host, user, port, home
+  %[1]s config profile [list] | config profile remove NAME
+  %[1]s config profile add [--label L] [--agent] [--env K=V]… NAME COMMAND [ARGS…]
+                     the shells and agents a pane can start (add replaces one
+                     of the same name; remove takes back a change to a built-in)
   %[1]s --skill      how an agent uses LaForge, in one read
   %[1]s hooks install [claude|codex]
                      let Claude Code and Codex report their status to LaForge
@@ -260,7 +271,7 @@ func (c *cmd) up(args []string) error {
 	fs := flag.NewFlagSet("up", flag.ContinueOnError)
 	fs.SetOutput(c.cfg.Stderr)
 	port := fs.Int("port", DefaultPort, "port to listen on (127.0.0.1 only); taken: any free port")
-	cwd := fs.String("cwd", "", "folder new panes start in (default: this folder)")
+	cwd := fs.String("cwd", "", "folder new panes start in, saved for next time (default: the saved folder, else this one)")
 	noOpen := fs.Bool("no-open", false, "do not open the browser")
 	foreground := fs.Bool("foreground", false, "run in this terminal instead of in the background")
 	container := fs.Bool("container", false, "run the forge in a container (docker or podman), this folder at /workspace")
@@ -276,14 +287,22 @@ func (c *cmd) up(args []string) error {
 	if *container {
 		return c.upContainer(containerUp{port: *port, dir: dir, image: *image, noOpen: *noOpen})
 	}
+	// --cwd is saved (as la config set cwd); without it this folder is
+	// this run's, and a saved folder wins over it
+	save := *cwd != ""
 
 	if s := c.running(); s != nil {
-		c.setCwd(s, dir)
+		c.setCwd(s, dir, save)
 		fmt.Fprintf(c.cfg.Stdout, "LaForge is running (pid %d, %s)\n  %s\n", s.PID, s.Version, s.link())
 		if !*noOpen {
 			openBrowser(s.link())
 		}
 		return nil
+	}
+	if save {
+		if err := forge.ApplyConfig(c.home, forge.ConfigPatch{Cwd: &dir}); err != nil {
+			return err
+		}
 	}
 	if *foreground {
 		serveArgs := []string{"--port", strconv.Itoa(*port), "--cwd", dir}
@@ -388,6 +407,22 @@ func (c *cmd) restart(args []string) error {
 	return nil
 }
 
+// respawnServe starts the next forge in this one's place, on the same port
+// and token, for a restart nobody waits on (the Settings panel's).
+func (c *cmd) respawnServe(port int, cwd, listen, token string) error {
+	exe, err := os.Executable()
+	if err != nil {
+		return err
+	}
+	argv := append(append([]string{exe}, c.cfg.Reexec...), "serve", "--port", strconv.Itoa(port), "--cwd", cwd, "--listen", listen)
+	env := append(os.Environ(), "LAFORGE_TOKEN="+token)
+	if os.Getenv("LAFORGE_HOME") == "" {
+		env = append(env, "LAFORGE_HOME="+c.home)
+	}
+	fmt.Fprintln(c.cfg.Stdout, "LaForge starting the next forge")
+	return respawn(exe, argv, env)
+}
+
 func (c *cmd) holdersDir() string { return filepath.Join(c.home, "holders") }
 
 // holders is the launcher the forge starts panes with: nil (panes in the
@@ -404,8 +439,8 @@ func (c *cmd) holders() *holder.Launcher {
 	return &holder.Launcher{Dir: c.holdersDir(), Command: command}
 }
 
-func (c *cmd) setCwd(s *State, dir string) {
-	raw, _ := json.Marshal(map[string]string{"cwd": dir})
+func (c *cmd) setCwd(s *State, dir string, save bool) {
+	raw, _ := json.Marshal(map[string]any{"cwd": dir, "save": save})
 	req, _ := http.NewRequest(http.MethodPut, s.URL+"/api/config", bytes.NewReader(raw))
 	req.Header.Set("Authorization", "Bearer "+s.Token)
 	req.Header.Set("Content-Type", "application/json")
@@ -531,7 +566,7 @@ func (c *cmd) serve(args []string) error {
 		}
 	}
 	actual := ln.Addr().(*net.TCPAddr).Port
-	srv, err := forge.NewServer(forge.Options{Home: c.home, Cwd: *cwd, Version: Version, Token: os.Getenv("LAFORGE_TOKEN"), Holders: c.holders()})
+	srv, err := forge.NewServer(forge.Options{Home: c.home, Cwd: *cwd, Version: Version, Port: actual, Token: os.Getenv("LAFORGE_TOKEN"), Holders: c.holders()})
 	if err != nil {
 		return err
 	}
@@ -564,6 +599,9 @@ func (c *cmd) serve(args []string) error {
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
 		_ = httpServer.Shutdown(shutdownCtx)
+		if srv.RespawnWanted() {
+			return c.respawnServe(actual, srv.RunCwd(), *listen, srv.Token())
+		}
 		return nil
 	case err := <-errc:
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {

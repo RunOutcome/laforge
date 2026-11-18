@@ -13,6 +13,8 @@ import { Picker, monogram } from './Picker';
 import { TerminalView, type TerminalHandle } from './TerminalView';
 import { loadPref, modeLabel, nextPref, resolveMode, savePref, systemMode, terminalTheme, type Mode, type ModePref } from './theme';
 import { Themes } from './Themes';
+import { Settings } from './Settings';
+import * as G from './config';
 import { Scene } from './Scene';
 import * as K from './skins';
 import * as R from './rail';
@@ -47,10 +49,11 @@ export function Forge({ api: given, embedded = false }: Props) {
   const [paneMenu, setPaneMenu] = useState(false);
   const [closingTab, setClosingTab] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [fontSize, setFontSize] = useState(13);
+  const [fontSize, setFontSize] = useState(G.loadFontSize);
   const [clock, setClock] = useState(() => new Date());
   const [agentsOpen, setAgentsOpen] = useState(() => N.loadFlag('laforge.agents', false));
   const [themesOpen, setThemesOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [notifyOn, setNotifyOn] = useState(() => N.loadFlag('laforge.notify', false));
   const [soundOn, setSoundOn] = useState(() => N.loadFlag('laforge.sound', false));
   const [permission, setPermission] = useState<N.Permission>(N.permission);
@@ -423,7 +426,36 @@ export function Forge({ api: given, embedded = false }: Props) {
       return next;
     });
   }, []);
-  const toggleThemes = useCallback(() => setThemesOpen((o) => !o), []);
+  const choosePref = useCallback((p: ModePref) => {
+    savePref(p);
+    setPref(p);
+  }, []);
+  // Themes and Settings share the right side: one at a time
+  const toggleThemes = useCallback(() => {
+    setSettingsOpen(false);
+    setThemesOpen((o) => !o);
+  }, []);
+  const toggleSettings = useCallback(() => {
+    setThemesOpen(false);
+    setSettingsOpen((o) => !o);
+  }, []);
+  const openSettings = useCallback(() => {
+    setThemesOpen(false);
+    setSettingsOpen(true);
+  }, []);
+  // this browser's text size, kept for next time
+  useEffect(() => G.saveFontSize(fontSize), [fontSize]);
+  // reloadForge: what a change in Settings changes elsewhere
+  const reloadForge = useCallback(async () => {
+    const [c, p] = await Promise.all([api.config(), api.profiles()]);
+    setConfig(c);
+    setProfiles(p);
+    await loadSkins();
+  }, [api, loadSkins]);
+  // opening Settings shows what the forge has now (la config may have changed it)
+  useEffect(() => {
+    if (settingsOpen) reloadForge().catch(() => undefined);
+  }, [settingsOpen, reloadForge]);
 
   useEffect(() => {
     const on = () => setVisible(document.visibilityState === 'visible');
@@ -625,7 +657,8 @@ export function Forge({ api: given, embedded = false }: Props) {
       { id: 'main', group: 'Layout', label: 'Main and stack', hint: '^b m', run: () => preset('main') },
       { id: 'agents', group: 'View', label: agentsOpen ? 'Hide the agents panel' : 'Show the agents panel', hint: '^b a', run: toggleAgents },
       { id: 'mode', group: 'View', label: `Toggle light/dark (now ${pref === 'system' ? `system, ${mode}` : pref})`, run: cycleMode },
-      { id: 'themes', group: 'View', label: 'Themes…', run: () => setThemesOpen(true) },
+      { id: 'themes', group: 'View', label: 'Themes…', run: () => (setSettingsOpen(false), setThemesOpen(true)) },
+      { id: 'settings', group: 'View', label: 'Settings…', run: openSettings },
       { id: 'bigger', group: 'View', label: 'Bigger text', hint: '^b +', run: () => setFontSize((f) => Math.min(f + 1, 22)) },
       { id: 'smaller', group: 'View', label: 'Smaller text', hint: '^b _', run: () => setFontSize((f) => Math.max(f - 1, 9)) },
       { id: 'help', group: 'Help', label: 'Keys', hint: '^b ?', run: () => setHelp(true) },
@@ -650,7 +683,7 @@ export function Forge({ api: given, embedded = false }: Props) {
       });
     }
     return list;
-  }, [profiles, tab, pref, mode, config, agentsOpen, skinList, skin, chooseSkin, makeDefaultSkin, splitPane, toggleZoom, newTabAction, stepTab, preset, cycleMode, toggleAgents, startIn, updateTab]);
+  }, [profiles, tab, pref, mode, config, agentsOpen, skinList, skin, chooseSkin, makeDefaultSkin, splitPane, toggleZoom, newTabAction, stepTab, preset, cycleMode, toggleAgents, startIn, updateTab, openSettings]);
 
   // keys: the prefix (Ctrl-b) then one key, as in tmux
   const keys = useRef<(e: KeyboardEvent) => boolean>(() => false);
@@ -660,6 +693,10 @@ export function Forge({ api: given, embedded = false }: Props) {
     if (palette || help || renaming || viewingRef.current) return false;
     if (themesOpen && e.key === 'Escape' && !prefixRef.current && !(e.target as HTMLElement | null)?.closest?.('.xterm')) {
       setThemesOpen(false);
+      return true;
+    }
+    if (settingsOpen && e.key === 'Escape' && !prefixRef.current && !(e.target as HTMLElement | null)?.closest?.('.xterm')) {
+      setSettingsOpen(false);
       return true;
     }
     if (paneMenu && e.key === 'Escape') {
@@ -1271,6 +1308,9 @@ export function Forge({ api: given, embedded = false }: Props) {
       <button className={`icon-btn themes-btn ${themesOpen ? 'is-open' : ''}`} title="Themes" aria-label="Themes" aria-expanded={themesOpen} onClick={toggleThemes}>
         <I.Palette />
       </button>
+      <button className={`icon-btn settings-btn-open ${settingsOpen ? 'is-open' : ''}`} title="Settings" aria-label="Settings" aria-expanded={settingsOpen} onClick={toggleSettings}>
+        <I.Gear />
+      </button>
       <button className="cmd-btn" title="Commands" onClick={() => setPalette(true)}>
         <I.Command />
         <span>Commands</span>
@@ -1324,6 +1364,27 @@ export function Forge({ api: given, embedded = false }: Props) {
           onAllowCode={allowSkinCode}
           onScenes={setScenes}
           onClose={() => setThemesOpen(false)}
+        />
+      )}
+      {settingsOpen && (
+        <Settings
+          api={api}
+          config={config}
+          skins={skinList?.skins ?? []}
+          sessions={sessions}
+          onChanged={reloadForge}
+          pref={pref}
+          sysMode={sysMode}
+          onPref={choosePref}
+          notify={notifyOn}
+          sound={soundOn}
+          permission={permission}
+          onNotify={setNotify}
+          onSound={setSound}
+          fontSize={fontSize}
+          onFontSize={(n) => setFontSize(G.clampFont(n))}
+          now={clock.getTime()}
+          onClose={() => setSettingsOpen(false)}
         />
       )}
     </div>

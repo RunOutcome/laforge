@@ -27,6 +27,10 @@ type Profile struct {
 	// Available and Reason are filled in when profiles are listed.
 	Available bool   `json:"available"`
 	Reason    string `json:"reason,omitempty"`
+	// Builtin is a profile every forge offers; Custom is one saved in
+	// profiles.json (added, or changing a built-in).
+	Builtin bool `json:"builtin,omitempty"`
+	Custom  bool `json:"custom,omitempty"`
 }
 
 // BuiltinProfiles are the panes every forge offers. The shell is the user's

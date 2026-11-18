@@ -917,7 +917,8 @@ kbd {
 }
 
 /* the themes panel: skins, light and dark strips, install */
-.themes-btn.is-open {
+.themes-btn.is-open,
+.settings-btn-open.is-open {
   background: color-mix(in oklab, var(--acc) 18%, var(--card));
   color: var(--tx);
 }
@@ -2562,4 +2563,350 @@ body.dragging-pane * {
   font-size: 12px;
   color: var(--tx-2);
   border-top: 1px solid var(--line);
+}
+
+/* the settings panel: the forge's settings, this browser's, shares, about */
+.settings-body {
+  padding: 2px 0 8px;
+}
+
+.settings-section {
+  padding: 4px 12px 12px;
+  border-top: 1px solid var(--line-2);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 12.5px;
+}
+
+.settings-section:first-child {
+  border-top: 0;
+}
+
+.settings-section .agents-sub {
+  margin: 4px 0 0;
+  padding: 6px 0 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.settings-note,
+.settings-hint {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--tx-3);
+}
+
+.settings-note code {
+  font: 11.5px var(--font-mono);
+  color: var(--tx-2);
+}
+
+.settings-indent {
+  padding-left: 22px;
+  margin-top: -4px;
+}
+
+.settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.settings-field > label,
+.settings-field > span:first-child {
+  color: var(--tx);
+}
+
+.settings-inline {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 10px;
+}
+
+.settings select,
+.settings-editor input,
+.settings-editor textarea {
+  min-width: 0;
+  height: 26px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-button);
+  background: var(--sunken);
+  color: var(--tx);
+  font: 12px var(--font-mono);
+}
+
+.settings select {
+  max-width: 60%;
+  font-family: var(--font-ui);
+}
+
+.settings-editor textarea {
+  height: auto;
+  padding: 5px 8px;
+  resize: vertical;
+}
+
+.settings select:focus,
+.settings-editor input:focus,
+.settings-editor textarea:focus {
+  outline: none;
+  border-color: var(--acc);
+}
+
+.settings-editor input:disabled {
+  color: var(--tx-3);
+}
+
+.settings-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: var(--tx);
+  line-height: 1.35;
+}
+
+.settings-check input {
+  margin: 2px 0 0;
+  accent-color: var(--acc-fill);
+}
+
+.settings-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 22px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-button-sm);
+  background: var(--card);
+  color: var(--tx);
+  font: 500 11.5px/1 var(--font-ui);
+  white-space: nowrap;
+}
+
+.settings-btn:hover:not(:disabled) {
+  border-color: var(--acc);
+}
+
+.settings-btn:disabled {
+  opacity: 0.5;
+}
+
+.settings-btn svg {
+  width: 13px;
+  height: 13px;
+}
+
+.settings-add {
+  align-self: flex-start;
+  height: 26px;
+}
+
+.settings-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--acc);
+  font: inherit;
+  font-size: 11.5px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.settings-link:disabled {
+  opacity: 0.5;
+}
+
+.settings-error {
+  padding-left: 0;
+}
+
+.settings-warning {
+  margin: 0;
+  padding: 6px 8px;
+  border: 1px solid var(--amber);
+  border-radius: var(--radius-button);
+  background: color-mix(in srgb, var(--amber) 10%, transparent);
+  color: var(--tx);
+  font-size: 11.5px;
+}
+
+.settings .themes-list {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.settings .theme-row {
+  padding: 6px 8px;
+  gap: 3px;
+}
+
+.settings-profile-top {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  min-width: 0;
+}
+
+.settings-profile-top .theme-label {
+  color: var(--tx);
+}
+
+.settings-row-actions {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.settings-missing {
+  color: var(--tx-3);
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.settings-cmd {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 11.5px var(--font-mono);
+  color: var(--tx-3);
+}
+
+.settings-confirm {
+  padding-left: 0;
+}
+
+.settings-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-top: 4px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-button);
+  background: var(--canvas);
+}
+
+.settings-editor > label:not(.settings-check) {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 11.5px;
+  color: var(--tx-2);
+}
+
+.settings-editor-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.settings-seg {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-button);
+  overflow: hidden;
+}
+
+.settings-seg-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 9px;
+  border: 0;
+  border-left: 1px solid var(--line);
+  background: var(--card);
+  color: var(--tx-2);
+  font: 500 11.5px/1 var(--font-ui);
+}
+
+.settings-seg-btn:first-child {
+  border-left: 0;
+}
+
+.settings-seg-btn svg {
+  width: 13px;
+  height: 13px;
+}
+
+.settings-seg-btn.is-on {
+  background: color-mix(in oklab, var(--acc) 18%, var(--card));
+  color: var(--tx);
+}
+
+.settings-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.settings-stepper .settings-btn {
+  width: 26px;
+  height: 26px;
+  justify-content: center;
+  font-size: 14px;
+}
+
+.settings-font-size {
+  min-width: 36px;
+  text-align: center;
+  font: 12px var(--font-mono);
+  color: var(--tx);
+}
+
+.settings-about {
+  margin: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.settings-about div {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  gap: 8px;
+}
+
+.settings-about dt {
+  color: var(--tx-3);
+}
+
+.settings-about dd {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 12px var(--font-mono);
+  color: var(--tx);
+}
+
+.settings-about-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+@media (max-width: 640px) {
+  .settings select,
+  .settings-editor input,
+  .settings-editor textarea {
+    font-size: 16px;
+  }
+  .settings-btn,
+  .settings-seg-btn {
+    height: 32px;
+  }
+  .settings-stepper .settings-btn {
+    width: 34px;
+    height: 34px;
+  }
 }

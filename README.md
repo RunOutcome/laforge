@@ -205,14 +205,53 @@ stylesheets, fonts and images, never code: see [docs/skins.md](docs/skins.md)
 to make one.
 More skins to install are in the [skin gallery](skins/README.md).
 
+### Settings
+
+The forge's settings are in one place, the same from the browser and the
+command line. In the browser, open **Settings** with the gear in the header
+(or ⌘K, **Settings…**):
+
+- **Forge**: the folder new panes start in, the default skin, animated scenes
+  on or off, and the profiles (add, edit, remove; a command that is not
+  installed is kept, marked "not installed"). Saved in the forge, so every
+  browser and `la config` see them.
+- **This browser**: light/dark, notifications, sound and terminal text size,
+  kept in this browser only (the same switches as the header and the agents
+  panel).
+- **Shares**: the read-only links (`la share`), each with its time left and a
+  Revoke.
+- **About**: version, host, port and home, Restart (panes it holds keep
+  running) and the third-party notices.
+
+From a terminal, `la config` uses the same keys as `GET`/`PUT /api/config`:
+
+```sh
+la config                       # every setting, what the forge is, the profiles
+la config get cwd
+la config set cwd ~/projects    # saved: new panes start there, after restarts too
+la config unset cwd             # back to the folder la up runs in
+la config set skin console
+la config set scenes off
+la config profile add --label Aider --agent aider aider --model sonnet
+la config profile remove aider  # on a built-in you changed: gives it back
+la config --json
+```
+
+`cwd`, `skin` and `scenes` are the settings; `version`, `host`, `user`, `port`
+and `home` are read-only. With the forge running, `la config` goes through
+it and the change shows at once (reopen Settings to see it there); without
+one it writes the home, and the next forge starts with it. `la up --cwd DIR`
+saves the folder too; a plain `la up` in a folder uses that folder only when
+none is saved.
+
 ### Profiles
 
 The built-in profiles are your login shell and each agent CLI that is
 installed (`claude`, `codex`, `agy`, `qwen`, `copilot`, `grok`, `opencode`,
 `ollama`). Each runs unchanged, with its own login. When an agent exits, its
 pane stays open as your shell in the same folder (the pane's label changes to
-Shell); `exit` there closes it. Add or replace profiles in
-`~/.laforge/forge/profiles.json`:
+Shell); `exit` there closes it. Add or replace profiles in Settings, with
+`la config profile add`, or in `~/.laforge/forge/profiles.json`:
 
 ```json
 [
@@ -229,7 +268,9 @@ would make an agent think it runs inside another agent), plus
 
 Everything is in `~/.laforge/forge` (`$LAFORGE_HOME` to change):
 `forge.json` (the running forge's port, pid and token, mode 0600),
-`forge.log`, `layout.json` and `profiles.json`.
+`forge.log`, `layout.json`, `profiles.json`, `config.json` (the saved
+new-pane folder), `skin` (the default skin) and `scenes-off` (present when
+scenes are off).
 
 ## Embedding
 
