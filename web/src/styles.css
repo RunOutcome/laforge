@@ -3043,3 +3043,28 @@ body.dragging-pane * {
     height: 34px;
   }
 }
+
+.scene-stopped {
+  position: fixed;
+  left: 12px;
+  bottom: 34px;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: min(560px, calc(100vw - 24px));
+  padding: 6px 8px 6px 12px;
+  font-size: 12px;
+  color: var(--tx);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control, 6px);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.25);
+}
+
+.scene-stopped button {
+  border: 1px solid var(--line);
+  background: transparent;
+  border-radius: var(--radius-button, 6px);
+  padding: 2px 8px;
+}

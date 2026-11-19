@@ -29,10 +29,12 @@ export type SceneEvent =
 
 /** How long without a status change before the scene is told it is idle. */
 export const IDLE_MS = 30_000;
-/** A scene that sends nothing for this long after ready is dropped. */
-export const BEAT_MS = 3_500;
+/** The page pings a ready scene this often while the page is visible. */
+export const PING_MS = 2_000;
+/** A visible, ready scene that answers no ping for this long is dropped. */
+export const DEAD_MS = 12_000;
 /** A scene that is not ready by then is dropped. */
-export const READY_MS = 20_000;
+export const READY_MS = 30_000;
 
 const ids = new WeakMap<Element, string>();
 let nextId = 1;
@@ -80,17 +82,19 @@ interface Props {
 
 export function Scene({ url, mode, layout, covered = false }: Props) {
   const frame = useRef<HTMLIFrameElement>(null);
-  const [failed, setFailed] = useState<string | null>(null);
+  const [failed, setFailed] = useState<{ url: string; why: string } | null>(null);
+  const [attempt, setAttempt] = useState(0);
   const now = useRef({ mode, layout, covered });
   now.current = { mode, layout, covered };
   const post = useRef<(ev: SceneEvent) => void>(() => undefined);
 
   useEffect(() => {
-    if (failed === url) return;
+    if (failed?.url === url) return;
     const root = document.documentElement;
     const motion = window.matchMedia?.('(prefers-reduced-motion: reduce)');
     let ready = false;
-    let lastBeat = Date.now();
+    let lastPong = Date.now();
+    let ping = 0;
     const started = Date.now();
     let lastChange = Date.now();
     let idle = false;
@@ -132,14 +136,14 @@ export function Scene({ url, mode, layout, covered = false }: Props) {
       dead = true;
       delete root.dataset.scene;
       console.warn('[laforge] scene removed: ' + why);
-      setFailed(url);
+      setFailed({ url, why });
     };
 
     const onMessage = (e: MessageEvent) => {
       if (!frame.current || e.source !== frame.current.contentWindow) return;
       const m = e.data as { laforgeScene?: number; type?: string; message?: string };
       if (!m || m.laforgeScene !== 1) return;
-      lastBeat = Date.now();
+      lastPong = Date.now();
       if (m.type === 'hello') {
         send({ type: 'init', mode: now.current.mode, layout: now.current.layout, reducedMotion: !!motion?.matches, size: size() });
         sendPanes(true);
@@ -150,19 +154,30 @@ export function Scene({ url, mode, layout, covered = false }: Props) {
         root.dataset.scene = 'on';
       } else if (m.type === 'error') {
         fail(String(m.message ?? 'error').slice(0, 300));
+      } else if (m.type === 'warn') {
+        console.warn('[laforge] scene: ' + String(m.message ?? '').slice(0, 300));
       }
     };
     const onResize = () => {
       send({ type: 'resize', size: size() });
       soon();
     };
-    const onVisibility = () => send({ type: 'visibility', visible: visible() });
+    const onVisibility = () => {
+      // a hidden page's frame may have slept: start counting again
+      if (document.visibilityState === 'visible') lastPong = Date.now();
+      send({ type: 'visibility', visible: visible() });
+    };
 
     const watch = window.setInterval(() => {
       const t = Date.now();
-      if (!ready && t - started > READY_MS) fail('not ready');
-      else if (ready && document.visibilityState === 'visible' && t - lastBeat > BEAT_MS) fail('stopped beating');
-      if (!idle && t - lastChange > IDLE_MS) {
+      if (document.visibilityState !== 'visible') return;
+      if (!ready && t - started > READY_MS) fail('it did not start within ' + READY_MS / 1000 + ' s');
+      else if (ready && t - lastPong > DEAD_MS) fail('it stopped answering');
+      else if (ready) frame.current?.contentWindow?.postMessage({ type: 'ping', n: ++ping }, '*');
+    }, PING_MS);
+
+    const idleWatch = window.setInterval(() => {
+      if (!idle && Date.now() - lastChange > IDLE_MS) {
         idle = true;
         send({ type: 'idle', idle: true });
       }
@@ -179,6 +194,7 @@ export function Scene({ url, mode, layout, covered = false }: Props) {
       dead = true;
       observer.disconnect();
       window.clearInterval(watch);
+      window.clearInterval(idleWatch);
       window.clearTimeout(pending);
       window.removeEventListener('message', onMessage);
       window.removeEventListener('resize', onResize);
@@ -187,14 +203,32 @@ export function Scene({ url, mode, layout, covered = false }: Props) {
       delete root.dataset.scene;
       post.current = () => undefined;
     };
-  }, [url, failed]);
+  }, [url, failed, attempt]);
 
   useEffect(() => post.current({ type: 'mode', mode }), [mode]);
   useEffect(() => post.current({ type: 'visibility', visible: document.visibilityState === 'visible' && !covered }), [covered]);
 
-  if (failed === url) return null;
+  if (failed?.url === url && !failed.why) return null; // dismissed
+  if (failed?.url === url)
+    return (
+      <div className="scene-stopped" role="status">
+        <span>Animation stopped: {failed.why}.</span>
+        <button
+          onClick={() => {
+            setFailed(null);
+            setAttempt((a) => a + 1);
+          }}
+        >
+          Retry
+        </button>
+        <button aria-label="Dismiss" onClick={() => setFailed({ ...failed, why: '' })}>
+          ×
+        </button>
+      </div>
+    );
   return (
     <iframe
+      key={attempt}
       ref={frame}
       className="scene-frame"
       src={url}

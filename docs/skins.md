@@ -531,8 +531,11 @@ Events (`host.on(type, fn)` replays the latest one of a type):
 - under `prefers-reduced-motion` (`host.reducedMotion`), one frame per event,
   so draw a still picture there.
 
-Move things from the ticker, not your own timers. A scene that throws, or stops
-answering for 3.5 s, is removed, and the stylesheet draws alone.
+Move things from the ticker, not your own timers. A scene that throws before it
+is ready, or stops answering the page for 12 s while the page is visible (a
+busy loop, a hang), is removed, and the stylesheet draws alone; the page says
+why and offers Retry. Errors after it is ready are logged as warnings and the
+scene keeps running. PixiJS is set to WebGL.
 
 **Backdrops.** While a scene runs, the root has `data-scene="on"` and the
 forge's own page backgrounds turn transparent. Clear your skin's own
